@@ -59,8 +59,7 @@ export class GameEngine {
         this.currentUpgradeChoices = [];
         this.isChoosingUpgrade = false;
         this.pointsToNextUpgrade = 10; 
-
-        // Mobile Touch tracking variables
+        
         this.leftTouch = { id: null, originX: 0, originY: 0, x: 0, y: 0, active: false };
         this.rightTouch = { id: null, originX: 0, originY: 0, x: 0, y: 0, active: false };
 
@@ -95,7 +94,6 @@ export class GameEngine {
             this.keys[e.key.toLowerCase()] = false; 
         });
 
-        // Mobile Touch Listeners - Bound safely
         const leftZone = document.getElementById('joystick-left');
         const rightZone = document.getElementById('joystick-right');
         const leftBase = document.getElementById('base-left');
@@ -297,11 +295,8 @@ export class GameEngine {
     startDemo() {
         if (this.animationId) cancelAnimationFrame(this.animationId);
         
-        // HIDE MOBILE CONTROLS ON MAIN MENU
         const mobileControls = document.getElementById('mobile-controls');
         if (mobileControls) mobileControls.classList.add('hidden');
-        
-        // Ensure minimap hides when returning to menu
         const brUi = document.getElementById('br-ui');
         if (brUi) brUi.classList.add('hidden');
 
@@ -328,11 +323,8 @@ export class GameEngine {
     start(playerClass) {
         if (this.animationId) cancelAnimationFrame(this.animationId);
         
-        // SHOW MOBILE CONTROLS FOR SINGLEPLAYER
         const mobileControls = document.getElementById('mobile-controls');
         if (mobileControls) mobileControls.classList.remove('hidden');
-        
-        // HIDE MINIMAP FOR SINGLEPLAYER
         const brUi = document.getElementById('br-ui');
         if (brUi) brUi.classList.add('hidden');
         
@@ -379,7 +371,7 @@ startMultiplayer(players, lobbyCode, isHost) {
         // SHOW MOBILE CONTROLS FOR MULTIPLAYER
         const mobileControls = document.getElementById('mobile-controls');
         if (mobileControls) mobileControls.classList.remove('hidden');
-
+        
         this.lobbyCode = lobbyCode; 
         this.isHost = isHost || false;
         this.worldSize = 10000; 
@@ -387,11 +379,21 @@ startMultiplayer(players, lobbyCode, isHost) {
         this.stormCenter = { x: this.worldSize / 2, y: this.worldSize / 2 };
         this.stormRadius = 7500; 
 
-        this.isDemo = false; this.isGameOver = false; this.spectateTarget = null;
-        this.bots = []; this.orbs = []; this.projectiles = []; this.particles = []; this.teammates = [];
+        this.isDemo = false; 
+        this.isGameOver = false; 
+        this.spectateTarget = null;
+        this.bots = []; 
+        this.orbs = []; 
+        this.projectiles = []; 
+        this.particles = [];
+        this.teammates = [];
 
         document.getElementById('game-ui').classList.remove('hidden');
         document.querySelector('.hud').classList.remove('hidden');
+        
+        // SHOW MINIMAP FOR MULTIPLAYER
+        const brUi = document.getElementById('br-ui');
+        if (brUi) brUi.classList.remove('hidden'); 
 
         let spawnX = this.worldSize / 2;
         let spawnY = this.worldSize / 2;
@@ -439,8 +441,14 @@ startMultiplayer(players, lobbyCode, isHost) {
                     window.gameSocket.emit('hostInit', {
                         code: this.lobbyCode,
                         bots: this.bots.filter(b => !b.isRemotePlayer).map(b => ({ 
-                            id: b.id, x: Math.round(b.x), y: Math.round(b.y), type: b.type, pts: Math.round(b.points),
-                            c: b.color, u: b.upgrades || {}, n: b.name
+                            id: b.id, 
+                            x: Math.round(b.x), 
+                            y: Math.round(b.y), 
+                            type: b.type, 
+                            pts: Math.round(b.points),
+                            c: b.color, 
+                            u: b.upgrades || {}, 
+                            n: b.name
                         }))
                     });
                 }
@@ -452,6 +460,7 @@ startMultiplayer(players, lobbyCode, isHost) {
         for(let i = 0; i < 1500; i++) {
             this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
         }
+        
         for(let i = 0; i < 60; i++) { 
             let pos = this.getSafeOrbPosition(500); 
             this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0));
@@ -536,7 +545,9 @@ startMultiplayer(players, lobbyCode, isHost) {
             window.gameSocket.on('teammateMoved', (data) => {
                 let tm = this.teammates.find(t => t.remoteId === data.id);
                 if (tm) {
-                    tm.x = data.x; tm.y = data.y; tm.angle = data.angle;
+                    tm.x = data.x; 
+                    tm.y = data.y; 
+                    tm.angle = data.angle;
                     if (data.health) tm.health = data.health;
                     if (data.maxHealth) tm.maxHealth = data.maxHealth;
                     if (data.points !== undefined) tm.points = data.points; 
@@ -576,16 +587,22 @@ startMultiplayer(players, lobbyCode, isHost) {
         
         this.cameraZoom = this.introStartZoom;
 
-        this.pointsToNextUpgrade = 10; this.matchStartTime = Date.now(); this.matchXPEarned = 0; 
-        this.distanceTraveled = 0; this.lastPlayerPos = { x: this.player.x, y: this.player.y };
-        this.pendingUpgrades = 0; this.isChoosingUpgrade = false;
+        this.pointsToNextUpgrade = 10; 
+        this.matchStartTime = Date.now(); 
+        this.matchXPEarned = 0; 
+        this.distanceTraveled = 0; 
+        this.lastPlayerPos = { x: this.player.x, y: this.player.y };
+        this.pendingUpgrades = 0; 
+        this.isChoosingUpgrade = false;
 
         document.getElementById('upgrade-ui').classList.add('hidden');
         document.getElementById('xp-bar').style.width = '0%';
         document.getElementById('level-display').innerText = '0 PTS';
 
         this.totalMatchPlayers = 97; 
-        this.lastTime = performance.now(); this.lastFpsTime = performance.now(); this.framesThisSecond = 0;
+        this.lastTime = performance.now(); 
+        this.lastFpsTime = performance.now(); 
+        this.framesThisSecond = 0;
         this.loop(this.lastTime);
     }
 
@@ -594,11 +611,14 @@ startMultiplayer(players, lobbyCode, isHost) {
         allPlayers.sort((a, b) => b.points - a.points); 
         if (this.isDemo) return; 
         
-        const list = document.getElementById('leaderboard-list'); list.innerHTML = ''; 
+        const list = document.getElementById('leaderboard-list'); 
+        list.innerHTML = ''; 
+        
         const displayLimit = window.innerWidth <= 768 ? 5 : 10;
         
         allPlayers.slice(0, displayLimit).forEach((p, index) => {
-            const li = document.createElement('li'); li.innerText = `#${index + 1} ${p.name} - ${Math.floor(p.points)} Pts`;
+            const li = document.createElement('li'); 
+            li.innerText = `#${index + 1} ${p.name} - ${Math.floor(p.points)} Pts`;
             if (p === this.player) li.style.color = '#00ffcc';
             list.appendChild(li);
         });
@@ -606,32 +626,51 @@ startMultiplayer(players, lobbyCode, isHost) {
 
     showNextUpgrade() {
         if (this.pendingUpgrades <= 0 || this.isDemo || this.isGameOver) return;
-        this.isChoosingUpgrade = true; this.currentUpgradeChoices = getWeightedUpgrades(this.player, 3);
-        if (this.currentUpgradeChoices.length === 0) { this.pendingUpgrades = 0; this.isChoosingUpgrade = false; return; }
+        
+        this.isChoosingUpgrade = true; 
+        this.currentUpgradeChoices = getWeightedUpgrades(this.player, 3);
+        
+        if (this.currentUpgradeChoices.length === 0) { 
+            this.pendingUpgrades = 0; 
+            this.isChoosingUpgrade = false; 
+            return; 
+        }
 
         for (let i = 0; i < 3; i++) {
-            const choice = this.currentUpgradeChoices[i]; const card = document.getElementById(`card-${i+1}`);
+            const choice = this.currentUpgradeChoices[i]; 
+            const card = document.getElementById(`card-${i+1}`);
+            
             if (choice && card) {
                 const currentTier = this.player.upgrades[choice.id];
                 document.getElementById(`title-${i+1}`).innerText = `${choice.title} [T${currentTier+1}]`;
                 document.getElementById(`desc-${i+1}`).innerText = choice.desc;
                 card.style.display = 'block';
-            } else if (card) { card.style.display = 'none'; }
+            } else if (card) { 
+                card.style.display = 'none'; 
+            }
         }
         document.getElementById('upgrade-ui').classList.remove('hidden');
     }
 
     selectUpgrade(index) {
         if (this.isDemo || this.isGameOver) return;
+        
         const choice = this.currentUpgradeChoices[index];
-        this.player.applyUpgrade(choice.id); this.grantAccountXP(15); 
+        this.player.applyUpgrade(choice.id); 
+        this.grantAccountXP(15); 
+        
         document.getElementById('upgrade-ui').classList.add('hidden');
-        this.isChoosingUpgrade = false; this.pendingUpgrades--;
-        if (this.pendingUpgrades > 0) setTimeout(() => this.showNextUpgrade(), 200); 
+        this.isChoosingUpgrade = false; 
+        this.pendingUpgrades--;
+        
+        if (this.pendingUpgrades > 0) {
+            setTimeout(() => this.showNextUpgrade(), 200); 
+        }
     }
 
     triggerUpgradeReady() {
         if (this.isDemo || this.isGameOver) return;
+        
         const notif = document.getElementById('level-up-notif');
         if (notif) {
             sounds.play('upgradeReady', 0.6); 
@@ -639,13 +678,18 @@ startMultiplayer(players, lobbyCode, isHost) {
             if (this.levelUpTimeout) clearTimeout(this.levelUpTimeout);
             this.levelUpTimeout = setTimeout(() => notif.classList.remove('show'), 3000);
         }
-        this.pendingUpgrades++; if (!this.isChoosingUpgrade) this.showNextUpgrade();
+        
+        this.pendingUpgrades++; 
+        if (!this.isChoosingUpgrade) {
+            this.showNextUpgrade();
+        }
     }
 
     fireProjectile(owner, angle) {
         let p = new Projectile(owner.x, owner.y, angle, owner);
         this.projectiles.push(p);
         this.playSoundAt('shoot', owner.x, owner.y, 0.25);
+        
         if (owner.rearguard > 0) {
             this.projectiles.push(new Projectile(owner.x, owner.y, angle + Math.PI, owner));
         }
@@ -694,7 +738,9 @@ startMultiplayer(players, lobbyCode, isHost) {
             this.handleGameOver(killer);
         } else {
             const botIndex = this.bots.indexOf(victim);
-            if (botIndex > -1) this.bots.splice(botIndex, 1);
+            if (botIndex > -1) {
+                this.bots.splice(botIndex, 1);
+            }
             
             if (this.spectateTarget === victim) {
                 this.spectateTarget = killer;
@@ -719,9 +765,11 @@ startMultiplayer(players, lobbyCode, isHost) {
         this.spectateTarget = killer;
         document.getElementById('upgrade-ui').classList.add('hidden'); 
 
-        // HIDE MOBILE CONTROLS ON DEATH SCREEN
+        // HIDE JOYSTICKS ON DEATH SCREEN
         const mobileControls = document.getElementById('mobile-controls');
-        if (mobileControls) mobileControls.classList.add('hidden');
+        if (mobileControls) {
+            mobileControls.classList.add('hidden');
+        }
 
         const timeAlive = Math.floor((Date.now() - this.matchStartTime) / 1000);
         this.grantAccountXP(timeAlive * 2);
@@ -731,7 +779,7 @@ startMultiplayer(players, lobbyCode, isHost) {
         const rank = allPlayers.indexOf(this.player) + 1;
         const totalPlayers = allPlayers.length;
 
-        // Custom Rank Suffixes
+        // FIX: PLACEMENT TEXT FORMATTING
         let suffix = "th";
         if (rank % 10 === 1 && rank % 100 !== 11) suffix = "st";
         else if (rank % 10 === 2 && rank % 100 !== 12) suffix = "nd";
@@ -739,12 +787,12 @@ startMultiplayer(players, lobbyCode, isHost) {
 
         const placementEl = document.getElementById('go-placement');
         if (placementEl) {
-            placementEl.parentElement.innerHTML = `Placed <span id="go-placement" style="color: #00ffcc;">${rank}${suffix}</span>`;
+            placementEl.innerText = `${rank}${suffix}`;
         }
-
+        
         const xpEl = document.getElementById('go-xp');
         if (xpEl) {
-            xpEl.parentElement.innerHTML = `Season Level XP Earned <span id="go-xp" style="color: #ffe600;">+${this.matchXPEarned}</span>`;
+            xpEl.innerText = `+${this.matchXPEarned}`;
         }
 
         window.lastMatchStats = {
@@ -766,7 +814,9 @@ startMultiplayer(players, lobbyCode, isHost) {
 
     update() {
         this.frameCount++;
-        if (this.frameCount % 30 === 0) this.updateLeaderboard(); 
+        if (this.frameCount % 30 === 0) {
+            this.updateLeaderboard(); 
+        }
 
         let pointsGainedThisFrame = 0;
 
@@ -806,7 +856,8 @@ startMultiplayer(players, lobbyCode, isHost) {
         }
 
         if (!this.isDemo && !this.isGameOver) {
-            let dx = 0; let dy = 0;
+            let dx = 0; 
+            let dy = 0;
             const binds = window.gameSettings.keybinds;
 
             if (!this.isCinematicIntro) {
@@ -816,7 +867,7 @@ startMultiplayer(players, lobbyCode, isHost) {
                 if (this.keys[binds.left]) dx -= 1; 
                 if (this.keys[binds.right]) dx += 1;
 
-                // MOBILE TOUCH MOVEMENT LOGIC
+                // Mobile Touch Left Joystick Input
                 if (this.leftTouch && this.leftTouch.active) {
                     let tdx = this.leftTouch.x - this.leftTouch.originX;
                     let tdy = this.leftTouch.y - this.leftTouch.originY;
@@ -843,11 +894,13 @@ startMultiplayer(players, lobbyCode, isHost) {
                     this.player.vy += (dy / length) * (this.player.speed * 0.2);
                 }
 
-                // MOBILE TOUCH AIMING LOGIC
+                // Mobile Aiming (Right Joystick or Mouse) with Lower Sensitivity Deadzone
                 if (this.rightTouch && this.rightTouch.active) {
                     let adx = this.rightTouch.x - this.rightTouch.originX;
                     let ady = this.rightTouch.y - this.rightTouch.originY;
-                    if (Math.hypot(adx, ady) > 5) {
+                    
+                    // Added a larger deadzone (15) so aim isn't twitchy
+                    if (Math.hypot(adx, ady) > 15) {
                         this.player.angle = Math.atan2(ady, adx);
                     }
                 } else {
@@ -885,6 +938,7 @@ startMultiplayer(players, lobbyCode, isHost) {
                     this.player.wantsShockwave = false;
                     this.playSoundAt('explosion', this.player.x, this.player.y, 0.4); 
                     this.spawnParticles(this.player.x, this.player.y, '#ffcc00', 20); 
+                    
                     allPlayers.forEach(p => {
                         if (p === this.player || p.isDead) return;
                         if (p.isTeammate) return;
@@ -892,7 +946,9 @@ startMultiplayer(players, lobbyCode, isHost) {
                             p.health -= this.player.shockwave * 25; 
                             p.vx += (p.x - this.player.x) * 0.05; 
                             p.vy += (p.y - this.player.y) * 0.05;
-                            if (p.health <= 0) this.processDeath(p, this.player);
+                            if (p.health <= 0) {
+                                this.processDeath(p, this.player);
+                            }
                         }
                     });
                 }
@@ -914,7 +970,9 @@ startMultiplayer(players, lobbyCode, isHost) {
                     
                     for (let s = 0; s < totalShots; s++) {
                         let finalAngle = startAngle + (s * spreadAngle);
-                        if (this.player.type === 'triangle') finalAngle += (Math.random() - 0.5) * 0.15;
+                        if (this.player.type === 'triangle') {
+                            finalAngle += (Math.random() - 0.5) * 0.15;
+                        }
                         this.fireProjectile(this.player, finalAngle);
                     }
                     this.player.fireCooldown = this.player.fireRate;
@@ -941,7 +999,9 @@ startMultiplayer(players, lobbyCode, isHost) {
 
         for (let i = this.particles.length - 1; i >= 0; i--) {
             this.particles[i].update();
-            if (this.particles[i].life <= 0) this.particles.splice(i, 1);
+            if (this.particles[i].life <= 0) {
+                this.particles.splice(i, 1);
+            }
         }
 
         for (let i = this.bots.length - 1; i >= 0; i--) {
@@ -967,6 +1027,7 @@ startMultiplayer(players, lobbyCode, isHost) {
                 bot.wantsShockwave = false;
                 this.playSoundAt('explosion', bot.x, bot.y, 0.4); 
                 this.spawnParticles(bot.x, bot.y, '#ffcc00', 20); 
+                
                 allPlayers.forEach(p => {
                     if (p === bot || p.isDead) return;
                     if (bot.isTeammate && (p.isPlayer || p.isTeammate)) return;
@@ -974,14 +1035,20 @@ startMultiplayer(players, lobbyCode, isHost) {
                         p.health -= bot.shockwave * 25; 
                         p.vx += (p.x - bot.x) * 0.05; 
                         p.vy += (p.y - bot.y) * 0.05;
-                        if (p.health <= 0) this.processDeath(p, bot);
+                        if (p.health <= 0) {
+                            this.processDeath(p, bot);
+                        }
                     }
                 });
             }
 
             if (bot.dashTimer > 0 && bot.afterburner > 0 && this.frameCount % 2 === 0) {
                 let fireProj = new Projectile(bot.x, bot.y, 0, bot);
-                fireProj.speed = 0; fireProj.life = 30 + (bot.afterburner * 10); fireProj.damage = 10 * bot.afterburner; fireProj.color = '#ffaa00'; fireProj.sizeScale = 1.5; 
+                fireProj.speed = 0; 
+                fireProj.life = 30 + (bot.afterburner * 10); 
+                fireProj.damage = 10 * bot.afterburner; 
+                fireProj.color = '#ffaa00'; 
+                fireProj.sizeScale = 1.5; 
                 this.projectiles.push(fireProj);
             }
 
@@ -992,7 +1059,8 @@ startMultiplayer(players, lobbyCode, isHost) {
                 if (!bot.isTeammate && (p.isPlayer || p.isTeammate)) enemyClose = true; 
                 
                 if (distance(bot.x, bot.y, p.x, p.y) < 600 && !(p.ghostDash && p.dashTimer > 0)) { 
-                    enemyClose = true; break; 
+                    enemyClose = true; 
+                    break; 
                 }
             }
             
@@ -1003,7 +1071,9 @@ startMultiplayer(players, lobbyCode, isHost) {
                 
                 for (let s = 0; s < totalShots; s++) {
                     let finalAngle = startAngle + (s * spreadAngle);
-                    if (bot.type === 'triangle') finalAngle += (Math.random() - 0.5) * 0.15;
+                    if (bot.type === 'triangle') {
+                        finalAngle += (Math.random() - 0.5) * 0.15;
+                    }
                     this.fireProjectile(bot, finalAngle);
                 }
                 bot.fireCooldown = bot.fireRate;
@@ -1020,7 +1090,9 @@ startMultiplayer(players, lobbyCode, isHost) {
 
         for (let i = 0; i < allPlayers.length; i++) {
             for (let j = i + 1; j < allPlayers.length; j++) {
-                const p1 = allPlayers[i]; const p2 = allPlayers[j];
+                const p1 = allPlayers[i]; 
+                const p2 = allPlayers[j];
+                
                 if (p1.isDead || p2.isDead) continue;
                 if ((p1.ghostDash && p1.dashTimer > 0) || (p2.ghostDash && p2.dashTimer > 0)) continue;
 
@@ -1028,9 +1100,13 @@ startMultiplayer(players, lobbyCode, isHost) {
                 const minDistance = p1.size + p2.size; 
                 
                 if (dist < minDistance && dist > 0) {
-                    const overlap = minDistance - dist; const nx = (p1.x - p2.x) / dist; const ny = (p1.y - p2.y) / dist;
-                    p1.x += nx * (overlap / 2); p1.y += ny * (overlap / 2);
-                    p2.x -= nx * (overlap / 2); p2.y -= ny * (overlap / 2);
+                    const overlap = minDistance - dist; 
+                    const nx = (p1.x - p2.x) / dist; 
+                    const ny = (p1.y - p2.y) / dist;
+                    p1.x += nx * (overlap / 2); 
+                    p1.y += ny * (overlap / 2);
+                    p2.x -= nx * (overlap / 2); 
+                    p2.y -= ny * (overlap / 2);
                     
                     let areTeammates = (p1.isPlayer || p1.isTeammate) && (p2.isPlayer || p2.isTeammate);
                     if (areTeammates) continue;
@@ -1040,14 +1116,19 @@ startMultiplayer(players, lobbyCode, isHost) {
                         p2.health -= Math.max(1, dmg - (p2.plating * 2)); 
                         p1.spikeCooldown = 30; 
                         this.spawnParticles(p2.x, p2.y, '#ff4444', 5);
-                        if (p2.health <= 0) this.processDeath(p2, p1);
+                        if (p2.health <= 0) {
+                            this.processDeath(p2, p1);
+                        }
                     }
+                    
                     if (p2.spikes > 0 && p2.spikeCooldown <= 0 && !p1.isDead) {
                         let dmg = p2.type === 'square' ? p2.spikes * 2.5 : p2.spikes * 5;
                         p1.health -= Math.max(1, dmg - (p1.plating * 2)); 
                         p2.spikeCooldown = 30;
                         this.spawnParticles(p1.x, p1.y, '#ff4444', 5);
-                        if (p1.health <= 0) this.processDeath(p1, p2);
+                        if (p1.health <= 0) {
+                            this.processDeath(p1, p2);
+                        }
                     }
                 }
             }
@@ -1073,7 +1154,10 @@ startMultiplayer(players, lobbyCode, isHost) {
                     proj.hitTargets.push(target);
                     
                     let dmg = proj.damage;
-                    if (target.health < target.maxHealth * 0.5) dmg *= (1 + proj.owner.executioner);
+                    if (target.health < target.maxHealth * 0.5) {
+                        dmg *= (1 + proj.owner.executioner);
+                    }
+                    
                     target.health -= Math.max(1, dmg - (target.plating * 2));
                     
                     this.playSoundAt('hit', target.x, target.y, 0.4);
@@ -1083,11 +1167,18 @@ startMultiplayer(players, lobbyCode, isHost) {
                         this.processDeath(target, proj.owner);
                     }
                     
-                    if (proj.pierce > 0) { proj.pierce--; hit = false; } else { hit = true; }
+                    if (proj.pierce > 0) { 
+                        proj.pierce--; 
+                        hit = false; 
+                    } else { 
+                        hit = true; 
+                    }
                     break;
                 }
             }
-            if (hit || proj.life <= 0) this.projectiles.splice(i, 1);
+            if (hit || proj.life <= 0) {
+                this.projectiles.splice(i, 1);
+            }
         }
 
         for (let i = this.orbs.length - 1; i >= 0; i--) {
@@ -1101,10 +1192,12 @@ startMultiplayer(players, lobbyCode, isHost) {
                 
                 let distP = distance(this.player.x, this.player.y, orb.x, orb.y);
                 let canPlayerTouch = (orb.lockedOwner !== this.player || orb.lockoutTimer <= 0);
+                
                 if (distP < pullRadius && canPlayerTouch) { 
                     orb.x += (this.player.x - orb.x) * 0.1; 
                     orb.y += (this.player.y - orb.y) * 0.1; 
                 }
+                
                 if (distP < this.player.size + orb.size && canPlayerTouch) {
                     collectedBy = this.player;
                 }
@@ -1113,13 +1206,16 @@ startMultiplayer(players, lobbyCode, isHost) {
             if (!collectedBy) {
                 for (let b of this.bots) {
                     if (b.isDead) continue;
+                    
                     let pullRadius = 150 + (b.magnet * 100);
                     let distB = distance(b.x, b.y, orb.x, orb.y);
                     let canBotTouch = (orb.lockedOwner !== b || orb.lockoutTimer <= 0);
+                    
                     if (distB < pullRadius && canBotTouch) {
                         orb.x += (b.x - orb.x) * 0.1;
                         orb.y += (b.y - orb.y) * 0.1;
                     }
+                    
                     if (distB < b.size + orb.size && canBotTouch) {
                         collectedBy = b;
                         break;
@@ -1129,14 +1225,18 @@ startMultiplayer(players, lobbyCode, isHost) {
 
             if (collectedBy) {
                 if (collectedBy === this.player) sounds.play('collect', 0.4); 
+                
                 if (orb.type === 'health') {
-                    if (collectedBy.health < collectedBy.maxHealth) collectedBy.health = Math.min(collectedBy.maxHealth, collectedBy.health + orb.healAmount);
+                    if (collectedBy.health < collectedBy.maxHealth) {
+                        collectedBy.health = Math.min(collectedBy.maxHealth, collectedBy.health + orb.healAmount);
+                    }
                 } else {
                     let finalVal = orb.value * collectedBy.scavenger;
                     collectedBy.points += finalVal;
                     collectedBy.upgradeProgress += finalVal;
                     if (collectedBy === this.player) pointsGainedThisFrame += finalVal;
                 }
+                
                 this.orbs.splice(i, 1);
             }
         }
@@ -1160,10 +1260,16 @@ startMultiplayer(players, lobbyCode, isHost) {
             for (let b of this.bots) {
                 if (!b.isRemotePlayer) {
                     syncData.push({ 
-                        id: b.id, x: Math.round(b.x), y: Math.round(b.y), 
-                        h: Math.round(b.health), d: b.isDead,
-                        pts: Math.round(b.points), type: b.type,
-                        c: b.color, u: b.upgrades || {}, n: b.name 
+                        id: b.id, 
+                        x: Math.round(b.x), 
+                        y: Math.round(b.y), 
+                        h: Math.round(b.health), 
+                        d: b.isDead,
+                        pts: Math.round(b.points), 
+                        type: b.type,
+                        c: b.color, 
+                        u: b.upgrades || {}, 
+                        n: b.name 
                     });
                 }
             }
@@ -1172,7 +1278,8 @@ startMultiplayer(players, lobbyCode, isHost) {
     }
 
     draw() {
-        this.ctx.fillStyle = '#111'; this.ctx.fillRect(0, 0, this.width, this.height);
+        this.ctx.fillStyle = '#111'; 
+        this.ctx.fillRect(0, 0, this.width, this.height);
         this.ctx.save();
         
         let targetCamX, targetCamY;
@@ -1190,16 +1297,21 @@ startMultiplayer(players, lobbyCode, isHost) {
         } else if (this.isCinematicIntro) {
             this.introTimer++;
             if (this.introTimer < 120) {
-                targetCamX = this.introTargetX; targetCamY = this.introTargetY; glideSpeed = 1.0; 
+                targetCamX = this.introTargetX; 
+                targetCamY = this.introTargetY; 
+                glideSpeed = 1.0; 
             } else if (this.introTimer < 240) {
                 let progress = (this.introTimer - 120) / 120;
                 let ease = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-                targetCamX = this.player.x; targetCamY = this.player.y;
+                targetCamX = this.player.x; 
+                targetCamY = this.player.y;
                 glideSpeed = 0.05 + (ease * 0.1); 
                 this.cameraZoom = this.introStartZoom + (1.0 - this.introStartZoom) * ease;
             } else {
                 this.isCinematicIntro = false;
-                targetCamX = this.player.x; targetCamY = this.player.y; this.cameraZoom = 1.0;
+                targetCamX = this.player.x; 
+                targetCamY = this.player.y; 
+                this.cameraZoom = 1.0;
             }
         } else {
             targetCamX = this.player.x;
@@ -1213,6 +1325,7 @@ startMultiplayer(players, lobbyCode, isHost) {
 
         let camX = this.width / 2 - this.camera.x * this.cameraZoom;
         let camY = this.height / 2 - this.camera.y * this.cameraZoom;
+        
         this.ctx.translate(camX, camY);
         this.ctx.scale(this.cameraZoom, this.cameraZoom);
         
@@ -1236,7 +1349,10 @@ startMultiplayer(players, lobbyCode, isHost) {
             this.ctx.restore();
         }
 
-        this.ctx.strokeStyle = '#222'; this.ctx.lineWidth = 1; const gridSize = 100;
+        this.ctx.strokeStyle = '#222'; 
+        this.ctx.lineWidth = 1; 
+        const gridSize = 100;
+        
         const startX = Math.floor(this.camera.x - (this.width / this.cameraZoom) / 2); 
         const startY = Math.floor(this.camera.y - (this.height / this.cameraZoom) / 2);
         const endX = startX + (this.width / this.cameraZoom) + gridSize;
@@ -1244,10 +1360,12 @@ startMultiplayer(players, lobbyCode, isHost) {
         
         this.ctx.beginPath();
         for (let x = startX - (startX % gridSize); x < endX; x += gridSize) {
-            this.ctx.moveTo(x, startY - gridSize); this.ctx.lineTo(x, endY);
+            this.ctx.moveTo(x, startY - gridSize); 
+            this.ctx.lineTo(x, endY);
         }
         for (let y = startY - (startY % gridSize); y < endY; y += gridSize) {
-            this.ctx.moveTo(startX - gridSize, y); this.ctx.lineTo(endX, y);
+            this.ctx.moveTo(startX - gridSize, y); 
+            this.ctx.lineTo(endX, y);
         }
         this.ctx.stroke();
 
@@ -1256,7 +1374,9 @@ startMultiplayer(players, lobbyCode, isHost) {
         this.projectiles.forEach(proj => proj.draw(this.ctx));
         this.bots.forEach(bot => { if (!bot.isDead) bot.draw(this.ctx) });
         
-        if (!this.isDemo && !this.player.isDead) this.player.draw(this.ctx);
+        if (!this.isDemo && !this.player.isDead) {
+            this.player.draw(this.ctx);
+        }
 
         this.ctx.restore();
 
