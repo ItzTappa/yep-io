@@ -187,19 +187,9 @@
         </div>
     </div>
 
-    <div id="mastery-modal" class="hidden" style="position: absolute; top:0; left:0; width:100vw; height:100dvh; background:rgba(0,0,0,0.8); z-index:300; display:flex; align-items:center; justify-content:center;">
-        <div class="settings-content text-center">
-            <h2 id="mastery-title" class="accent-text">CLASS MASTERY</h2>
-            <div id="mastery-progress-text" style="font-size:1.2rem; font-weight:bold; margin-bottom:10px;">0 / 1000 Kills</div>
-            <div class="menu-xp-bar-container" style="height:15px;"><div id="mastery-bar" style="width:0%; height:100%; background:linear-gradient(90deg, #ffd700, #ffaa00);"></div></div>
-            <button id="claim-mastery-btn" class="yellow-btn-solid hidden" style="margin-top:20px; width:100%;">CLAIM MASTERY SKIN</button>
-            <button id="equip-mastery-btn" class="dark-btn-outline hidden" style="margin-top:10px; width:100%;">EQUIP SKIN</button>
-            <button id="close-mastery-btn" class="dark-btn-outline" style="margin-top:20px; width:100%;">CLOSE</button>
-        </div>
-    </div>
-
     <div id="account-modal" class="hidden">
         <div class="settings-content">
+            
             <div id="account-logged-out">
                 <h2>ACCOUNT</h2>
                 <div style="display: flex; flex-direction: column; gap: 15px;">
@@ -215,7 +205,7 @@
             </div>
 
             <div id="account-logged-in" class="hidden">
-                <h2 style="color: var(--success);">LOGGED IN</h2>
+                <h2 style="color: #00ffcc;">LOGGED IN</h2>
                 <div style="text-align: center; font-size: 1.5rem; font-weight: bold; margin-bottom: 20px; color: white;" id="acc-display-name"></div>
                 <button id="acc-logout-btn" class="dark-btn-outline" style="width: 100%; margin-bottom: 30px;">LOG OUT</button>
                 
@@ -275,32 +265,20 @@
                     <h3>LEADERBOARD</h3>
                     <ul id="leaderboard-list"></ul>
                 </div>
-
+                
                 <div id="minimap-container">
                     <canvas id="minimap-canvas"></canvas>
-                    </div>
+                </div>
                 <div id="teammate-pointers"></div>
-                </div>
-
-            <div id="slot-machine-ui" class="hidden">
-                <div class="slot-machine-container">
-                    <div class="slot-header">🎰 LUCKY SLOTS 🎰</div>
-                    <div class="slot-reels">
-                        <div class="reel" id="reel-1"></div>
-                        <div class="reel" id="reel-2"></div>
-                        <div class="reel" id="reel-3"></div>
-                    </div>
-                    <div id="slot-result" class="slot-result">ROLLING...</div>
-                </div>
             </div>
         </div>
 
         <div id="notif-queue">
-            <div id="account-level-notif" class="notif-box hidden fade-out">
+            <div id="account-level-notif" class="notif-box notif-season hidden fade-out">
                 <div class="notif-text">SEASON LEVEL UP!</div>
                 <div class="notif-level">YOU REACHED LEVEL <span id="account-notif-level-num">2</span></div>
             </div>
-            <div id="level-up-notif" class="notif-box hidden fade-out">
+            <div id="level-up-notif" class="notif-box notif-upgrade hidden fade-out">
                 <div class="notif-text">UPGRADE READY</div>
                 <div class="notif-level">PRESS [1] [2] OR [3]</div>
             </div>
@@ -333,8 +311,6 @@
                 <div>Time Alive: <span id="go-time">0s</span></div>
             </div>
             
-            <div id="go-awards" class="go-awards"></div>
-
             <div id="go-xp-container" class="xp-gained">Season Level XP Earned: <span id="go-xp" class="accent-text">+0</span></div>
             <button id="return-lobby-btn">Return to Menu</button>
         </div>

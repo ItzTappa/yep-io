@@ -1,4 +1,4 @@
-import { Player, Bot, Orb, Projectile, Particle, SafeZone, AcceleratorPad, Asteroid, SlotMachineEntity, getWeightedUpgrades } from './entities.js';
+import { Player, Bot, Orb, Projectile, Particle, SafeZone, getWeightedUpgrades } from './entities.js';
 import { distance } from './utils.js';
 import { sounds } from './soundManager.js';
 import { UPGRADE_POOL } from './upgrades.js'; 
@@ -24,16 +24,8 @@ export class GameEngine {
         this.projectiles = []; 
         this.particles = [];
         this.teammates = []; 
-        
         this.safeZones = [];
         this.safeZoneSpawnTimer = 0;
-
-        this.pads = [];
-        this.asteroids = [];
-        this.slotMachineEntity = null;
-        
-        this.slotMachineActive = false;
-        this.slotMachineTick = 0;
         
         this.lobbyCode = null; 
         this.isHost = false; 
@@ -60,6 +52,7 @@ export class GameEngine {
         this.levelUpTimeout = null; 
         this.accountLevelUpTimeout = null; 
         this.animationId = null; 
+        
         this.isRunning = false; 
         
         this.fpsInterval = 1000 / 60; 
@@ -97,13 +90,6 @@ export class GameEngine {
         this.initInput();
     }
 
-    getVol() {
-        if (window.gameSettings && window.gameSettings.volume !== undefined) {
-            return window.gameSettings.volume;
-        }
-        return 1.0;
-    }
-
     initInput() {
         window.addEventListener('resize', () => {
             this.width = window.innerWidth; 
@@ -120,22 +106,19 @@ export class GameEngine {
             this.isTouchDevice = true;
         }, { passive: true });
 
-        window.addEventListener('mousemove', (e) => {
+        window.addEventListener('mousemove', (e) => { 
             if (!this.isTouchDevice) {
-                this.mouseX = e.clientX;
-                this.mouseY = e.clientY;
+                this.mouseX = e.clientX; 
+                this.mouseY = e.clientY; 
             }
         });
         
         window.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'INPUT') return;
-            
             const key = e.key.toLowerCase();
-            
-            if (window.gameSettings && window.gameSettings.keybinds && Object.values(window.gameSettings.keybinds).includes(key)) {
+            if (window.gameSettings && window.gameSettings.keybinds && Object.values(window.gameSettings.keybinds).includes(key)) { 
                 e.preventDefault(); 
             }
-            
             this.keys[key] = true;
             
             if (this.isChoosingUpgrade && !this.isDemo && !this.isGameOver) {
@@ -145,9 +128,9 @@ export class GameEngine {
             }
         });
         
-        window.addEventListener('keyup', (e) => {
+        window.addEventListener('keyup', (e) => { 
             if (e.target.tagName === 'INPUT') return;
-            this.keys[e.key.toLowerCase()] = false;
+            this.keys[e.key.toLowerCase()] = false; 
         });
 
         [1, 2, 3].forEach(num => {
@@ -182,7 +165,7 @@ export class GameEngine {
                         this.leftTouch.x = t.clientX;
                         this.leftTouch.y = t.clientY;
                         
-                        leftBase.style.bottom = 'auto';
+                        leftBase.style.bottom = 'auto'; 
                         leftBase.style.left = t.clientX + 'px';
                         leftBase.style.top = t.clientY + 'px';
                         leftBase.style.transform = 'translate(-50%, -50%)';
@@ -205,12 +188,10 @@ export class GameEngine {
                         let dy = t.clientY - this.leftTouch.originY;
                         let dist = Math.hypot(dx, dy);
                         let maxDist = 40; 
-                        
-                        if (dist > maxDist) {
-                            dx = (dx/dist) * maxDist;
-                            dy = (dy/dist) * maxDist;
+                        if (dist > maxDist) { 
+                            dx = (dx/dist) * maxDist; 
+                            dy = (dy/dist) * maxDist; 
                         }
-                        
                         leftStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
                     }
                 }
@@ -231,7 +212,6 @@ export class GameEngine {
                     }
                 }
             };
-            
             leftZone.addEventListener('touchend', endLeft);
             leftZone.addEventListener('touchcancel', endLeft);
         }
@@ -243,7 +223,7 @@ export class GameEngine {
                 if ((!this.leftTouch.active || t.identifier !== this.leftTouch.id) && 
                     e.target.id !== 'mobile-dash-btn' && 
                     e.target.id !== 'mobile-ability-btn' && 
-                    !e.target.closest('#joystick-left') && 
+                    !e.target.closest('#joystick-left') &&
                     !e.target.closest('.card')) { 
                     
                     this.aimTouchId = t.identifier;
@@ -262,7 +242,7 @@ export class GameEngine {
                     let dx = t.clientX - this.aimOriginX;
                     let dy = t.clientY - this.aimOriginY;
                     
-                    if (!this.isAimDragging && Math.hypot(dx, dy) > 10) {
+                    if (!this.isAimDragging && Math.hypot(dx, dy) > 10) { 
                         this.isAimDragging = true;
                     }
 
@@ -286,16 +266,12 @@ export class GameEngine {
             dashBtn.addEventListener('touchstart', (e) => {
                 if (this.isDemo || this.isGameOver) return;
                 e.preventDefault();
-                if (window.gameSettings && window.gameSettings.keybinds) {
-                    this.keys[window.gameSettings.keybinds.dash] = true;
-                }
+                if (window.gameSettings && window.gameSettings.keybinds) this.keys[window.gameSettings.keybinds.dash] = true;
             });
             dashBtn.addEventListener('touchend', (e) => {
                 if (this.isDemo || this.isGameOver) return;
                 e.preventDefault();
-                if (window.gameSettings && window.gameSettings.keybinds) {
-                    this.keys[window.gameSettings.keybinds.dash] = false;
-                }
+                if (window.gameSettings && window.gameSettings.keybinds) this.keys[window.gameSettings.keybinds.dash] = false;
             });
         }
         
@@ -303,16 +279,12 @@ export class GameEngine {
             abilityBtn.addEventListener('touchstart', (e) => {
                 if (this.isDemo || this.isGameOver) return;
                 e.preventDefault();
-                if (window.gameSettings && window.gameSettings.keybinds) {
-                    this.keys[window.gameSettings.keybinds.ability] = true;
-                }
+                if (window.gameSettings && window.gameSettings.keybinds) this.keys[window.gameSettings.keybinds.ability] = true;
             });
             abilityBtn.addEventListener('touchend', (e) => {
                 if (this.isDemo || this.isGameOver) return;
                 e.preventDefault();
-                if (window.gameSettings && window.gameSettings.keybinds) {
-                    this.keys[window.gameSettings.keybinds.ability] = false;
-                }
+                if (window.gameSettings && window.gameSettings.keybinds) this.keys[window.gameSettings.keybinds.ability] = false;
             });
         }
     }
@@ -320,7 +292,6 @@ export class GameEngine {
     playSoundAt(soundName, x, y, baseVolume = 1.0, category = 'combat', varyPitch = false) {
         const dist = distance(this.camera.x, this.camera.y, x, y);
         const maxHearingDistance = 2000; 
-        
         if (dist < maxHearingDistance) {
             const falloff = 1 - (dist / maxHearingDistance);
             const spatialVolume = baseVolume * (falloff * falloff);
@@ -333,7 +304,7 @@ export class GameEngine {
         let attempts = 0;
         
         while (!isSafe && attempts < 100) {
-            x = Math.random() * this.worldSize;
+            x = Math.random() * this.worldSize; 
             y = Math.random() * this.worldSize;
             isSafe = true;
             
@@ -360,14 +331,13 @@ export class GameEngine {
         let attempts = 0;
         
         while (!isSafe && attempts < 50) {
-            x = Math.random() * this.worldSize;
-            y = Math.random() * this.worldSize;
+            x = Math.random() * this.worldSize; 
+            y = Math.random() * this.worldSize; 
             isSafe = true;
-            
             for (let orb of this.orbs) {
-                if (orb.type === 'health' && distance(x, y, orb.x, orb.y) < minDist) {
-                    isSafe = false;
-                    break;
+                if (orb.type === 'health' && distance(x, y, orb.x, orb.y) < minDist) { 
+                    isSafe = false; 
+                    break; 
                 }
             }
             attempts++;
@@ -384,8 +354,8 @@ export class GameEngine {
 
     grantAccountXP(baseAmount, enemyPoints = 0) {
         let multiplier = 1;
-        if (this.player && enemyPoints > this.player.points) {
-            multiplier = enemyPoints / Math.max(1, this.player.points);
+        if (this.player && enemyPoints > this.player.points) { 
+            multiplier = enemyPoints / Math.max(1, this.player.points); 
         }
         multiplier = Math.min(multiplier, 5);
         
@@ -393,7 +363,6 @@ export class GameEngine {
         const finalXP = Math.floor(baseAmount * multiplier) + bonusFromScore;
         window.globalAccountXP += finalXP;
         this.matchXPEarned += finalXP;
-        
         this.checkAccountLevelUp();
     }
 
@@ -402,9 +371,9 @@ export class GameEngine {
         let leveledUp = false;
         
         while (window.globalAccountXP >= xpRequired) {
-            window.globalAccountLevel++;
+            window.globalAccountLevel++; 
             window.globalAccountXP -= xpRequired;
-            xpRequired = window.globalAccountLevel * 1000;
+            xpRequired = window.globalAccountLevel * 1000; 
             leveledUp = true;
         }
         
@@ -415,7 +384,7 @@ export class GameEngine {
                     sounds.play('level_up', 'alert');
                     document.getElementById('account-notif-level-num').innerText = window.globalAccountLevel;
                     
-                    notif.classList.remove('hidden', 'fade-out', 'show');
+                    notif.classList.remove('hidden', 'fade-out', 'show'); 
                     notif.classList.add('active'); 
                     
                     requestAnimationFrame(() => {
@@ -427,7 +396,6 @@ export class GameEngine {
                     if (this.accountLevelUpTimeout) {
                         clearTimeout(this.accountLevelUpTimeout);
                     }
-                    
                     this.accountLevelUpTimeout = setTimeout(() => {
                         if(notif) {
                             notif.classList.remove('show');
@@ -437,35 +405,6 @@ export class GameEngine {
                 }
             }
         }
-    }
-
-    addKillFeed(killer, victim) {
-        if (window.gameSettings && window.gameSettings.showNotifs === false) return;
-        
-        const feed = document.getElementById('kill-feed');
-        if (!feed) return;
-
-        const el = document.createElement('div');
-        el.className = 'kill-feed-item';
-        
-        let killerName = killer.isPlayer ? "YOU" : killer.name;
-        let victimName = victim.isPlayer ? "YOU" : victim.name;
-        
-        el.innerHTML = `<span style="color:${killer.color}">${killerName}</span> ⚔️ <span style="color:${victim.color}">${victimName}</span>`;
-        feed.appendChild(el);
-
-        while(feed.children.length > 5) {
-            feed.removeChild(feed.firstChild);
-        }
-
-        setTimeout(() => {
-            if (el.parentNode) {
-                el.style.opacity = '0';
-                setTimeout(() => {
-                    if (el.parentNode) el.remove();
-                }, 500);
-            }
-        }, 4000);
     }
 
     stopLoop() {
@@ -479,45 +418,53 @@ export class GameEngine {
     startDemo() {
         this.stopLoop();
         
-        if (document.getElementById('mobile-controls')) document.getElementById('mobile-controls').classList.add('hidden');
-        if (document.getElementById('game-ui')) document.getElementById('game-ui').classList.add('hidden');
-        if (document.querySelector('.hud')) document.querySelector('.hud').classList.add('hidden');
-        if (document.getElementById('br-ui')) document.getElementById('br-ui').classList.add('hidden');
+        const mobileControls = document.getElementById('mobile-controls');
+        if (mobileControls) mobileControls.classList.add('hidden');
+        
+        const gameUi = document.getElementById('game-ui');
+        if (gameUi) {
+            gameUi.classList.add('hidden');
+            gameUi.style.display = 'none';
+        }
+        
+        const hudEl = document.querySelector('.hud');
+        if (hudEl) {
+            hudEl.classList.add('hidden');
+            hudEl.style.display = 'none';
+        }
+        
+        const brUi = document.getElementById('br-ui');
+        if (brUi) brUi.classList.add('hidden');
 
         this.worldSize = 4000;
         this.stormActive = false;
-        this.isDemo = true;
-        this.isGameOver = false;
+        this.isDemo = true; 
+        this.isGameOver = false; 
         this.spectateTarget = null;
-        
-        this.bots = [];
-        this.orbs = [];
-        this.projectiles = [];
+        this.bots = []; 
+        this.orbs = []; 
+        this.projectiles = []; 
         this.particles = [];
-        this.teammates = [];
-        this.safeZones = [];
-        this.pads = [];
-        this.asteroids = [];
-        this.slotMachineEntity = null;
-        this.slotMachineActive = false;
-        
+        this.teammates = []; 
+        this.safeZones = []; 
         this.isCinematicIntro = false;
         
-        this.player = new Player(-10000, -10000, 'circle', "");
+        this.player = new Player(-10000, -10000, 'circle', ""); 
         this.player.health = 999999; 
 
         for(let i = 0; i < 30; i++) {
             const types = ['triangle', 'square', 'circle'];
-            this.bots.push(new Bot(Math.random() * this.worldSize, Math.random() * this.worldSize, types[Math.floor(Math.random() * 3)], Math.random() * 5000));
+            const type = types[Math.floor(Math.random() * 3)];
+            this.bots.push(new Bot(Math.random() * this.worldSize, Math.random() * this.worldSize, type, Math.random() * 5000));
         }
         
         for(let i = 0; i < 1000; i++) {
             this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
         }
 
-        this.demoTargetX = this.worldSize / 2;
+        this.demoTargetX = this.worldSize / 2; 
         this.demoTargetY = this.worldSize / 2;
-        this.camera.x = this.demoTargetX;
+        this.camera.x = this.demoTargetX; 
         this.camera.y = this.demoTargetY;
         this.cameraZoom = 1.0;
         
@@ -533,85 +480,79 @@ export class GameEngine {
         
         const mobileControls = document.getElementById('mobile-controls');
         if (mobileControls) {
-            if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-                mobileControls.classList.remove('hidden');
-            } else {
-                mobileControls.classList.add('hidden');
-            }
+            if ('ontouchstart' in window || navigator.maxTouchPoints > 0) mobileControls.classList.remove('hidden');
+            else mobileControls.classList.add('hidden');
         }
         
-        if (document.getElementById('br-ui')) {
-            document.getElementById('br-ui').classList.remove('hidden');
-        }
+        const brUi = document.getElementById('br-ui');
+        if (brUi) brUi.classList.remove('hidden');
         
-        this.worldSize = 8000;
-        this.stormActive = false;
-        this.isDemo = false;
-        this.isGameOver = false;
+        this.worldSize = 8000; 
+        this.stormActive = false; 
+
+        this.isDemo = false; 
+        this.isGameOver = false; 
         this.spectateTarget = null;
-        this.screenShake = 0;
-        
-        this.bots = [];
-        this.orbs = [];
-        this.projectiles = [];
+        this.bots = []; 
+        this.orbs = []; 
+        this.projectiles = []; 
         this.particles = [];
         this.teammates = [];
-        this.safeZones = [];
-        this.pads = [];
-        this.asteroids = [];
+        this.screenShake = 0;
         
+        this.safeZones = [];
         this.safeZoneSpawnTimer = 0;
-        this.slotMachineEntity = null;
-        this.slotMachineActive = false;
-        this.slotMachineTick = 0;
-
+        
         for(let i = 0; i < 3; i++) {
             let pos = this.getSafeSpawnPosition(4000);
             this.safeZones.push(new SafeZone(pos.x, pos.y));
         }
         
-        for(let i = 0; i < 15; i++) {
-            let pos = this.getSafeSpawnPosition(500);
-            this.asteroids.push(new Asteroid(pos.x, pos.y));
-        }
-        
-        for(let i = 0; i < 10; i++) {
-            let pos = this.getSafeSpawnPosition(500);
-            this.pads.push(new AcceleratorPad(pos.x, pos.y));
-        }
-        
-        let slotPos = this.getSafeSpawnPosition(1000);
-        this.slotMachineEntity = new SlotMachineEntity(slotPos.x, slotPos.y);
-
         this.player = new Player(this.worldSize / 2, this.worldSize / 2, playerClass, "");
-        this.player.damageDealt = 0; 
-        this.player.slotsUsed = 0;
 
-        this.camera.x = this.player.x;
+        this.camera.x = this.player.x; 
         this.camera.y = this.player.y;
-        this.cameraZoom = 1.0;
+        this.cameraZoom = 1.0; 
         this.isCinematicIntro = false;
         
-        this.pointsToNextUpgrade = 15;
-        this.matchStartTime = Date.now();
-        this.matchXPEarned = 0;
-        this.distanceTraveled = 0;
+        this.pointsToNextUpgrade = 15; 
+        this.matchStartTime = Date.now(); 
+        this.matchXPEarned = 0; 
+        this.distanceTraveled = 0; 
         this.lastPlayerPos = { x: this.player.x, y: this.player.y };
-        this.pendingUpgrades = 0;
+        this.pendingUpgrades = 0; 
         this.isChoosingUpgrade = false;
         
-        if (document.getElementById('upgrade-ui')) document.getElementById('upgrade-ui').classList.add('hidden');
-        if (document.getElementById('slot-machine-ui')) document.getElementById('slot-machine-ui').classList.add('hidden');
-        if (document.getElementById('game-ui')) document.getElementById('game-ui').classList.remove('hidden');
-        if (document.querySelector('.hud')) document.querySelector('.hud').classList.remove('hidden');
-        if (document.querySelector('.xp-bar-container')) document.querySelector('.xp-bar-container').classList.remove('hidden');
+        const upgradeUi = document.getElementById('upgrade-ui');
+        if (upgradeUi) upgradeUi.classList.add('hidden');
         
-        if (document.getElementById('kill-feed')) document.getElementById('kill-feed').innerHTML = ''; 
-        if (document.getElementById('xp-bar')) document.getElementById('xp-bar').style.width = '0%';
-        if (document.getElementById('level-display')) document.getElementById('level-display').innerText = '0 PTS';
+        const gameUi = document.getElementById('game-ui');
+        if (gameUi) {
+            gameUi.classList.remove('hidden');
+            gameUi.style.display = 'block';
+        }
+
+        const hudEl = document.querySelector('.hud');
+        if (hudEl) {
+            hudEl.classList.remove('hidden');
+            hudEl.style.display = 'block';
+        }
+
+        const xpBarContainer = document.querySelector('.xp-bar-container');
+        if (xpBarContainer) {
+            xpBarContainer.classList.remove('hidden');
+            xpBarContainer.style.display = 'block';
+        }
+        
+        const xpBar = document.getElementById('xp-bar');
+        if (xpBar) xpBar.style.width = '0%';
+        
+        const levelDisplay = document.getElementById('level-display');
+        if (levelDisplay) levelDisplay.innerText = '0 PTS';
         
         const lb = document.getElementById('leaderboard-container') || document.querySelector('.leaderboard');
         if (lb) {
+            lb.classList.remove('hidden');
             if (window.gameSettings && window.gameSettings.showLeaderboard === false) {
                 lb.style.display = 'none';
             } else {
@@ -634,35 +575,34 @@ export class GameEngine {
         
         for(let i = 0; i < 49; i++) {
             const types = ['triangle', 'square', 'circle']; 
+            const type = types[Math.floor(Math.random() * 3)]; 
             const spawn = this.getSafeSpawnPosition();
             
             let startingPts = 0;
-            if (matchSeed > 0.9) {
-                startingPts = Math.random() < 0.2 ? Math.random() * 5000 : Math.random() * 500;
-            } else if (matchSeed < 0.4) {
-                startingPts = Math.random() * 80;
-            } else {
-                startingPts = Math.random() < 0.1 ? Math.random() * 1000 : Math.random() * 100;
-            }
+            if (matchSeed > 0.9) startingPts = Math.random() < 0.2 ? Math.random() * 5000 : Math.random() * 500; 
+            else if (matchSeed < 0.4) startingPts = Math.random() * 80; 
+            else startingPts = Math.random() < 0.1 ? Math.random() * 1000 : Math.random() * 100; 
             
-            this.bots.push(new Bot(spawn.x, spawn.y, types[Math.floor(Math.random() * 3)], startingPts));
+            this.bots.push(new Bot(spawn.x, spawn.y, type, startingPts));
         }
         
         for(let i = 0; i < 3000; i++) {
-            this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
+            const x = Math.random() * this.worldSize;
+            const y = Math.random() * this.worldSize;
+            this.orbs.push(new Orb(x, y, 'xp', 1, null, 0));
         }
         
-        for(let i = 0; i < 83; i++) {
-            let pos = this.getSafeOrbPosition(500);
-            this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0));
+        for(let i = 0; i < 83; i++) { 
+            let pos = this.getSafeOrbPosition(500); 
+            this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0)); 
         }
 
         this.totalMatchPlayers = this.bots.length + 1; 
         
         this.isRunning = true;
         this.accumulator = 0;
-        this.lastTime = performance.now();
-        this.lastFpsTime = performance.now();
+        this.lastTime = performance.now(); 
+        this.lastFpsTime = performance.now(); 
         this.framesThisSecond = 0;
         
         this.animationId = requestAnimationFrame((t) => this.loop(t));
@@ -673,65 +613,56 @@ export class GameEngine {
         
         const mobileControls = document.getElementById('mobile-controls');
         if (mobileControls) {
-            if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-                mobileControls.classList.remove('hidden');
-            } else {
-                mobileControls.classList.add('hidden');
-            }
+            if ('ontouchstart' in window || navigator.maxTouchPoints > 0) mobileControls.classList.remove('hidden');
+            else mobileControls.classList.add('hidden');
         }
         
-        this.lobbyCode = lobbyCode;
+        this.lobbyCode = lobbyCode; 
         this.isHost = isHost || false;
         
-        this.worldSize = 8000;
-        this.stormActive = true;
+        this.worldSize = 8000; 
+        this.stormActive = true; 
         this.stormCenter = { x: this.worldSize / 2, y: this.worldSize / 2 };
         this.stormRadius = 6000; 
 
-        this.isDemo = false;
-        this.isGameOver = false;
+        this.isDemo = false; 
+        this.isGameOver = false; 
         this.spectateTarget = null;
-        this.screenShake = 0;
-        
-        this.bots = [];
-        this.orbs = [];
-        this.projectiles = [];
+        this.bots = []; 
+        this.orbs = []; 
+        this.projectiles = []; 
         this.particles = [];
         this.teammates = [];
-        this.safeZones = [];
-        this.pads = [];
-        this.asteroids = [];
-        this.slotMachineEntity = null;
-        this.slotMachineActive = false;
-
-        this.safeZoneSpawnTimer = 0;
+        this.screenShake = 0;
         
+        this.safeZones = [];
+        this.safeZoneSpawnTimer = 0;
         for(let i = 0; i < 3; i++) {
             let pos = this.getSafeSpawnPosition(4000);
             this.safeZones.push(new SafeZone(pos.x, pos.y));
         }
-        
-        if (this.isHost) {
-            for(let i = 0; i < 15; i++) {
-                let pos = this.getSafeSpawnPosition(500);
-                this.asteroids.push(new Asteroid(pos.x, pos.y));
-            }
-            for(let i = 0; i < 10; i++) {
-                let pos = this.getSafeSpawnPosition(500);
-                this.pads.push(new AcceleratorPad(pos.x, pos.y));
-            }
-            let slotPos = this.getSafeSpawnPosition(1000);
-            this.slotMachineEntity = new SlotMachineEntity(slotPos.x, slotPos.y);
+
+        const gameUi = document.getElementById('game-ui');
+        if (gameUi) {
+            gameUi.classList.remove('hidden');
+            gameUi.style.display = 'block';
         }
 
-        if (document.getElementById('game-ui')) document.getElementById('game-ui').classList.remove('hidden');
-        if (document.querySelector('.hud')) document.querySelector('.hud').classList.remove('hidden');
-        if (document.querySelector('.xp-bar-container')) document.querySelector('.xp-bar-container').classList.remove('hidden');
-        if (document.getElementById('kill-feed')) document.getElementById('kill-feed').innerHTML = ''; 
-        if (document.getElementById('br-ui')) document.getElementById('br-ui').classList.remove('hidden'); 
+        const hudEl = document.querySelector('.hud');
+        if (hudEl) {
+            hudEl.classList.remove('hidden');
+            hudEl.style.display = 'block';
+        }
+
+        const xpBarContainer = document.querySelector('.xp-bar-container');
+        if (xpBarContainer) {
+            xpBarContainer.classList.remove('hidden');
+            xpBarContainer.style.display = 'block';
+        }
         
         const lb = document.getElementById('leaderboard-container') || document.querySelector('.leaderboard');
         if (lb) {
+            lb.classList.remove('hidden');
             if (window.gameSettings && window.gameSettings.showLeaderboard === false) {
                 lb.style.display = 'none';
             } else {
@@ -749,6 +680,9 @@ export class GameEngine {
                 badgeUI.style.display = 'flex';
             }
         }
+        
+        const brUi = document.getElementById('br-ui');
+        if (brUi) brUi.classList.remove('hidden'); 
 
         let spawnX = this.worldSize / 2;
         let spawnY = this.worldSize / 2;
@@ -766,18 +700,15 @@ export class GameEngine {
                 let pClass = activeBtn ? activeBtn.dataset.class : 'triangle';
                 
                 this.player = new Player(px, py, pClass, "");
-                this.player.color = pData.color;
-                this.player.damageDealt = 0;
-                this.player.slotsUsed = 0;
-                
+                this.player.color = pData.color; 
                 this.introTargetX = px;
                 this.introTargetY = py;
             } else {
                 let bot = new Bot(px, py, pData.classType || 'square', 0);
                 bot.name = pData.name;
                 bot.color = pData.color;
-                bot.isTeammate = true;
-                bot.isRemotePlayer = true;
+                bot.isTeammate = true; 
+                bot.isRemotePlayer = true; 
                 bot.remoteId = pData.id; 
                 
                 this.bots.push(bot);
@@ -790,10 +721,11 @@ export class GameEngine {
             
             for(let i = 0; i < botsToSpawn; i++) {
                 const types = ['triangle', 'square', 'circle']; 
+                const type = types[Math.floor(Math.random() * 3)]; 
                 const spawn = this.getSafeSpawnPosition();
                 
-                let b = new Bot(spawn.x, spawn.y, types[Math.floor(Math.random() * 3)], 0);
-                b.id = 'b' + i;
+                let b = new Bot(spawn.x, spawn.y, type, 0);
+                b.id = 'b' + i; 
                 this.bots.push(b);
             }
             
@@ -822,8 +754,8 @@ export class GameEngine {
             this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
         }
         
-        for(let i = 0; i < 83; i++) {
-            let pos = this.getSafeOrbPosition(500);
+        for(let i = 0; i < 83; i++) { 
+            let pos = this.getSafeOrbPosition(500); 
             this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0));
         }
 
@@ -842,8 +774,8 @@ export class GameEngine {
                 data.bots.forEach(b => {
                     let bot = new Bot(b.x, b.y, b.type, 0);
                     bot.id = b.id;
-                    bot.points = b.pts;
-                    bot.name = b.n || bot.name;
+                    bot.points = b.pts; 
+                    bot.name = b.n || bot.name; 
                     if (b.c) bot.color = b.c;
                     
                     if (b.u && typeof bot.applyUpgrade === 'function') {
@@ -864,11 +796,11 @@ export class GameEngine {
                 data.bots.forEach(bd => {
                     let bot = this.bots.find(b => b.id === bd.id);
                     if (bot) {
-                        bot.x += (bd.x - bot.x) * 0.5;
+                        bot.x += (bd.x - bot.x) * 0.5; 
                         bot.y += (bd.y - bot.y) * 0.5;
                         bot.health = bd.h;
-                        bot.points = bd.pts;
-                        bot.name = bd.n || bot.name;
+                        bot.points = bd.pts; 
+                        bot.name = bd.n || bot.name; 
                         if (bd.c) bot.color = bd.c;
                         
                         if (bd.u && typeof bot.applyUpgrade === 'function') {
@@ -891,7 +823,7 @@ export class GameEngine {
                         newBot.id = bd.id;
                         newBot.health = bd.h;
                         newBot.points = bd.pts;
-                        newBot.name = bd.n || newBot.name;
+                        newBot.name = bd.n || newBot.name; 
                         if (bd.c) newBot.color = bd.c;
                         
                         if (bd.u && typeof newBot.applyUpgrade === 'function') {
@@ -900,7 +832,7 @@ export class GameEngine {
                                 for(let i = 0; i < hostTier; i++) newBot.applyUpgrade(key);
                             }
                         }
-                        newBot.upgradeProgress = -999999;
+                        newBot.upgradeProgress = -999999; 
                         this.bots.push(newBot);
                     }
                 });
@@ -909,8 +841,8 @@ export class GameEngine {
             window.gameSocket.on('teammateMoved', (data) => {
                 let tm = this.teammates.find(t => t.remoteId === data.id);
                 if (tm) {
-                    tm.x = data.x;
-                    tm.y = data.y;
+                    tm.x = data.x; 
+                    tm.y = data.y; 
                     tm.angle = data.angle;
                     if (data.health) tm.health = data.health;
                     if (data.maxHealth) tm.maxHealth = data.maxHealth;
@@ -944,28 +876,23 @@ export class GameEngine {
         this.camera.x = spawnX;
         this.camera.y = spawnY;
         
-        if (players.length <= 2) {
-            this.introStartZoom = 0.8;
-        } else if (players.length === 3) {
-            this.introStartZoom = 0.65;
-        } else {
-            this.introStartZoom = 0.5;
-        }
+        if (players.length <= 2) this.introStartZoom = 0.8;
+        else if (players.length === 3) this.introStartZoom = 0.65;
+        else this.introStartZoom = 0.5;
         
         this.cameraZoom = this.introStartZoom;
 
-        this.pointsToNextUpgrade = 15;
-        this.matchStartTime = Date.now();
-        this.matchXPEarned = 0;
-        this.distanceTraveled = 0;
+        this.pointsToNextUpgrade = 15; 
+        this.matchStartTime = Date.now(); 
+        this.matchXPEarned = 0; 
+        this.distanceTraveled = 0; 
         this.lastPlayerPos = { x: this.player.x, y: this.player.y };
-        this.pendingUpgrades = 0;
+        this.pendingUpgrades = 0; 
         this.isChoosingUpgrade = false;
 
-        if (document.getElementById('upgrade-ui')) document.getElementById('upgrade-ui').classList.add('hidden');
-        if (document.getElementById('slot-machine-ui')) document.getElementById('slot-machine-ui').classList.add('hidden');
-        if (document.getElementById('xp-bar')) document.getElementById('xp-bar').style.width = '0%';
-        if (document.getElementById('level-display')) document.getElementById('level-display').innerText = '0 PTS';
+        document.getElementById('upgrade-ui').classList.add('hidden');
+        document.getElementById('xp-bar').style.width = '0%';
+        document.getElementById('level-display').innerText = '0 PTS';
 
         this.totalMatchPlayers = 50; 
         
@@ -993,7 +920,6 @@ export class GameEngine {
         
         const list = document.getElementById('leaderboard-list'); 
         if (!list) return;
-        
         list.innerHTML = ''; 
         
         const displayLimit = window.innerWidth <= 768 ? 5 : 10;
@@ -1002,9 +928,7 @@ export class GameEngine {
             const li = document.createElement('li'); 
             let displayPts = p.points >= 1000 ? (p.points / 1000).toFixed(1) + 'k' : Math.floor(p.points);
             li.innerText = `#${index + 1} ${p.isPlayer ? "YOU" : p.name} - ${displayPts} Pts`;
-            if (p === this.player) {
-                li.style.color = '#00ffcc';
-            }
+            if (p === this.player) li.style.color = '#00ffcc';
             list.appendChild(li);
         });
     }
@@ -1025,7 +949,6 @@ export class GameEngine {
             let abDef = UPGRADE_POOL.find(u => u.id === this.player.activeAbility);
             let abName = abDef ? abDef.title.toUpperCase() : this.player.activeAbility.toUpperCase();
             let keyText = this.isTouchDevice ? 'TAP ABILITY' : '[E] TO USE';
-            
             container.innerHTML += `
                 <div class="upgrade-badge ability-badge" title="Active Ability">
                     <div class="badge-name">⭐ ${abName}</div>
@@ -1036,7 +959,6 @@ export class GameEngine {
         if (this.player && this.player.upgrades) {
             for (let upgId in this.player.upgrades) {
                 let def = UPGRADE_POOL.find(u => u && u.id === upgId);
-                
                 if (def && def.isActiveAbility) continue;
                 
                 let tier = this.player.upgrades[upgId];
@@ -1060,14 +982,14 @@ export class GameEngine {
         this.isChoosingUpgrade = true; 
         this.currentUpgradeChoices = getWeightedUpgrades(this.player, 3);
         
-        if (this.currentUpgradeChoices.length === 0) {
-            this.pendingUpgrades = 0;
-            this.isChoosingUpgrade = false;
+        if (this.currentUpgradeChoices.length === 0) { 
+            this.pendingUpgrades = 0; 
+            this.isChoosingUpgrade = false; 
             return; 
         }
 
         for (let i = 0; i < 3; i++) {
-            const choice = this.currentUpgradeChoices[i];
+            const choice = this.currentUpgradeChoices[i]; 
             const card = document.getElementById(`card-${i+1}`);
             
             if (choice && card) {
@@ -1090,7 +1012,7 @@ export class GameEngine {
                 
                 document.getElementById(`desc-${i+1}`).innerText = choice.desc;
                 card.style.display = 'block';
-            } else if (card) {
+            } else if (card) { 
                 card.style.display = 'none'; 
             }
         }
@@ -1110,12 +1032,10 @@ export class GameEngine {
         const ui = document.getElementById('upgrade-ui');
         if (ui) ui.classList.add('hidden');
         
-        this.isChoosingUpgrade = false;
+        this.isChoosingUpgrade = false; 
         this.pendingUpgrades--;
         
-        if (this.pendingUpgrades > 0) {
-            setTimeout(() => this.showNextUpgrade(), 200);
-        }
+        if (this.pendingUpgrades > 0) setTimeout(() => this.showNextUpgrade(), 200); 
     }
 
     triggerUpgradeReady() {
@@ -1132,7 +1052,7 @@ export class GameEngine {
             if (notif) {
                 sounds.play('upgrade_ready', 'alert'); 
                 
-                notif.classList.remove('hidden', 'fade-out', 'show');
+                notif.classList.remove('hidden', 'fade-out', 'show'); 
                 notif.classList.add('active'); 
                 
                 requestAnimationFrame(() => {
@@ -1161,76 +1081,6 @@ export class GameEngine {
         }
     }
 
-    activateSlotMachine() {
-        if (this.isDemo || this.isGameOver || !this.player) return;
-        
-        this.slotMachineActive = true;
-        this.slotMachineTick = 0;
-        
-        const ui = document.getElementById('slot-machine-ui');
-        if (ui) {
-            ui.classList.remove('hidden');
-            document.getElementById('slot-result').innerText = "ROLLING...";
-            document.getElementById('slot-result').style.color = "white";
-            
-            document.getElementById('reel-1').style.background = '#444';
-            document.getElementById('reel-2').style.background = '#444';
-            document.getElementById('reel-3').style.background = '#444';
-            
-            sounds.play('upgrade_ready', 'alert'); 
-        }
-    }
-
-    resolveSlotMachine() {
-        let r = Math.random();
-        let tier = 1; 
-        
-        if (r < 0.05) tier = 5; 
-        else if (r < 0.15) tier = 4; 
-        else if (r < 0.40) tier = 3; 
-        else if (r < 0.70) tier = 2; 
-        else tier = 1; 
-
-        const colors = { 1: '#cd7f32', 2: '#c0c0c0', 3: '#ffd700', 4: '#00ffcc', 5: '#ff00ff' };
-        let color = colors[tier];
-
-        document.getElementById('reel-1').style.background = color;
-        document.getElementById('reel-2').style.background = color;
-        document.getElementById('reel-3').style.background = color;
-
-        let choices = getWeightedUpgrades(this.player, 10);
-        let validChoices = choices.filter(c => {
-            if (c.isActiveAbility) return tier === 5;
-            return true;
-        });
-
-        if (validChoices.length === 0) {
-            validChoices = choices; 
-        }
-
-        if (validChoices.length > 0) {
-            let choice = validChoices[Math.floor(Math.random() * validChoices.length)];
-            let applyCount = tier;
-            
-            if (choice.isActiveAbility) {
-                applyCount = 1;
-            }
-
-            for(let i=0; i < applyCount; i++) {
-                this.player.applyUpgrade(choice.id);
-            }
-
-            document.getElementById('slot-result').innerText = `WON: ${choice.title.toUpperCase()} (T${tier})`;
-            document.getElementById('slot-result').style.color = color;
-            sounds.play('slot_win', 'alert'); // NEW SLOT WIN SOUND
-            this.updateUpgradeBadges();
-            
-        } else {
-            document.getElementById('slot-result').innerText = "MAXED OUT!";
-            document.getElementById('slot-result').style.color = "white";
-        }
-    }
-
     fireProjectile(owner, angle) {
         let p = new Projectile(owner.x, owner.y, angle, owner);
         this.projectiles.push(p);
@@ -1255,10 +1105,6 @@ export class GameEngine {
         
         if (!this.isDemo && this.player && distance(this.player.x, this.player.y, victim.x, victim.y) < 500) {
             this.screenShake = Math.max(this.screenShake, 15);
-        }
-        
-        if (killer && victim) {
-            this.addKillFeed(killer, victim);
         }
         
         if (victim === this.player && window.gameSocket && this.lobbyCode) {
@@ -1385,31 +1231,6 @@ export class GameEngine {
         const goTime = document.getElementById('go-time');
         if (goTime) goTime.innerText = `${timeAlive}s`;
         
-        const goAwards = document.getElementById('go-awards');
-        if (goAwards) {
-            goAwards.innerHTML = '';
-            
-            let topDamage = allPlayers.reduce((a, b) => (a.damageDealt || 0) > (b.damageDealt || 0) ? a : b);
-            
-            if (this.player.kills > 15) {
-                goAwards.innerHTML += `<div class="award-box"><div class="award-title">THE TERMINATOR</div><div class="award-desc">Absolute slaughter. Insane kills.</div></div>`;
-            } else if (this.player.kills === 0 && timeAlive > 180) {
-                goAwards.innerHTML += `<div class="award-box"><div class="award-title">PACIFIST</div><div class="award-desc">Survived completely peacefully.</div></div>`;
-            }
-            
-            if (topDamage === this.player && this.player.damageDealt > 2000) {
-                goAwards.innerHTML += `<div class="award-box"><div class="award-title">HEAVY HITTER</div><div class="award-desc">Dealt the most damage in the lobby.</div></div>`;
-            }
-            
-            if (this.distanceTraveled > 25000) {
-                goAwards.innerHTML += `<div class="award-box"><div class="award-title">TRACK STAR</div><div class="award-desc">Ran an absolute marathon.</div></div>`;
-            }
-            
-            if (this.player.slotsUsed > 0) {
-                goAwards.innerHTML += `<div class="award-box"><div class="award-title">HIGH ROLLER</div><div class="award-desc">Hit the lucky slot machine.</div></div>`;
-            }
-        }
-        
         const gameOverScreen = document.getElementById('game-over-screen');
         if (gameOverScreen) gameOverScreen.classList.remove('hidden');
     }
@@ -1417,9 +1238,7 @@ export class GameEngine {
     update() {
         this.frameCount++;
         
-        if (this.frameCount % 30 === 0) {
-            this.updateLeaderboard();
-        }
+        if (this.frameCount % 30 === 0) this.updateLeaderboard(); 
 
         let pointsGainedThisFrame = 0;
 
@@ -1463,91 +1282,6 @@ export class GameEngine {
             }
         }
 
-        if (this.slotMachineEntity && !this.slotMachineEntity.isDead) {
-            this.slotMachineEntity.update();
-            
-            if (!this.isDemo && this.player && !this.player.isDead) {
-                if (distance(this.player.x, this.player.y, this.slotMachineEntity.x, this.slotMachineEntity.y) < this.player.size + this.slotMachineEntity.size) {
-                    this.slotMachineEntity.isDead = true;
-                    this.player.slotsUsed = (this.player.slotsUsed || 0) + 1;
-                    this.activateSlotMachine();
-                }
-            }
-        }
-        
-        if (!this.slotMachineEntity || this.slotMachineEntity.isDead) {
-            if (!this.slotMachineActive && Math.random() < 0.0005) {
-                let slotPos = this.getSafeSpawnPosition(1000);
-                this.slotMachineEntity = new SlotMachineEntity(slotPos.x, slotPos.y);
-            }
-        }
-
-        if (this.slotMachineActive) {
-            this.slotMachineTick++;
-            
-            if (this.slotMachineTick % 5 === 0 && this.slotMachineTick < 120) {
-                const colors = ['#cd7f32', '#c0c0c0', '#ffd700', '#00ffcc', '#ff00ff'];
-                if (document.getElementById('reel-1')) document.getElementById('reel-1').style.background = colors[Math.floor(Math.random() * colors.length)];
-                if (document.getElementById('reel-2')) document.getElementById('reel-2').style.background = colors[Math.floor(Math.random() * colors.length)];
-                if (document.getElementById('reel-3')) document.getElementById('reel-3').style.background = colors[Math.floor(Math.random() * colors.length)];
-                
-                sounds.play('slot_spin', 'ui'); // NEW SLOT SPIN SOUND
-            }
-            
-            if (this.slotMachineTick === 120) {
-                this.resolveSlotMachine();
-            }
-            
-            if (this.slotMachineTick === 300) {
-                const ui = document.getElementById('slot-machine-ui');
-                if (ui) ui.classList.add('hidden');
-                this.slotMachineActive = false;
-            }
-        }
-
-        this.pads.forEach(pad => {
-            pad.update();
-            allPlayers.forEach(p => {
-                if (!p.isDead && !p.isCloaked && distance(p.x, p.y, pad.x, pad.y) < pad.size + p.size) {
-                    if (!pad.cooldowns.has(p)) {
-                        pad.trigger(p);
-                        // NEW PAD SOUND!
-                        this.playSoundAt('boost_pad', pad.x, pad.y, 0.7, 'pickup');
-                        if (p === this.player) this.screenShake = Math.max(this.screenShake, 5);
-                    }
-                }
-            });
-        });
-
-        for (let i = this.asteroids.length - 1; i >= 0; i--) {
-            let ast = this.asteroids[i];
-            ast.update();
-            
-            if (ast.isDead) {
-                // NEW ASTEROID BOOM SOUND!
-                this.playSoundAt('asteroid_boom', ast.x, ast.y, 1.0, 'heavy');
-                this.spawnParticles(ast.x, ast.y, '#ff4400', 40);
-                
-                if (!this.isDemo && this.player && distance(this.player.x, this.player.y, ast.x, ast.y) < 800) {
-                    this.screenShake = Math.max(this.screenShake, 20);
-                }
-                
-                allPlayers.forEach(p => {
-                    if (!p.isDead && distance(p.x, p.y, ast.x, ast.y) < 300) {
-                        p.health -= 150;
-                        if (p.health <= 0) this.processDeath(p, {name: "ASTEROID", isPlayer: false, color: "#ff4400"});
-                    }
-                });
-                
-                this.asteroids.splice(i, 1);
-            }
-        }
-        
-        if (this.asteroids.length < 15 && Math.random() < 0.01) {
-            let pos = this.getSafeSpawnPosition(500);
-            this.asteroids.push(new Asteroid(pos.x, pos.y));
-        }
-
         allPlayers.forEach(p => {
             if (p.isDead) return;
 
@@ -1573,15 +1307,12 @@ export class GameEngine {
                     if (vol) this.playSoundAt('ability_emp', p.x, p.y, vol, 'ability');
                     this.spawnParticles(p.x, p.y, '#00ffff', 40);
                     if (p.isPlayer) this.screenShake = Math.max(this.screenShake, 15);
-                    
                     allPlayers.forEach(e => {
                         if (e !== p && !e.isDead && !e.isTeammate && distance(p.x, p.y, e.x, e.y) < 600) {
                             e.fireCooldown = 180;
                             e.dashCooldown = 180;
                             e.health -= 20;
-                            if (p.isPlayer) p.damageDealt = (p.damageDealt || 0) + 20;
-                            e.vx *= 0.2; 
-                            e.vy *= 0.2;
+                            e.vx *= 0.2; e.vy *= 0.2;
                             if (e.health <= 0) this.processDeath(e, p);
                         }
                     });
@@ -1599,7 +1330,6 @@ export class GameEngine {
                     allPlayers.forEach(e => {
                         if (e !== p && !e.isDead && !e.isTeammate && distance(p.x, p.y, e.x, e.y) < 600) {
                             e.health -= 100;
-                            if (p.isPlayer) p.damageDealt = (p.damageDealt || 0) + 100;
                             e.vx += (e.x - p.x) * 0.1;
                             e.vy += (e.y - p.y) * 0.1;
                             if (e.health <= 0) this.processDeath(e, p);
@@ -1654,7 +1384,6 @@ export class GameEngine {
                     allPlayers.forEach(e => {
                         if (e !== p && !e.isDead && !e.isTeammate && distance(p.x, p.y, e.x, e.y) < 250) {
                             e.health -= 15;
-                            if (p.isPlayer) p.damageDealt = (p.damageDealt || 0) + 15;
                             this.spawnParticles(e.x, e.y, '#ff0000', 3);
                             if (e.health <= 0) this.processDeath(e, p);
                         }
@@ -1664,7 +1393,6 @@ export class GameEngine {
                     allPlayers.forEach(e => {
                         if (e !== p && !e.isDead && !e.isTeammate && distance(p.x, p.y, e.x, e.y) < p.size + e.size + 20) {
                             e.health -= 5; 
-                            if (p.isPlayer) p.damageDealt = (p.damageDealt || 0) + 5;
                             if (e.health <= 0) this.processDeath(e, p);
                         }
                     });
@@ -1685,7 +1413,7 @@ export class GameEngine {
                             if (p.health <= 0) {
                                 this.processDeath(p, { 
                                     name: "THE STORM", x: this.stormCenter.x, y: this.stormCenter.y, 
-                                    vampirism: 0, medicDrop: 0, isDead: false, color: "#8a2be2"
+                                    vampirism: 0, medicDrop: 0, isDead: false 
                                 }); 
                             }
                         }
@@ -1835,7 +1563,6 @@ export class GameEngine {
                         if (distance(this.player.x, this.player.y, p.x, p.y) < 250) { 
                             if (!(p.abilityTimer > 0 && p.activeAbility === 'shield') && !(p.abilityTimer > 0 && p.activeAbility === 'juggernaut')) {
                                 p.health -= this.player.shockwave * 25; 
-                                this.player.damageDealt = (this.player.damageDealt || 0) + (this.player.shockwave * 25);
                             }
                             p.vx += (p.x - this.player.x) * 0.05; 
                             p.vy += (p.y - this.player.y) * 0.05;
@@ -2030,8 +1757,7 @@ export class GameEngine {
                     if (p1.spikes > 0 && p1.spikeCooldown <= 0) {
                         let dmg = p1.type === 'square' ? p1.spikes * 2.5 : p1.spikes * 5;
                         if (!(p2.abilityTimer > 0 && (p2.activeAbility === 'shield' || p2.activeAbility === 'juggernaut'))) {
-                            p2.health -= Math.max(1, dmg - (p2.plating * 2));
-                            if (p1.isPlayer) p1.damageDealt = (p1.damageDealt || 0) + dmg; 
+                            p2.health -= Math.max(1, dmg - (p2.plating * 2)); 
                             this.spawnParticles(p2.x, p2.y, '#ff4444', 5);
                             this.playSoundAt('take_damage', p2.x, p2.y, 0.4, 'heavy');
                             if (p2 === this.player) this.screenShake = Math.max(this.screenShake, 8);
@@ -2046,7 +1772,6 @@ export class GameEngine {
                         let dmg = p2.type === 'square' ? p2.spikes * 2.5 : p2.spikes * 5;
                         if (!(p1.abilityTimer > 0 && (p1.activeAbility === 'shield' || p1.activeAbility === 'juggernaut'))) {
                             p1.health -= Math.max(1, dmg - (p1.plating * 2)); 
-                            if (p2.isPlayer) p2.damageDealt = (p2.damageDealt || 0) + dmg;
                             this.spawnParticles(p1.x, p1.y, '#ff4444', 5);
                             this.playSoundAt('take_damage', p1.x, p1.y, 0.4, 'heavy');
                             if (p1 === this.player) this.screenShake = Math.max(this.screenShake, 8);
@@ -2062,27 +1787,6 @@ export class GameEngine {
 
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             const proj = this.projectiles[i];
-            let hitObj = false;
-
-            for (let a of this.asteroids) {
-                if (distance(proj.x, proj.y, a.x, a.y) < a.size) {
-                    a.health -= proj.damage;
-                    this.spawnParticles(proj.x, proj.y, proj.color, 3);
-                    this.playSoundAt('take_damage', a.x, a.y, 0.2, 'combat');
-                    hitObj = true;
-                    break;
-                }
-            }
-
-            if (hitObj) {
-                if (proj.pierce > 0) {
-                    proj.pierce--;
-                } else {
-                    this.projectiles.splice(i, 1);
-                    continue;
-                }
-            }
-
             proj.update(allPlayers); 
             
             let hitSafeZone = false;
@@ -2121,10 +1825,7 @@ export class GameEngine {
                     if (!immune) {
                         let dmg = proj.damage;
                         if (target.health < target.maxHealth * 0.5) dmg *= (1 + proj.owner.executioner);
-                        let finalDmg = Math.max(1, dmg - (target.plating * 2));
-                        target.health -= finalDmg;
-                        
-                        if (proj.owner.isPlayer) proj.owner.damageDealt = (proj.owner.damageDealt || 0) + finalDmg;
+                        target.health -= Math.max(1, dmg - (target.plating * 2));
                         
                         this.playSoundAt('take_damage', target.x, target.y, 0.3, 'heavy');
                         if (proj.owner === this.player) {
@@ -2384,12 +2085,6 @@ export class GameEngine {
         this.ctx.stroke();
 
         this.safeZones.forEach(sz => sz.draw(this.ctx));
-        
-        this.pads.forEach(pad => pad.draw(this.ctx));
-        this.asteroids.forEach(ast => ast.draw(this.ctx));
-        if (this.slotMachineEntity && !this.slotMachineEntity.isDead) {
-            this.slotMachineEntity.draw(this.ctx);
-        }
 
         this.orbs.forEach(orb => orb.draw(this.ctx));
         this.particles.forEach(p => p.draw(this.ctx));
@@ -2461,8 +2156,6 @@ export class GameEngine {
         ctx.lineWidth = 2;
         ctx.strokeRect(0, 0, 220, 220);
 
-        let aliveCount = (this.player && !this.player.isDead) ? 1 : 0;
-
         const drawDot = (x, y, color, size) => {
             ctx.fillStyle = color;
             ctx.beginPath();
@@ -2472,7 +2165,6 @@ export class GameEngine {
 
         this.bots.forEach(b => {
             if (!b.isDead) {
-                aliveCount++;
                 if (b.isTeammate) drawDot(b.x, b.y, '#00ffcc', 3);
                 else drawDot(b.x, b.y, '#ff4444', 2);
             }
@@ -2488,17 +2180,6 @@ export class GameEngine {
             const cx = (this.camera.x * scale) - viewW/2;
             const cy = (this.camera.y * scale) - viewH/2;
             ctx.strokeRect(cx, cy, viewW, viewH);
-        }
-
-        const countDisplay = document.getElementById('player-count-display');
-        if (countDisplay) {
-            let isMultiplayer = this.lobbyCode || this.isHost;
-            if (isMultiplayer) {
-                countDisplay.style.display = 'block';
-                countDisplay.innerText = `ALIVE: ${aliveCount}`;
-            } else {
-                countDisplay.style.display = 'none';
-            }
         }
     }
 

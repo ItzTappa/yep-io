@@ -157,7 +157,6 @@ export class Entity {
 
     applyUpgrade(upgradeId) {
         if (!UPGRADE_POOL) return;
-        
         const upgradeDef = UPGRADE_POOL.find(u => u && u.id === upgradeId);
         if (!upgradeDef) return;
 
@@ -214,7 +213,6 @@ export class Entity {
 
     dash(dx, dy) {
         let dashCost = Math.max(0, 2 - this.efficiency); 
-        
         if (this.dashCooldown <= 0 && this.points >= dashCost) {
             this.points -= dashCost; 
             this.upgradeProgress = Math.max(0, this.upgradeProgress - dashCost); 
@@ -226,7 +224,6 @@ export class Entity {
             }
             
             let length = Math.hypot(dx, dy);
-            
             if (length === 0) { 
                 dx = Math.cos(this.angle); 
                 dy = Math.sin(this.angle); 
@@ -261,7 +258,6 @@ export class Entity {
         
         if (this.abilityTimer > 0) {
             this.abilityTimer--;
-            
             if (this.activeAbility === 'cloak') {
                 this.isCloaked = true;
             } else {
@@ -328,19 +324,15 @@ export class Entity {
             let armorOffset = this.bodyVisual === 'armor' ? (4 + armorTier + (4 + armorTier * 1.5) / 2) : 0;
             
             let backOffset = this.type === 'circle' ? -this.size : -this.size / 2;
-            
             if (this.bodyVisual === 'armor') {
                 backOffset -= armorOffset;
             }
             
             let vSpread = this.type === 'square' ? this.size * 0.35 : this.size * 0.45;
-            
             let px1 = this.x + Math.cos(this.angle) * (backOffset - tLen) - Math.sin(this.angle) * (-vSpread);
             let py1 = this.y + Math.sin(this.angle) * (backOffset - tLen) + Math.cos(this.angle) * (-vSpread);
-            
             let px2 = this.x + Math.cos(this.angle) * (backOffset - tLen) - Math.sin(this.angle) * (vSpread);
             let py2 = this.y + Math.sin(this.angle) * (backOffset - tLen) + Math.cos(this.angle) * (vSpread);
-            
             let pCount = isDashing ? 3 + tTier : 1 + Math.floor(tTier / 2);
             
             let pColor = '#ffaa00'; 
@@ -405,7 +397,6 @@ export class Entity {
         if (!ctx || !window.gameSettings) return;
 
         let isPreviewCanvas = false;
-        
         if (ctx.canvas && ctx.canvas.id) {
             let cid = ctx.canvas.id.toLowerCase();
             if (cid.includes('preview') || cid.includes('lobby')) isPreviewCanvas = true;
@@ -522,7 +513,6 @@ export class Entity {
         }
 
         let armorOffset = 0;
-        
         if (this.bodyVisual === 'armor') {
             let armorTier = Math.max(this.upgrades['maxHealth'] || 0, this.upgrades['plating'] || 0);
             armorOffset = 4 + armorTier; 
@@ -724,7 +714,7 @@ export class Entity {
             ctx.translate(this.x, this.y); 
             ctx.rotate(this.angle); 
             
-            if (['spectre', 'luminescent', 'celestial', 'voidwalker', 'inferno', 'neon', 'dark', 'glitch', 'mastery_gold'].includes(skinType)) { 
+            if (['spectre', 'luminescent', 'celestial', 'voidwalker', 'inferno', 'neon', 'dark', 'glitch'].includes(skinType)) { 
                 if (window.gameSettings && window.gameSettings.highQuality) {
                     ctx.shadowBlur = 20; 
                 }
@@ -1209,42 +1199,6 @@ export class Entity {
                 ctx.fill(); 
                 ctx.restore(); 
             }
-            else if (skinType === 'mastery_gold') {
-                // GOLDEN MASTERY SKIN LOGIC
-                ctx.save(); 
-                ctx.beginPath(); 
-                if (this.type === 'circle') {
-                    ctx.arc(0, 0, this.size, 0, Math.PI * 2); 
-                } else if (this.type === 'square') {
-                    ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size); 
-                } else { 
-                    ctx.moveTo(this.size, 0); 
-                    ctx.lineTo(-this.size / 2, -this.size * 0.866); 
-                    ctx.lineTo(-this.size / 2, this.size * 0.866); 
-                    ctx.closePath(); 
-                } 
-                ctx.clip(); 
-                
-                let timeGrad = (Date.now() / 1000) % (Math.PI * 2);
-                let gradient = ctx.createLinearGradient(-this.size, -this.size, this.size, this.size);
-                gradient.addColorStop(0, '#ffd700');
-                gradient.addColorStop(0.5, '#ffffff');
-                gradient.addColorStop(1, '#ffaa00');
-                
-                ctx.fillStyle = gradient;
-                ctx.fillRect(-this.size, -this.size, this.size * 2, this.size * 2);
-                
-                ctx.shadowColor = '#ffd700';
-                ctx.shadowBlur = 20 + Math.sin(timeGrad) * 10;
-                
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.arc(0, 0, this.size * 0.4, 0, Math.PI * 2);
-                ctx.stroke();
-
-                ctx.restore();
-            }
             else {
                 ctx.beginPath(); 
                 const innerSize = this.size * 0.5;
@@ -1288,12 +1242,10 @@ export class Entity {
 
         if (this.orbiters > 0 && !this.isCloaked && !isPreviewCanvas) {
             ctx.fillStyle = '#a855f7'; 
-            
             if (window.gameSettings && window.gameSettings.highQuality) { 
                 ctx.shadowBlur = 10; 
                 ctx.shadowColor = '#a855f7'; 
             }
-            
             let t = (Date.now() / 500) * this.overclock; 
             let selfSpin = (Date.now() / 80) * this.overclock; 
 
@@ -1303,7 +1255,6 @@ export class Entity {
             
             for (let i = 0; i < this.orbiters; i++) {
                 let angle = t + (i / this.orbiters) * Math.PI * 2; 
-                
                 let ox = this.x + swayX + Math.cos(angle) * (this.size + 25); 
                 let oy = this.y + swayY + Math.sin(angle) * (this.size + 25);
                 
@@ -1319,7 +1270,6 @@ export class Entity {
                 for (let j = 0; j < teeth * 2; j++) {
                     let r = (j % 2 === 0) ? outerRadius : innerRadius; 
                     let a = (j / (teeth * 2)) * Math.PI * 2;
-                    
                     if (j === 0) { 
                         ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r); 
                     } else { 
@@ -1342,6 +1292,7 @@ export class Entity {
 
         // FLOATING FACING ARROW
         if (this.isPlayer && this.frontVisual !== 'gun' && this.frontVisual !== 'spikes' && !this.isCloaked && !isPreviewCanvas) {
+            
             let timeBob = Math.sin(Date.now() / 300) * 1.5; 
             
             let localVx = this.vx * Math.cos(-this.angle) - this.vy * Math.sin(-this.angle);
@@ -1415,11 +1366,9 @@ export class Entity {
                 }
                 
                 let displayName = this.name;
-                
                 if (this.equipped.Banner && ITEMS_DB && ITEMS_DB[this.equipped.Banner]) { 
                     displayName = `${ITEMS_DB[this.equipped.Banner].value} ${this.name}`; 
                 }
-                
                 ctx.fillText(displayName, this.x, this.y - this.size - 20 - topOffset); 
                 ctx.shadowBlur = 0; 
             }
@@ -1436,7 +1385,6 @@ export class Entity {
             ctx.fillRect(this.x - 20, this.y + this.size + 22 + bottomOffset, 40, 3);
             
             let dashCost = Math.max(0, 2 - this.efficiency); 
-            
             if (this.dashCooldown <= 0) {
                 if (this.points >= dashCost) { 
                     ctx.fillStyle = '#ffe600'; 
@@ -1605,7 +1553,6 @@ export class Bot extends Entity {
             this.upgradeProgress -= this.botPointsToNextUpgrade; 
             this.upgradeCount++; 
             this.botPointsToNextUpgrade = Math.floor(15 + (this.upgradeCount * 12) + (Math.pow(this.upgradeCount, 1.7) * 1.5));
-            
             let choices = getWeightedUpgrades(this, 1); 
             if (choices.length > 0) {
                 this.applyUpgrade(choices[0].id);
@@ -1846,10 +1793,8 @@ export class Projectile {
             if (nearest) { 
                 let targetAngle = Math.atan2(nearest.y - this.y, nearest.x - this.x); 
                 let diff = targetAngle - this.angle; 
-                
                 while (diff < -Math.PI) diff += Math.PI * 2; 
                 while (diff > Math.PI) diff -= Math.PI * 2; 
-                
                 if (diff > 0) {
                     this.angle += Math.min(this.turnSpeed, diff); 
                 } else {
@@ -1873,10 +1818,8 @@ export class Projectile {
             if (nearest) { 
                 let targetAngle = Math.atan2(nearest.y - this.y, nearest.x - this.x); 
                 let diff = targetAngle - this.angle; 
-                
                 while (diff < -Math.PI) diff += Math.PI * 2; 
                 while (diff > Math.PI) diff -= Math.PI * 2; 
-                
                 if (Math.abs(diff) < 0.4) {
                     this.angle += diff * 0.05; 
                 }
@@ -1978,12 +1921,10 @@ export class Particle {
         this.x = x; 
         this.y = y; 
         this.color = color; 
-        
         const angle = Math.random() * Math.PI * 2; 
         const speed = Math.random() * 4 + 1;
         this.vx = Math.cos(angle) * speed; 
         this.vy = Math.sin(angle) * speed; 
-        
         this.life = 1.0; 
         this.decay = Math.random() * 0.05 + 0.02; 
         this.size = Math.random() * 4 + 2;
@@ -2008,188 +1949,6 @@ export class Particle {
         ctx.beginPath(); 
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); 
         ctx.fill(); 
-        ctx.restore();
-    }
-}
-
-// ==========================================
-// NEW MAP INTERACTABLES
-// ==========================================
-
-export class AcceleratorPad {
-    constructor(x, y) {
-        this.x = x;
-        this.y = y;
-        this.size = 60;
-        this.angle = Math.random() * Math.PI * 2;
-        this.cooldowns = new Map();
-    }
-    
-    update() {
-        for (let [ent, cd] of this.cooldowns) {
-            if (cd > 0) {
-                this.cooldowns.set(ent, cd - 1);
-            } else {
-                this.cooldowns.delete(ent);
-            }
-        }
-    }
-    
-    trigger(entity) {
-        if (this.cooldowns.has(entity)) return;
-        this.cooldowns.set(entity, 120); 
-        
-        let boost = 25;
-        entity.vx += Math.cos(this.angle) * boost;
-        entity.vy += Math.sin(this.angle) * boost;
-    }
-    
-    draw(ctx) {
-        ctx.save();
-        ctx.translate(this.x, this.y);
-        ctx.rotate(this.angle);
-        ctx.strokeStyle = '#00ffcc';
-        ctx.lineWidth = 6;
-        
-        if (window.gameSettings && window.gameSettings.highQuality) {
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = '#00ffcc';
-        }
-        
-        for(let i=0; i<3; i++) {
-            let offset = -20 + (i * 20) + (Date.now() / 10 % 20); 
-            if (offset > 40) offset -= 60;
-            
-            ctx.beginPath();
-            ctx.moveTo(-15, offset - 15);
-            ctx.lineTo(0, offset);
-            ctx.lineTo(15, offset - 15);
-            ctx.stroke();
-        }
-        ctx.restore();
-    }
-}
-
-export class Asteroid {
-    constructor(x, y) {
-        this.x = x;
-        this.y = y;
-        this.size = 40 + Math.random() * 40;
-        this.maxHealth = this.size * 10;
-        this.health = this.maxHealth;
-        this.isDead = false;
-        
-        this.angle = Math.random() * Math.PI * 2;
-        this.rotSpeed = (Math.random() - 0.5) * 0.02;
-        
-        this.points = [];
-        let numPoints = 8 + Math.floor(Math.random() * 6);
-        for(let i=0; i<numPoints; i++) {
-            let a = (i / numPoints) * Math.PI * 2;
-            let r = this.size * (0.8 + Math.random() * 0.4);
-            this.points.push({x: Math.cos(a)*r, y: Math.sin(a)*r});
-        }
-    }
-    
-    update() {
-        this.angle += this.rotSpeed;
-        if (this.health <= 0) {
-            this.isDead = true;
-        }
-    }
-    
-    draw(ctx) {
-        ctx.save();
-        ctx.translate(this.x, this.y);
-        
-        if (this.health < this.maxHealth) {
-            let damageRatio = 1 - (this.health / this.maxHealth);
-            ctx.translate((Math.random()-0.5)*10*damageRatio, (Math.random()-0.5)*10*damageRatio);
-        }
-        
-        ctx.rotate(this.angle);
-        ctx.fillStyle = '#444';
-        ctx.strokeStyle = '#666';
-        ctx.lineWidth = 3;
-        
-        let glow = Math.max(0, 1 - (this.health / this.maxHealth));
-        if (glow > 0) {
-            ctx.shadowBlur = glow * 20;
-            ctx.shadowColor = '#ff4400';
-            ctx.fillStyle = `rgb(${68 + glow*100}, 68, 68)`;
-        }
-
-        ctx.beginPath();
-        ctx.moveTo(this.points[0].x, this.points[0].y);
-        for(let i=1; i<this.points.length; i++) {
-            ctx.lineTo(this.points[i].x, this.points[i].y);
-        }
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-        ctx.restore();
-    }
-}
-
-export class SlotMachineEntity {
-    constructor(x, y) {
-        this.x = x;
-        this.y = y;
-        this.size = 35;
-        this.isDead = false;
-        
-        this.startY = y;
-        this.jumpOffset = 0;
-        this.jumpTimer = 0;
-    }
-    
-    update() {
-        this.jumpTimer++;
-        if (this.jumpTimer % 120 < 20) {
-            this.jumpOffset = -Math.sin((this.jumpTimer % 120) / 20 * Math.PI) * 20;
-        } else {
-            this.jumpOffset = 0;
-        }
-    }
-    
-    draw(ctx) {
-        ctx.save();
-        ctx.translate(this.x, this.y + this.jumpOffset);
-        
-        if (window.gameSettings && window.gameSettings.highQuality) {
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = '#ffe600';
-        }
-        
-        ctx.fillStyle = '#111';
-        ctx.fillRect(-20, -30, 40, 60);
-        
-        ctx.fillStyle = '#444';
-        ctx.fillRect(-15, -20, 30, 20);
-        
-        let colors = ['#cd7f32', '#c0c0c0', '#ffd700', '#00ffcc', '#ff00ff'];
-        let flash = colors[Math.floor((Date.now() / 100) % colors.length)];
-        
-        ctx.fillStyle = flash;
-        ctx.fillRect(-10, -15, 20, 10);
-        
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(20, 0);
-        ctx.lineTo(30, -10);
-        ctx.stroke();
-        
-        ctx.fillStyle = '#ff0000';
-        ctx.beginPath();
-        ctx.arc(30, -10, 5, 0, Math.PI*2);
-        ctx.fill();
-
-        ctx.fillStyle = '#ffe600';
-        ctx.font = 'bold 10px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText("SLOTS", 0, 15);
-        
         ctx.restore();
     }
 }
