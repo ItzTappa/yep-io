@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>yep.io</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -141,7 +141,6 @@
                 <div id="menu-xp-bar"></div>
             </div>
         </div>
-        
         <button id="settings-btn">⚙️</button>
     </div>
 
@@ -237,12 +236,12 @@
             <h2>MATCH OVER</h2>
             <div class="killed-by">SPECTATING: <span id="go-killer-name" style="color: #ffe600;">UNKNOWN</span></div>
             <div class="stats-grid">
-                <div>Placement: <span id="go-placement" style="color: #00ffcc;">#1 / 100</span></div>
+                <div id="go-placement-container">Placed <span id="go-placement" style="color: #00ffcc;">#1 / 100</span></div>
                 <div>Points: <span id="go-points">0</span></div>
                 <div>Kills: <span id="go-kills">0</span></div>
                 <div>Time Alive: <span id="go-time">0s</span></div>
             </div>
-            <div class="xp-gained">Season XP Earned: <span id="go-xp" style="color: #ffe600;">+0</span></div>
+            <div id="go-xp-container" class="xp-gained">Season Level XP Earned <span id="go-xp" style="color: #ffe600;">+0</span></div>
             <button id="return-lobby-btn">Return to Lobby</button>
         </div>
     </div>
@@ -281,7 +280,21 @@
 
     <div id="black-fade-overlay"></div>
 
-    
+    <div id="mobile-controls" class="hidden" style="pointer-events: none;">
+        <div id="joystick-left" class="joystick-zone">
+            <div class="joystick-base" id="base-left">
+                <div class="joystick-stick" id="stick-left"></div>
+            </div>
+        </div>
+        <div id="joystick-right" class="joystick-zone">
+            <div class="joystick-base" id="base-right">
+                <div class="joystick-stick" id="stick-right"></div>
+            </div>
+        </div>
+        <button id="mobile-dash-btn">DASH</button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
     <script type="module" src="js/main.js"></script>
 </body>
 </html>
