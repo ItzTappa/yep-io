@@ -425,10 +425,7 @@ export class GameEngine {
         for(let i = 0; i < 30; i++) { let pos = this.getSafeOrbPosition(500); this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0)); }
 
         this.totalMatchPlayers = this.bots.length + 1; 
-        
-        this.lastTime = performance.now(); 
-        this.lastFpsTime = performance.now(); 
-        this.framesThisSecond = 0;
+        this.lastTime = performance.now(); this.lastFpsTime = performance.now(); this.framesThisSecond = 0;
         this.loop(this.lastTime);
     }
 
@@ -706,12 +703,25 @@ export class GameEngine {
         });
     }
 
+    // NEW: Separates Special Abilities to be prominently displayed at the top of your badge list
     updateUpgradeBadges() {
         const container = document.getElementById('upgrade-badges');
         if (!container) return;
         container.innerHTML = '';
         
+        if (this.player.activeAbility) {
+            let abName = this.player.activeAbility === 'shield' ? 'DOME SHIELD' : 'OVERDRIVE';
+            let keyText = this.isTouchDevice ? 'TAP ABILITY' : '[E] TO USE';
+            container.innerHTML += `
+                <div class="upgrade-badge ability-badge" title="Active Ability">
+                    <div class="badge-name">⭐ ${abName}</div>
+                    <div class="badge-tier">${keyText}</div>
+                </div>`;
+        }
+        
         for (let upgId in this.player.upgrades) {
+            if (upgId === 'shield' || upgId === 'overdrive') continue;
+            
             let tier = this.player.upgrades[upgId];
             if (tier > 0) {
                 let def = UPGRADE_POOL.find(u => u.id === upgId);
@@ -744,8 +754,19 @@ export class GameEngine {
             const card = document.getElementById(`card-${i+1}`);
             
             if (choice && card) {
-                const currentTier = this.player.upgrades[choice.id];
-                document.getElementById(`title-${i+1}`).innerText = `${choice.title} [T${currentTier+1}]`;
+                // NEW: Make ability cards glowing and highly distinct
+                let isAbility = choice.id === 'shield' || choice.id === 'overdrive';
+                
+                if (isAbility) {
+                    card.classList.add('ability-card');
+                    let shortName = choice.title.replace('Active: ', '');
+                    document.getElementById(`title-${i+1}`).innerHTML = `⭐ ABILITY:<br/>${shortName.toUpperCase()}`;
+                } else {
+                    card.classList.remove('ability-card');
+                    const currentTier = this.player.upgrades[choice.id] || 0;
+                    document.getElementById(`title-${i+1}`).innerText = `${choice.title} [T${currentTier+1}]`;
+                }
+                
                 document.getElementById(`desc-${i+1}`).innerText = choice.desc;
                 card.style.display = 'block';
             } else if (card) { 
@@ -1700,7 +1721,6 @@ export class GameEngine {
         
         let elapsed = timestamp - this.lastTime;
         
-        // PERFECT CATCH-UP FIX: If the tab goes to sleep, ignore the massive time jump so the game doesn't speed up.
         if (elapsed > 100) {
             this.lastTime = timestamp;
             elapsed = 0;

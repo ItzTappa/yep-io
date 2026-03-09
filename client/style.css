@@ -100,6 +100,24 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .badge-name { display: flex; align-items: center; justify-content: center; padding: 0 8px; font-size: 0.6rem; font-weight: bold; color: white; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; }
 .badge-tier { display: flex; align-items: center; justify-content: center; padding: 0 8px; font-weight: bold; font-size: 0.75rem; border-left: 2px solid #444; text-shadow: 1px 1px 2px black; }
 
+/* NEW: PULSING ANIMATION & STYLE FOR SPECIAL ABILITY BADGES */
+.ability-badge {
+    border-color: #ff00ff !important;
+    box-shadow: 0 0 15px rgba(255,0,255,0.6) !important;
+    background: linear-gradient(90deg, rgba(255,0,255,0.2), rgba(0,0,0,0.8)) !important;
+    animation: pulseAbility 2s infinite;
+    margin-bottom: 8px;
+    height: 28px !important;
+}
+.ability-badge .badge-name { color: #ffbbff !important; font-size: 0.75rem !important; }
+.ability-badge .badge-tier { border-left-color: #ff00ff !important; color: #ff00ff !important; font-size: 0.85rem !important; }
+
+@keyframes pulseAbility {
+    0% { box-shadow: 0 0 10px rgba(255,0,255,0.4); }
+    50% { box-shadow: 0 0 25px rgba(255,0,255,0.8); }
+    100% { box-shadow: 0 0 10px rgba(255,0,255,0.4); }
+}
+
 .badge-t1 { border-color: #cd7f32; } .badge-t1 .badge-tier { border-left-color: #cd7f32; color: #cd7f32; background: rgba(205,127,50,0.15); }
 .badge-t2 { border-color: #c0c0c0; } .badge-t2 .badge-tier { border-left-color: #c0c0c0; color: #c0c0c0; background: rgba(192,192,192,0.15); }
 .badge-t3 { border-color: #ffd700; box-shadow: 0 0 8px rgba(255,215,0,0.3); } .badge-t3 .badge-tier { border-left-color: #ffd700; color: #ffd700; background: rgba(255,215,0,0.15); }
@@ -114,8 +132,9 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 #leaderboard-list { list-style: none; font-size: 0.9rem; }
 #leaderboard-list li { display: flex; justify-content: space-between; margin-bottom: 5px; }
 
+/* RE-COLORED TO A VIBRANT GREEN GRADIENT! */
 #level-up-notif, #account-level-notif { position: absolute; left: -400px; padding: 12px 25px; border-radius: 0 12px 12px 0; font-weight: bold; transition: left 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none; z-index: 100; text-align: left; }
-#level-up-notif { bottom: 60px; background: linear-gradient(90deg, rgba(0,255,204,0.9), rgba(0,0,0,0.7)); border-left: 6px solid #00ffcc; box-shadow: 0 0 20px rgba(0,255,204,0.4); }
+#level-up-notif { bottom: 60px; background: linear-gradient(90deg, rgba(0,255,204,0.9), rgba(46,204,113,0.8)); border-left: 6px solid #00ffcc; box-shadow: 0 0 20px rgba(0,255,204,0.4); }
 #account-level-notif { bottom: 135px; background: linear-gradient(90deg, rgba(255,230,0,0.9), rgba(0,0,0,0.8)); border-left: 6px solid var(--accent); box-shadow: 0 0 20px rgba(255,230,0,0.5); }
 #level-up-notif.show, #account-level-notif.show { left: 0; }
 
@@ -129,6 +148,12 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .card-key { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); background: var(--accent); color: black; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; font-size: 1.2rem; box-shadow: 0 0 10px var(--accent); }
 .card-title { color: white; font-size: 1.1rem; font-weight: bold; margin-top: 10px; margin-bottom: 5px; }
 .card-desc { color: #aaa; font-size: 0.9rem; }
+
+/* NEW: SPECIAL GLOWING STYLES FOR ABILITY CARDS */
+.card.ability-card { border-color: #ff00ff !important; box-shadow: 0 0 25px rgba(255,0,255,0.3) !important; background: rgba(40, 10, 40, 0.9) !important; }
+.card.ability-card .card-key { background: #ff00ff !important; box-shadow: 0 0 15px #ff00ff !important; color: white; }
+.card.ability-card .card-title { color: #ffbbff !important; text-shadow: 0 0 10px #ff00ff !important; font-size: 1rem; line-height: 1.3; }
+
 
 #game-over-screen { 
     position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh; 
@@ -178,7 +203,6 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 #locker-back-btn:hover { background: var(--accent); color: black; }
 #locker-category-title { color: var(--accent); font-size: 1.5rem; letter-spacing: 2px; text-transform: uppercase; }
 
-/* STICKY PREVIEW CONTAINER FOR LOCKER */
 .preview-container { position: sticky; top: 100px; align-self: flex-start; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%); width: 350px; height: 350px; border-radius: 50%; margin-left: auto; margin-right: 20px; }
 .preview-container canvas { display: block; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
 
