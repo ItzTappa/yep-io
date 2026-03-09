@@ -43,7 +43,7 @@ export class GameEngine {
         this.animationId = null; 
         
         this.fpsInterval = 1000 / 60; 
-        this.lastTime = 0;
+        this.lastTime = performance.now();
         this.lastFpsTime = performance.now(); 
         this.framesThisSecond = 0;
 
@@ -337,6 +337,7 @@ export class GameEngine {
 
     startDemo() {
         if (this.animationId) cancelAnimationFrame(this.animationId);
+        this.animationId = null;
         
         const mobileControls = document.getElementById('mobile-controls');
         if (mobileControls) mobileControls.classList.add('hidden');
@@ -362,11 +363,14 @@ export class GameEngine {
         this.demoTargetX = this.worldSize / 2; this.demoTargetY = this.worldSize / 2;
         this.camera.x = this.demoTargetX; this.camera.y = this.demoTargetY;
         this.cameraZoom = 1.0;
-        this.lastTime = performance.now(); this.loop(this.lastTime);
+        
+        this.lastTime = performance.now(); 
+        this.loop(this.lastTime);
     }
 
     start(playerClass) {
         if (this.animationId) cancelAnimationFrame(this.animationId);
+        this.animationId = null;
         
         const mobileControls = document.getElementById('mobile-controls');
         if (mobileControls && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
@@ -421,12 +425,16 @@ export class GameEngine {
         for(let i = 0; i < 30; i++) { let pos = this.getSafeOrbPosition(500); this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0)); }
 
         this.totalMatchPlayers = this.bots.length + 1; 
-        this.lastTime = performance.now(); this.lastFpsTime = performance.now(); this.framesThisSecond = 0;
+        
+        this.lastTime = performance.now(); 
+        this.lastFpsTime = performance.now(); 
+        this.framesThisSecond = 0;
         this.loop(this.lastTime);
     }
 
     startMultiplayer(players, lobbyCode, isHost) {
         if (this.animationId) cancelAnimationFrame(this.animationId);
+        this.animationId = null;
         
         const mobileControls = document.getElementById('mobile-controls');
         if (mobileControls && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
@@ -1173,7 +1181,6 @@ export class GameEngine {
             bot.x = Math.max(0, Math.min(this.worldSize, bot.x)); 
             bot.y = Math.max(0, Math.min(this.worldSize, bot.y));
             
-            // NEW: Solid collision against Safe Zones so bots cannot enter!
             for (let sz of this.safeZones) {
                 let distToSZ = distance(bot.x, bot.y, sz.x, sz.y);
                 let minAllowed = sz.radius + bot.size;
@@ -1689,6 +1696,16 @@ export class GameEngine {
     }
 
     loop(timestamp) {
+        if (!this.lastTime) this.lastTime = timestamp;
+        
+        let elapsed = timestamp - this.lastTime;
+        
+        // PERFECT CATCH-UP FIX: If the tab goes to sleep, ignore the massive time jump so the game doesn't speed up.
+        if (elapsed > 100) {
+            this.lastTime = timestamp;
+            elapsed = 0;
+        }
+
         if (window.gameSettings.showFps) {
             this.framesThisSecond++;
             if (timestamp - this.lastFpsTime >= 1000) {
@@ -1698,8 +1715,6 @@ export class GameEngine {
             }
         }
 
-        const elapsed = timestamp - this.lastTime;
-        
         if (elapsed >= this.fpsInterval) {
             this.lastTime = timestamp - (elapsed % this.fpsInterval);
             this.update();

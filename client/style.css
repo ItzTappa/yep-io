@@ -159,10 +159,9 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .match-detail-label { display: block; font-size: 0.75rem; color: gray; font-weight: bold; letter-spacing: 1px; margin-bottom: 4px; text-transform: uppercase; }
 .match-detail-val { display: block; font-size: 1.3rem; font-weight: bold; color: white; }
 .match-rank { font-size: 1.5rem; font-weight: bold; display: flex; align-items: baseline; justify-content: center; gap: 4px; }
-
 .match-card.expanded .match-upgrades { display: flex !important; }
 
-/* LOCKER SECTION STYLES */
+/* LOCKER & PREVIEW STYLES */
 .locker-layout { display: flex; width: 100%; gap: 50px; align-items: flex-start; justify-content: space-between; padding-top: 10px; }
 .locker-left { flex: 0 0 55%; display: flex; flex-direction: column; min-height: 400px; width: 100%; }
 
@@ -179,9 +178,9 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 #locker-category-title { color: var(--accent); font-size: 1.5rem; letter-spacing: 2px; text-transform: uppercase; }
 
 /* STICKY PREVIEW CONTAINER FOR LOCKER */
-.preview-container { position: sticky; top: 100px; align-self: flex-start; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%); width: 350px; height: 350px; border-radius: 50%; margin-left: 20px; }
-.preview-container canvas { display: block; margin: 0 auto; position: absolute; top: 0; left: 0; }
-.preview-label { position: absolute; bottom: 20px; color: white; font-weight: bold; text-shadow: 1px 1px 3px black; text-transform: uppercase; font-size: 1.1rem; text-align: center; width: 100%; z-index: 5; pointer-events: none;}
+.preview-container { position: sticky; top: 100px; align-self: flex-start; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%); width: 350px; height: 350px; border-radius: 50%; margin-left: auto; margin-right: 20px; }
+.preview-container canvas { display: block; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+.preview-label { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); color: white; font-weight: bold; text-shadow: 1px 1px 3px black; text-transform: uppercase; font-size: 1.1rem; text-align: center; width: 100%; z-index: 5; pointer-events: none;}
 
 #locker-items-view { width: 100%; display: flex; flex-direction: column; }
 #locker-item-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; padding: 10px; padding-bottom: 40px; align-content: start; }
