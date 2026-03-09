@@ -90,7 +90,6 @@ window.activePreviewItem = null;
 
 window.showItemPreview = (itemId) => {
     const item = ITEMS_DB[itemId];
-    // PREVENTS BANNERS FROM OPENING A FULLSCREEN PREVIEW
     if (!item || item.category === 'Banner') return; 
     
     window.activePreviewItem = itemId;
@@ -130,7 +129,6 @@ previewDummy.isPlayer = false;
 function renderPreview() {
     previewAngle += 0.015;
     
-    // 1. RENDER LOCKER PREVIEW
     if (lockerCtx && document.getElementById('locker').classList.contains('active')) {
         lockerCtx.clearRect(0, 0, 300, 300);
         previewDummy.type = selectedClass || 'triangle';
@@ -159,7 +157,6 @@ function renderPreview() {
         window.gameSettings.showNames = tmp;
     }
 
-    // 2. RENDER FULLSCREEN SHOP PREVIEW OVERLAY
     if (fsCtx && !document.getElementById('item-preview-screen').classList.contains('hidden')) {
         fsCtx.clearRect(0, 0, 350, 350);
         previewDummy.type = selectedClass || 'triangle';
@@ -402,7 +399,7 @@ function renderLocker() {
                 let color = item.color || RARITY_COLORS[item.rarity];
                 const isEquipped = window.equippedItems[item.category] === item.id;
                 grid.innerHTML += `<div class="store-item unlocked" style="--rarity-color: ${color};">
-                    <div class="item-icon" style="cursor: pointer;" title="Click to Preview">${item.icon}</div>
+                    <div class="item-icon" onclick="window.activePreviewItem = '${item.id}'" style="cursor: pointer;" title="Click to Preview">${item.icon}</div>
                     <div style="font-size: 0.8rem; color: ${color}; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px;">${item.category}</div>
                     <div class="item-name">${item.name}</div>
                     <button class="btn-equip ${isEquipped ? 'equipped' : ''}" onclick="window.toggleEquip('${item.id}')">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button></div>`;
@@ -689,14 +686,85 @@ if (devInput) {
             const parts = val.split(' ');
             const cmd = parts[0].toLowerCase();
             const arg = parseInt(parts[1]);
+            const player = (window.game && !window.game.isDemo && !window.game.isGameOver) ? window.game.player : null;
 
             if (cmd === '/level' && !isNaN(arg)) {
-                window.globalAccountLevel = arg;
-                window.globalAccountXP = 0; 
-                updateMenuXPBar();
-                renderSeasonStore();
-                if (document.getElementById('stats').classList.contains('active')) renderStats();
+                window.globalAccountLevel = arg; window.globalAccountXP = 0; updateMenuXPBar();
+                renderSeasonStore(); if (document.getElementById('stats').classList.contains('active')) renderStats();
                 logDev(`[SUCCESS] Account Level set to ${arg}.`);
+            }
+            else if (cmd === '/god' || cmd === '/unkillable') {
+                if(player) { player.maxHealth = 9999999; player.health = 9999999; player.regen = 9999; logDev('[SUCCESS] God mode enabled.'); }
+                else logDev('[ERROR] Must be in a match.');
+            }
+            else if (cmd === '/score' && !isNaN(arg)) {
+                if(player) { player.points += arg; player.upgradeProgress += arg; logDev(`[SUCCESS] Added ${arg} score.`); }
+            }
+            else if (cmd === '/speed' && !isNaN(arg)) {
+                if(player) { player.speed = arg; logDev(`[SUCCESS] Speed set to ${arg}.`); }
+            }
+            else if (cmd === '/damage' && !isNaN(arg)) {
+                if(player) { player.baseDamage = arg; logDev(`[SUCCESS] Damage set to ${arg}.`); }
+            }
+            else if (cmd === '/firerate' && !isNaN(arg)) {
+                if(player) { player.fireRate = arg; logDev(`[SUCCESS] Fire rate set to ${arg}.`); }
+            }
+            else if (cmd === '/multishot' && !isNaN(arg)) {
+                if(player) { player.multiShot = arg; logDev(`[SUCCESS] Multishot set to ${arg}.`); }
+            }
+            else if (cmd === '/spikes' && !isNaN(arg)) {
+                if(player) { player.spikes = arg; player.frontVisual = 'spikes'; logDev(`[SUCCESS] Spikes set to ${arg}.`); }
+            }
+            else if (cmd === '/orbiters' && !isNaN(arg)) {
+                if(player) { player.orbiters = arg; logDev(`[SUCCESS] Orbiters set to ${arg}.`); }
+            }
+            else if (cmd === '/missiles' && !isNaN(arg)) {
+                if(player) { player.missiles = arg; logDev(`[SUCCESS] Missiles set to ${arg}.`); }
+            }
+            else if (cmd === '/size' && !isNaN(arg)) {
+                if(player) { player.size = arg; logDev(`[SUCCESS] Size set to ${arg}.`); }
+            }
+            else if (cmd === '/heal') {
+                if(player) { player.health = player.maxHealth; logDev('[SUCCESS] Health restored.'); }
+            }
+            else if (cmd === '/nuke') {
+                if(window.game && window.game.bots) { window.game.bots.forEach(b => b.health = 0); logDev('[SUCCESS] Destroyed all enemies.'); }
+            }
+            else if (cmd === '/shake' && !isNaN(arg)) {
+                if(window.game) { window.game.screenShake = arg; logDev(`[SUCCESS] Screen shake = ${arg}.`); }
+            }
+            else if (cmd === '/storm') {
+                if(window.game) { window.game.stormActive = true; window.game.stormRadius = arg || 1000; logDev(`[SUCCESS] Storm triggered.`); }
+            }
+            else if (cmd === '/ability') {
+                if(player) { player.activeAbility = parts[1]; window.game.updateUpgradeBadges(); logDev(`[SUCCESS] Ability set to ${parts[1]}.`); }
+            }
+            else if (cmd === '/cooldown') {
+                if(player) { player.abilityMaxCooldown = arg || 0; player.dashMaxCooldown = arg || 0; logDev('[SUCCESS] Cooldowns modified.'); }
+            }
+            else if (cmd === '/maxupgrades') {
+                if(player && UPGRADE_POOL) {
+                    UPGRADE_POOL.forEach(u => { while(player.upgrades[u.id] < 5) { player.applyUpgrade(u.id); } });
+                    window.game.updateUpgradeBadges(); logDev('[SUCCESS] ALL UPGRADES MAXED!');
+                }
+            }
+            else if (cmd === '/suicide') {
+                if(player) { player.health = 0; logDev('[SUCCESS] Goodbye cruel world.'); }
+            }
+            else if (cmd === '/tiny') {
+                if(player) { player.size = 5; logDev('[SUCCESS] You are now tiny.'); }
+            }
+            else if (cmd === '/giant') {
+                if(player) { player.size = 150; player.maxHealth += 5000; player.health += 5000; logDev('[SUCCESS] You are now a giant boss.'); }
+            }
+            else if (cmd === '/freeze') {
+                if(window.game) { window.game.bots.forEach(b => b.speed = 0); logDev('[SUCCESS] Enemies frozen.'); }
+            }
+            else if (cmd === '/unfreeze') {
+                if(window.game) { window.game.bots.forEach(b => b.speed = 4.2); logDev('[SUCCESS] Enemies unfrozen.'); }
+            }
+            else if (cmd === '/statpoints' && !isNaN(arg)) {
+                window.hourlyStats.points = arg; renderMainStore(); logDev(`[SUCCESS] Hourly points set to ${arg}.`);
             }
             else if (cmd === '/kills' && !isNaN(arg)) {
                 window.hourlyStats.kills = arg; renderMainStore(); logDev(`[SUCCESS] Hourly kills set to ${arg}.`);
@@ -707,30 +775,18 @@ if (devInput) {
             else if (cmd === '/time' && !isNaN(arg)) {
                 window.hourlyStats.time = arg; renderMainStore(); logDev(`[SUCCESS] Hourly time set to ${arg}.`);
             }
-            else if (cmd === '/points' && !isNaN(arg)) {
-                window.hourlyStats.points = arg; renderMainStore(); logDev(`[SUCCESS] Hourly points set to ${arg}.`);
-            }
             else if (cmd === '/claimall') { 
-                if (typeof ITEMS_DB !== 'undefined') {
-                    Object.keys(ITEMS_DB).forEach(k => window.claimedItems[k] = true);
-                    renderLocker();
-                    renderSeasonStore();
-                    renderMainStore();
-                    logDev(`[SUCCESS] Unlocked all cosmetics and items!`);
-                }
+                Object.keys(ITEMS_DB).forEach(k => window.claimedItems[k] = true);
+                renderLocker(); renderSeasonStore(); renderMainStore(); logDev(`[SUCCESS] Unlocked all cosmetics!`);
             }
             else if (cmd === '/reroll') {
-                localStorage.removeItem('yep_shop');
-                window.currentShopItems = getShop();
-                renderMainStore();
-                logDev(`[SUCCESS] Force-rerolled the current shop items.`);
+                localStorage.removeItem('yep_shop'); window.currentShopItems = getShop(); renderMainStore(); logDev(`[SUCCESS] Shop rerolled.`);
             }
             else if (cmd === '/close' || cmd === '/exit') {
-                devConsole.classList.add('hidden');
-                devInput.blur();
+                devConsole.classList.add('hidden'); devInput.blur();
             }
             else if (cmd === '/help') {
-                logDev('Commands: /level [num], /kills [num], /dist [num], /time [num], /points [num], /claimall, /reroll, /close');
+                logDev('Commands: /level, /kills, /dist, /time, /statpoints, /claimall, /reroll, /close, /god, /score, /speed, /damage, /firerate, /multishot, /spikes, /orbiters, /missiles, /size, /heal, /nuke, /shake, /storm, /ability [shield/overdrive], /cooldown, /maxupgrades, /suicide, /tiny, /giant, /freeze, /unfreeze');
             }
             else {
                 logDev('<span style="color: red;">[ERROR] Unknown command. Type /help</span>');
