@@ -3,13 +3,13 @@
 // ==========================================
 
 export const UPGRADE_POOL = [
-    // --- SPECIAL ACTIVE ABILITIES ---
+    // --- SPECIAL ACTIVE ABILITIES (RARE / LEGENDARY DROPS) ---
     { 
-        id: 'shield', title: 'Active: Dome Shield', desc: 'Press E (or tap Ability) to become invincible for 3s', weight: 60, maxTier: 1,
+        id: 'shield', title: 'Active: Dome Shield', desc: 'Press E (or tap Ability) to become invincible for 3s', weight: 12, maxTier: 1,
         apply: (e) => { e.activeAbility = 'shield'; } 
     },
     { 
-        id: 'overdrive', title: 'Active: Overdrive', desc: 'Press E (or tap Ability) to double speed & fire rate for 3s', weight: 60, maxTier: 1,
+        id: 'overdrive', title: 'Active: Overdrive', desc: 'Press E (or tap Ability) to double speed & fire rate for 3s', weight: 12, maxTier: 1,
         apply: (e) => { e.activeAbility = 'overdrive'; } 
     },
 

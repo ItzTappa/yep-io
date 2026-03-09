@@ -43,7 +43,10 @@ export class GameEngine {
         this.animationId = null; 
         
         this.fpsInterval = 1000 / 60; 
+        
         this.lastTime = performance.now();
+        this.accumulator = 0; 
+
         this.lastFpsTime = performance.now(); 
         this.framesThisSecond = 0;
 
@@ -364,6 +367,7 @@ export class GameEngine {
         this.camera.x = this.demoTargetX; this.camera.y = this.demoTargetY;
         this.cameraZoom = 1.0;
         
+        this.accumulator = 0;
         this.lastTime = performance.now(); 
         this.loop(this.lastTime);
     }
@@ -425,7 +429,11 @@ export class GameEngine {
         for(let i = 0; i < 30; i++) { let pos = this.getSafeOrbPosition(500); this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0)); }
 
         this.totalMatchPlayers = this.bots.length + 1; 
-        this.lastTime = performance.now(); this.lastFpsTime = performance.now(); this.framesThisSecond = 0;
+        
+        this.accumulator = 0;
+        this.lastTime = performance.now(); 
+        this.lastFpsTime = performance.now(); 
+        this.framesThisSecond = 0;
         this.loop(this.lastTime);
     }
 
@@ -679,6 +687,8 @@ export class GameEngine {
         document.getElementById('level-display').innerText = '0 PTS';
 
         this.totalMatchPlayers = 50; 
+        
+        this.accumulator = 0;
         this.lastTime = performance.now(); 
         this.lastFpsTime = performance.now(); 
         this.framesThisSecond = 0;
@@ -703,7 +713,6 @@ export class GameEngine {
         });
     }
 
-    // NEW: Separates Special Abilities to be prominently displayed at the top of your badge list
     updateUpgradeBadges() {
         const container = document.getElementById('upgrade-badges');
         if (!container) return;
@@ -754,16 +763,23 @@ export class GameEngine {
             const card = document.getElementById(`card-${i+1}`);
             
             if (choice && card) {
-                // NEW: Make ability cards glowing and highly distinct
+                // RESET THE CARD CLASSES FIRST SO THEY DONT STACK!
+                card.className = 'card';
+                
                 let isAbility = choice.id === 'shield' || choice.id === 'overdrive';
+                const currentTier = this.player.upgrades[choice.id] || 0;
                 
                 if (isAbility) {
                     card.classList.add('ability-card');
                     let shortName = choice.title.replace('Active: ', '');
                     document.getElementById(`title-${i+1}`).innerHTML = `⭐ ABILITY:<br/>${shortName.toUpperCase()}`;
                 } else {
-                    card.classList.remove('ability-card');
-                    const currentTier = this.player.upgrades[choice.id] || 0;
+                    // NEW DYNAMIC UPGRADE TIER COLORING!
+                    if (currentTier === 1) card.classList.add('card-t1');
+                    else if (currentTier === 2) card.classList.add('card-t2');
+                    else if (currentTier === 3) card.classList.add('card-t3');
+                    else if (currentTier >= 4) card.classList.add('card-t4');
+                    
                     document.getElementById(`title-${i+1}`).innerText = `${choice.title} [T${currentTier+1}]`;
                 }
                 
@@ -1719,12 +1735,12 @@ export class GameEngine {
     loop(timestamp) {
         if (!this.lastTime) this.lastTime = timestamp;
         
-        let elapsed = timestamp - this.lastTime;
+        let dt = timestamp - this.lastTime;
+        this.lastTime = timestamp;
         
-        if (elapsed > 100) {
-            this.lastTime = timestamp;
-            elapsed = 0;
-        }
+        if (dt > 100) dt = 16.666; 
+        
+        this.accumulator += dt;
 
         if (window.gameSettings.showFps) {
             this.framesThisSecond++;
@@ -1735,11 +1751,12 @@ export class GameEngine {
             }
         }
 
-        if (elapsed >= this.fpsInterval) {
-            this.lastTime = timestamp - (elapsed % this.fpsInterval);
+        while (this.accumulator >= this.fpsInterval) {
             this.update();
-            this.draw();
+            this.accumulator -= this.fpsInterval;
         }
+        
+        this.draw();
         
         this.animationId = requestAnimationFrame((t) => this.loop(t));
     }

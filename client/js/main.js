@@ -126,9 +126,45 @@ let previewAngle = 0;
 let previewDummy = new Player(0, 0, 'triangle', "");
 previewDummy.isPlayer = false; 
 
-function renderPreview() {
-    previewAngle += 0.015;
+// PERFECT PREVIEW FIX: Use a fixed timestep accumulator so 144Hz monitors don't spin 2.5x faster!
+let previewLastTime = performance.now();
+let previewAccumulator = 0;
+
+function renderPreview(timestamp) {
+    if (!timestamp) timestamp = performance.now();
+    let dt = timestamp - previewLastTime;
+    previewLastTime = timestamp;
+    if (dt > 100) dt = 16.666; // clamp lag spikes
     
+    previewAccumulator += dt;
+    
+    while (previewAccumulator >= 16.666) {
+        previewAngle += 0.015;
+        
+        if (lockerCtx && document.getElementById('locker').classList.contains('active')) {
+            if (currentLockerCategory === 'Trail') {
+                previewDummy.vx = Math.cos(previewAngle) * 4;
+                previewDummy.vy = Math.sin(previewAngle) * 4;
+            } else {
+                previewDummy.vx = 0; previewDummy.vy = 0; previewDummy.trail = [];
+            }
+            previewDummy.update();
+        }
+
+        if (fsCtx && !document.getElementById('item-preview-screen').classList.contains('hidden')) {
+            if (window.activePreviewItem && ITEMS_DB[window.activePreviewItem].category === 'Trail') {
+                previewDummy.vx = Math.cos(previewAngle) * 4;
+                previewDummy.vy = Math.sin(previewAngle) * 4;
+            } else {
+                previewDummy.vx = 0; previewDummy.vy = 0; previewDummy.trail = [];
+            }
+            previewDummy.update();
+        }
+        
+        previewAccumulator -= 16.666;
+    }
+    
+    // RENDER LOCKER PREVIEW
     if (lockerCtx && document.getElementById('locker').classList.contains('active')) {
         lockerCtx.clearRect(0, 0, 300, 300);
         previewDummy.type = selectedClass || 'triangle';
@@ -141,22 +177,15 @@ function renderPreview() {
         
         previewDummy.angle = previewAngle; 
         previewDummy.size = 60; 
-        
-        if (currentLockerCategory === 'Trail') {
-            previewDummy.vx = Math.cos(previewAngle) * 4;
-            previewDummy.vy = Math.sin(previewAngle) * 4;
-        } else {
-            previewDummy.vx = 0; previewDummy.vy = 0; previewDummy.trail = [];
-        }
-        
-        previewDummy.update();
-        previewDummy.x = 150; previewDummy.y = 150;
+        previewDummy.x = 150; 
+        previewDummy.y = 150;
         
         let tmp = window.gameSettings.showNames; window.gameSettings.showNames = false;
         previewDummy.draw(lockerCtx);
         window.gameSettings.showNames = tmp;
     }
 
+    // RENDER FULLSCREEN SHOP PREVIEW OVERLAY
     if (fsCtx && !document.getElementById('item-preview-screen').classList.contains('hidden')) {
         fsCtx.clearRect(0, 0, 350, 350);
         previewDummy.type = selectedClass || 'triangle';
@@ -175,16 +204,8 @@ function renderPreview() {
         
         previewDummy.angle = previewAngle; 
         previewDummy.size = 70; 
-        
-        if (window.activePreviewItem && ITEMS_DB[window.activePreviewItem].category === 'Trail') {
-            previewDummy.vx = Math.cos(previewAngle) * 4;
-            previewDummy.vy = Math.sin(previewAngle) * 4;
-        } else {
-            previewDummy.vx = 0; previewDummy.vy = 0; previewDummy.trail = [];
-        }
-        
-        previewDummy.update();
-        previewDummy.x = 175; previewDummy.y = 175;
+        previewDummy.x = 175; 
+        previewDummy.y = 175;
         
         let tmp = window.gameSettings.showNames; window.gameSettings.showNames = false;
         previewDummy.draw(fsCtx);

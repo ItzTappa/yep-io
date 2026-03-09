@@ -100,23 +100,11 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .badge-name { display: flex; align-items: center; justify-content: center; padding: 0 8px; font-size: 0.6rem; font-weight: bold; color: white; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; }
 .badge-tier { display: flex; align-items: center; justify-content: center; padding: 0 8px; font-weight: bold; font-size: 0.75rem; border-left: 2px solid #444; text-shadow: 1px 1px 2px black; }
 
-/* NEW: PULSING ANIMATION & STYLE FOR SPECIAL ABILITY BADGES */
-.ability-badge {
-    border-color: #ff00ff !important;
-    box-shadow: 0 0 15px rgba(255,0,255,0.6) !important;
-    background: linear-gradient(90deg, rgba(255,0,255,0.2), rgba(0,0,0,0.8)) !important;
-    animation: pulseAbility 2s infinite;
-    margin-bottom: 8px;
-    height: 28px !important;
-}
+.ability-badge { border-color: #ff00ff !important; box-shadow: 0 0 15px rgba(255,0,255,0.6) !important; background: linear-gradient(90deg, rgba(255,0,255,0.2), rgba(0,0,0,0.8)) !important; animation: pulseAbility 2s infinite; margin-bottom: 8px; height: 28px !important; }
 .ability-badge .badge-name { color: #ffbbff !important; font-size: 0.75rem !important; }
 .ability-badge .badge-tier { border-left-color: #ff00ff !important; color: #ff00ff !important; font-size: 0.85rem !important; }
 
-@keyframes pulseAbility {
-    0% { box-shadow: 0 0 10px rgba(255,0,255,0.4); }
-    50% { box-shadow: 0 0 25px rgba(255,0,255,0.8); }
-    100% { box-shadow: 0 0 10px rgba(255,0,255,0.4); }
-}
+@keyframes pulseAbility { 0% { box-shadow: 0 0 10px rgba(255,0,255,0.4); } 50% { box-shadow: 0 0 25px rgba(255,0,255,0.8); } 100% { box-shadow: 0 0 10px rgba(255,0,255,0.4); } }
 
 .badge-t1 { border-color: #cd7f32; } .badge-t1 .badge-tier { border-left-color: #cd7f32; color: #cd7f32; background: rgba(205,127,50,0.15); }
 .badge-t2 { border-color: #c0c0c0; } .badge-t2 .badge-tier { border-left-color: #c0c0c0; color: #c0c0c0; background: rgba(192,192,192,0.15); }
@@ -132,7 +120,6 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 #leaderboard-list { list-style: none; font-size: 0.9rem; }
 #leaderboard-list li { display: flex; justify-content: space-between; margin-bottom: 5px; }
 
-/* RE-COLORED TO A VIBRANT GREEN GRADIENT! */
 #level-up-notif, #account-level-notif { position: absolute; left: -400px; padding: 12px 25px; border-radius: 0 12px 12px 0; font-weight: bold; transition: left 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none; z-index: 100; text-align: left; }
 #level-up-notif { bottom: 60px; background: linear-gradient(90deg, rgba(0,255,204,0.9), rgba(46,204,113,0.8)); border-left: 6px solid #00ffcc; box-shadow: 0 0 20px rgba(0,255,204,0.4); }
 #account-level-notif { bottom: 135px; background: linear-gradient(90deg, rgba(255,230,0,0.9), rgba(0,0,0,0.8)); border-left: 6px solid var(--accent); box-shadow: 0 0 20px rgba(255,230,0,0.5); }
@@ -144,16 +131,31 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 #upgrade-ui { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 100; }
 .upgrade-header { background: rgba(0, 0, 0, 0.7); padding: 5px 20px; border-radius: 20px; color: var(--accent); font-weight: bold; letter-spacing: 2px; font-size: 0.9rem; border: 1px solid var(--accent); }
 .upgrade-cards { display: flex; gap: 20px; }
-.card { background: rgba(20, 20, 25, 0.9); border: 2px solid #444; border-radius: 10px; width: 200px; padding: 15px; text-align: center; position: relative; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
-.card-key { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); background: var(--accent); color: black; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; font-size: 1.2rem; box-shadow: 0 0 10px var(--accent); }
-.card-title { color: white; font-size: 1.1rem; font-weight: bold; margin-top: 10px; margin-bottom: 5px; }
+.card { background: rgba(20, 20, 25, 0.9); border: 2px solid #444; border-radius: 10px; width: 200px; padding: 15px; text-align: center; position: relative; box-shadow: 0 10px 20px rgba(0,0,0,0.5); transition: border-color 0.2s, box-shadow 0.2s; }
+.card-key { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); background: var(--accent); color: black; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; font-size: 1.2rem; box-shadow: 0 0 10px var(--accent); transition: background 0.2s, color 0.2s, box-shadow 0.2s; }
+.card-title { color: white; font-size: 1.1rem; font-weight: bold; margin-top: 10px; margin-bottom: 5px; transition: color 0.2s; }
 .card-desc { color: #aaa; font-size: 0.9rem; }
 
-/* NEW: SPECIAL GLOWING STYLES FOR ABILITY CARDS */
+/* --- DYNAMIC UPGRADE CARD COLORS FOR PRE-OWNED TIERS --- */
+.card.card-t1 { border-color: #cd7f32; box-shadow: 0 8px 20px rgba(205,127,50,0.2); }
+.card.card-t1 .card-key { background: #cd7f32; box-shadow: 0 0 10px #cd7f32; color: white; }
+.card.card-t1 .card-title { color: #cd7f32; }
+
+.card.card-t2 { border-color: #c0c0c0; box-shadow: 0 8px 20px rgba(192,192,192,0.2); }
+.card.card-t2 .card-key { background: #c0c0c0; box-shadow: 0 0 10px #c0c0c0; color: black; }
+.card.card-t2 .card-title { color: #c0c0c0; }
+
+.card.card-t3 { border-color: #ffd700; box-shadow: 0 8px 20px rgba(255,215,0,0.3); }
+.card.card-t3 .card-key { background: #ffd700; box-shadow: 0 0 10px #ffd700; color: black; }
+.card.card-t3 .card-title { color: #ffd700; }
+
+.card.card-t4 { border-color: #00ffcc; box-shadow: 0 8px 20px rgba(0,255,204,0.3); }
+.card.card-t4 .card-key { background: #00ffcc; box-shadow: 0 0 10px #00ffcc; color: black; }
+.card.card-t4 .card-title { color: #00ffcc; }
+
 .card.ability-card { border-color: #ff00ff !important; box-shadow: 0 0 25px rgba(255,0,255,0.3) !important; background: rgba(40, 10, 40, 0.9) !important; }
 .card.ability-card .card-key { background: #ff00ff !important; box-shadow: 0 0 15px #ff00ff !important; color: white; }
 .card.ability-card .card-title { color: #ffbbff !important; text-shadow: 0 0 10px #ff00ff !important; font-size: 1rem; line-height: 1.3; }
-
 
 #game-over-screen { 
     position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh; 
@@ -184,14 +186,13 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .match-detail-label { display: block; font-size: 0.75rem; color: gray; font-weight: bold; letter-spacing: 1px; margin-bottom: 4px; text-transform: uppercase; }
 .match-detail-val { display: block; font-size: 1.3rem; font-weight: bold; color: white; }
 .match-rank { font-size: 1.5rem; font-weight: bold; display: flex; align-items: baseline; justify-content: center; gap: 4px; }
-
 .match-card.expanded .match-upgrades { display: flex !important; }
 
-/* LOCKER SECTION STYLES */
-.locker-layout { display: flex; width: 100%; gap: 50px; align-items: flex-start; justify-content: space-between; padding-top: 10px; }
-.locker-left { flex: 0 0 55%; display: flex; flex-direction: column; min-height: 400px; width: 100%; }
+/* LOCKER & PREVIEW STYLES */
+.locker-layout { display: flex; width: 100%; gap: 50px; align-items: flex-start; justify-content: center; padding-top: 10px; }
+.locker-left { flex: 1; max-width: 600px; display: flex; flex-direction: column; min-height: 400px; }
 
-.locker-slots-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; width: 100%; max-width: 600px; margin: 0 auto; }
+.locker-slots-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; width: 100%; margin: 0 auto; }
 .locker-slot { background: rgba(20,20,25,0.9); border: 2px solid #444; border-left: 6px solid var(--slot-color); border-radius: 8px; padding: 20px; cursor: pointer; transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; align-items: center; text-align: center; }
 .locker-slot:hover { transform: scale(1.05); border-color: var(--slot-color); box-shadow: 0 0 15px rgba(255,255,255,0.1); }
 .slot-header { font-size: 1rem; color: gray; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; width: 100%; text-align: left; border-bottom: 1px solid #333; padding-bottom: 5px; }
@@ -203,13 +204,41 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 #locker-back-btn:hover { background: var(--accent); color: black; }
 #locker-category-title { color: var(--accent); font-size: 1.5rem; letter-spacing: 2px; text-transform: uppercase; }
 
-.preview-container { position: sticky; top: 100px; align-self: flex-start; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%); width: 350px; height: 350px; border-radius: 50%; margin-left: auto; margin-right: 20px; }
-.preview-container canvas { display: block; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+.locker-preview-box {
+    position: sticky;
+    top: 100px;
+    width: 350px;
+    height: 350px;
+    background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.locker-preview-box canvas { display: block; }
 
 #locker-items-view { width: 100%; display: flex; flex-direction: column; }
 #locker-item-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; padding: 10px; padding-bottom: 40px; align-content: start; }
 #locker-item-grid .store-item { width: 100%; padding: 15px; }
 #locker-back-btn, #locker-category-title { flex-shrink: 0; margin-bottom: 10px; }
+
+/* FULLSCREEN PREVIEW OVERLAY */
+#item-preview-screen {
+    position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh; 
+    background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); 
+    display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 400; pointer-events: auto;
+}
+.preview-text-container { text-align: center; margin-bottom: 20px; }
+#preview-screen-title { color: var(--accent); margin: 0 0 5px 0; letter-spacing: 2px; text-transform: uppercase; font-size: 2.5rem; text-shadow: 0 0 15px rgba(255,230,0,0.4); }
+#preview-screen-category { color: #aaa; margin: 0; letter-spacing: 4px; font-weight: bold; text-transform: uppercase; font-size: 1.2rem; }
+
+.fullscreen-preview-box {
+    width: 350px; height: 350px; position: relative; margin-bottom: 40px; 
+    background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%); 
+    border-radius: 50%; display: flex; justify-content: center; align-items: center;
+}
+.fullscreen-preview-box canvas { display: block; }
 
 /* MULTIPLAYER LOBBY */
 .full-screen-overlay {
@@ -349,7 +378,8 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 
     .locker-layout { flex-direction: column-reverse; align-items: center; gap: 20px; }
     
-    .preview-container { position: sticky; top: 70px; z-index: 50; width: 150px; height: 150px; margin: 0 auto; flex-shrink: 0; background: var(--bg-color); border-radius: 50%; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
+    .locker-preview-box { position: sticky; top: 70px; z-index: 50; width: 150px; height: 150px; margin: 0 auto; background: var(--bg-color); border-radius: 50%; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
+    .locker-preview-box canvas { width: 150px; height: 150px; }
     
     .locker-slots-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; width: 100%; }
     .locker-slot { padding: 10px; width: 100%; }
@@ -384,4 +414,9 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
     .match-rank { font-size: 1.6rem; }
     
     .settings-content { width: 90%; padding: 15px; }
+
+    #preview-screen-title { font-size: 2rem; }
+    #preview-screen-category { font-size: 1rem; margin-bottom: 15px; }
+    .fullscreen-preview-box { width: 250px; height: 250px; margin-bottom: 20px; }
+    .fullscreen-preview-box canvas { width: 250px; height: 250px; }
 }
