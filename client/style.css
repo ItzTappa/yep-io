@@ -226,26 +226,23 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 #mobile-controls { display: none; }
 
 @media (max-width: 768px) {
-    /* FORCE CONTROLS VISIBLE ON MOBILE */
+    /* FORCE CONTROLS VISIBLE ON MOBILE WHEN UNHIDDEN BY JS */
     #mobile-controls {
-        display: block; position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh;
+        display: block !important; position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh;
         pointer-events: none; z-index: 1000;
     }
     
-    /* Touch halves of the screen */
     .joystick-zone { position: absolute; top: 0; width: 50%; height: 100%; pointer-events: auto; }
     #joystick-left { left: 0; }
     #joystick-right { right: 0; }
     
-    /* INVISIBLE BY DEFAULT, dynamically placed by JS */
     .joystick-base { 
         position: absolute; width: 100px; height: 100px; 
         background: rgba(255, 255, 255, 0.05); border: 2px solid rgba(255, 255, 255, 0.15); 
         border-radius: 50%; pointer-events: none; 
-        transform: translate(-50%, -50%); /* Centers on thumb perfectly */
-        opacity: 0; transition: opacity 0.1s; 
+        transform: translate(-50%, -50%); opacity: 0; transition: opacity 0.1s; 
     }
-    .joystick-base.active { opacity: 1; } /* VISIBLE WHEN TOUCHED */
+    .joystick-base.active { opacity: 1; }
     
     .joystick-stick { 
         position: absolute; width: 40px; height: 40px; 
@@ -254,7 +251,6 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
         box-shadow: 0 0 10px rgba(0,0,0,0.5); 
     }
     
-    /* Transparent centered Dash Button */
     #mobile-dash-btn { 
         position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
         width: 90px; height: 50px; border-radius: 25px; 
@@ -264,17 +260,16 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
     }
     #mobile-dash-btn:active { background: rgba(0, 255, 204, 0.3); color: white; transform: translateX(-50%) scale(0.9); }
 
-    /* DYNAMIC ISLAND PADDING */
     .top-nav { padding: max(10px, env(safe-area-inset-top)) 10px 10px 10px; }
     
     .xp-bar-container { top: max(10px, env(safe-area-inset-top)); width: 50%; height: 16px; }
     #level-display { font-size: 0.7rem; }
     #fps-display { top: max(10px, env(safe-area-inset-top)); left: 10px; font-size: 0.7rem; padding: 4px 8px; }
     
-    /* SHRINK & MOVE LEADERBOARD DOWN */
+    /* LEADERBOARD AT EXACTLY 120PX */
     .leaderboard { 
         top: calc(max(10px, env(safe-area-inset-top)) + 45px); 
-        right: 10px; width: 110px; padding: 8px; background: rgba(0,0,0,0.7);
+        right: 10px; width: 120px; padding: 8px; background: rgba(0,0,0,0.7);
     }
     .leaderboard h3 { font-size: 0.7rem; margin-bottom: 5px; }
     #leaderboard-list { font-size: 0.65rem; }
@@ -282,12 +277,12 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 
     /* PERFECT MINIMAP PLACEMENT UNDER LEADERBOARD */
     #minimap-container { 
-        width: 110px; height: 110px; 
+        width: 120px; height: auto; /* Changed to auto so 'ALIVE' text shows */
         bottom: auto; left: auto; right: 10px; transform: none;
-        top: calc(max(10px, env(safe-area-inset-top)) + 160px); /* Placed right under Top 5 Leaderboard */
+        top: calc(max(10px, env(safe-area-inset-top)) + 180px); /* Pushed perfectly below Leaderboard */
     }
-    #minimap-canvas { width: 100%; height: 100%; }
-    #player-count-display { font-size: 0.9rem; padding: 4px; }
+    #minimap-canvas { width: 120px; height: 120px; display: block; }
+    #player-count-display { font-size: 0.8rem; padding: 5px; }
     
     /* Make upgrade cards smaller */
     .upgrade-cards { flex-direction: column; gap: 10px; }

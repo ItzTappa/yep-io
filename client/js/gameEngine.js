@@ -295,9 +295,11 @@ export class GameEngine {
     startDemo() {
         if (this.animationId) cancelAnimationFrame(this.animationId);
         
-        // HIDE MINIMAP IN DEMO
+        // HIDE GAME UI, MINIMAP, AND MOBILE CONTROLS ON MENU
         const brUi = document.getElementById('br-ui');
         if (brUi) brUi.classList.add('hidden');
+        const mobileControls = document.getElementById('mobile-controls');
+        if (mobileControls) mobileControls.classList.add('hidden');
 
         this.worldSize = 4000;
         this.stormActive = false;
@@ -322,7 +324,9 @@ export class GameEngine {
     start(playerClass) {
         if (this.animationId) cancelAnimationFrame(this.animationId);
         
-        // HIDE MINIMAP IN SINGLEPLAYER
+        // REVEAL MOBILE CONTROLS, KEEP MINIMAP HIDDEN
+        const mobileControls = document.getElementById('mobile-controls');
+        if (mobileControls) mobileControls.classList.remove('hidden');
         const brUi = document.getElementById('br-ui');
         if (brUi) brUi.classList.add('hidden');
         
@@ -367,6 +371,10 @@ export class GameEngine {
     startMultiplayer(players, lobbyCode, isHost) {
         if (this.animationId) cancelAnimationFrame(this.animationId);
         
+        // REVEAL MOBILE CONTROLS AND MINIMAP
+        const mobileControls = document.getElementById('mobile-controls');
+        if (mobileControls) mobileControls.classList.remove('hidden');
+        
         this.lobbyCode = lobbyCode; 
         this.isHost = isHost || false;
         this.worldSize = 10000; 
@@ -379,6 +387,9 @@ export class GameEngine {
 
         document.getElementById('game-ui').classList.remove('hidden');
         document.querySelector('.hud').classList.remove('hidden');
+        
+        const brUi = document.getElementById('br-ui');
+        if (brUi) brUi.classList.remove('hidden'); // Show minimap in multiplayer!
 
         let spawnX = this.worldSize / 2;
         let spawnY = this.worldSize / 2;
@@ -705,6 +716,9 @@ export class GameEngine {
         this.isGameOver = true;
         this.spectateTarget = killer;
         document.getElementById('upgrade-ui').classList.add('hidden'); 
+        
+        const mobileControls = document.getElementById('mobile-controls');
+        if (mobileControls) mobileControls.classList.add('hidden'); // Hide joysticks on death screen
 
         const timeAlive = Math.floor((Date.now() - this.matchStartTime) / 1000);
         this.grantAccountXP(timeAlive * 2);
@@ -714,7 +728,7 @@ export class GameEngine {
         const rank = allPlayers.indexOf(this.player) + 1;
         const totalPlayers = allPlayers.length;
 
-        // Automatically format "1st", "2nd", "3rd", "4th", etc!
+        // FOOLPROOF TEXT REPLACEMENTS!
         let suffix = "th";
         if (rank % 10 === 1 && rank % 100 !== 11) suffix = "st";
         else if (rank % 10 === 2 && rank % 100 !== 12) suffix = "nd";
@@ -722,12 +736,14 @@ export class GameEngine {
 
         const placementEl = document.getElementById('go-placement');
         if (placementEl) {
-            placementEl.parentElement.innerHTML = `Placed <span id="go-placement" style="color: #00ffcc;">${rank}${suffix}</span>`;
+            placementEl.parentElement.childNodes[0].nodeValue = "Placed ";
+            placementEl.innerText = `${rank}${suffix}`;
         }
         
         const xpEl = document.getElementById('go-xp');
         if (xpEl) {
-            xpEl.parentElement.innerHTML = `Season Level XP Earned <span id="go-xp" style="color: #ffe600;">+${this.matchXPEarned}</span>`;
+            xpEl.parentElement.childNodes[0].nodeValue = "Season Level XP Earned ";
+            xpEl.innerText = `+${this.matchXPEarned}`;
         }
 
         window.lastMatchStats = {
