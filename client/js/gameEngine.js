@@ -5,15 +5,24 @@ import { UPGRADE_POOL } from './upgrades.js';
 
 export class GameEngine {
     constructor(canvas) {
-        this.canvas = canvas; this.ctx = canvas.getContext('2d');
-        this.width = window.innerWidth; this.height = window.innerHeight;
+        this.canvas = canvas; 
+        this.ctx = canvas.getContext('2d');
+        this.width = window.innerWidth; 
+        this.height = window.innerHeight;
+        
         const dpr = window.devicePixelRatio || 1;
-        this.canvas.width = this.width * dpr; this.canvas.height = this.height * dpr;
-        this.canvas.style.width = `${this.width}px`; this.canvas.style.height = `${this.height}px`;
+        this.canvas.width = this.width * dpr; 
+        this.canvas.height = this.height * dpr;
+        this.canvas.style.width = `${this.width}px`; 
+        this.canvas.style.height = `${this.height}px`;
         this.ctx.scale(dpr, dpr);
 
         this.worldSize = 4000;
-        this.player = null; this.bots = []; this.orbs = []; this.projectiles = []; this.particles = [];
+        this.player = null; 
+        this.bots = []; 
+        this.orbs = []; 
+        this.projectiles = []; 
+        this.particles = [];
         this.teammates = []; 
         this.safeZones = [];
         this.safeZoneSpawnTimer = 0;
@@ -21,8 +30,10 @@ export class GameEngine {
         this.lobbyCode = null; 
         this.isHost = false; 
         
-        this.mouseX = this.width / 2; this.mouseY = this.height / 2;
-        this.keys = {}; this.frameCount = 0; 
+        this.mouseX = this.width / 2; 
+        this.mouseY = this.height / 2;
+        this.keys = {}; 
+        this.frameCount = 0; 
         
         this.camera = { x: this.worldSize / 2, y: this.worldSize / 2 };
         this.cameraZoom = 1.0; 
@@ -44,6 +55,7 @@ export class GameEngine {
         
         this.fpsInterval = 1000 / 60; 
         
+        // BULLETPROOF FIXED TIMESTEP 
         this.lastTime = performance.now();
         this.accumulator = 0; 
 
@@ -73,7 +85,6 @@ export class GameEngine {
         this.isAimDragging = false; 
         
         this.isTouchDevice = false; 
-        
         this.screenShake = 0;
 
         this.initInput();
@@ -81,10 +92,13 @@ export class GameEngine {
 
     initInput() {
         window.addEventListener('resize', () => {
-            this.width = window.innerWidth; this.height = window.innerHeight;
+            this.width = window.innerWidth; 
+            this.height = window.innerHeight;
             const dpr = window.devicePixelRatio || 1;
-            this.canvas.width = this.width * dpr; this.canvas.height = this.height * dpr;
-            this.canvas.style.width = `${this.width}px`; this.canvas.style.height = `${this.height}px`;
+            this.canvas.width = this.width * dpr; 
+            this.canvas.height = this.height * dpr;
+            this.canvas.style.width = `${this.width}px`; 
+            this.canvas.style.height = `${this.height}px`;
             this.ctx.scale(dpr, dpr);
         });
         
@@ -102,7 +116,9 @@ export class GameEngine {
         window.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'INPUT') return;
             const key = e.key.toLowerCase();
-            if (Object.values(window.gameSettings.keybinds).includes(key)) { e.preventDefault(); }
+            if (Object.values(window.gameSettings.keybinds).includes(key)) { 
+                e.preventDefault(); 
+            }
             this.keys[key] = true;
             
             if (this.isChoosingUpgrade && !this.isDemo && !this.isGameOver) {
@@ -172,7 +188,10 @@ export class GameEngine {
                         let dy = t.clientY - this.leftTouch.originY;
                         let dist = Math.hypot(dx, dy);
                         let maxDist = 40; 
-                        if (dist > maxDist) { dx = (dx/dist) * maxDist; dy = (dy/dist) * maxDist; }
+                        if (dist > maxDist) { 
+                            dx = (dx/dist) * maxDist; 
+                            dy = (dy/dist) * maxDist; 
+                        }
                         leftStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
                     }
                 }
@@ -283,18 +302,30 @@ export class GameEngine {
     getSafeSpawnPosition() {
         let x, y, isSafe = false;
         while (!isSafe) {
-            x = Math.random() * this.worldSize; y = Math.random() * this.worldSize;
-            if (!this.player || distance(x, y, this.player.x, this.player.y) > 1000) isSafe = true;
+            x = Math.random() * this.worldSize; 
+            y = Math.random() * this.worldSize;
+            if (!this.player || distance(x, y, this.player.x, this.player.y) > 1000) {
+                isSafe = true;
+            }
         }
         return { x, y };
     }
 
     getSafeOrbPosition(minDist = 500) {
-        let x, y; let isSafe = false; let attempts = 0;
+        let x, y; 
+        let isSafe = false; 
+        let attempts = 0;
+        
         while (!isSafe && attempts < 50) {
-            x = Math.random() * this.worldSize; y = Math.random() * this.worldSize; isSafe = true;
+            x = Math.random() * this.worldSize; 
+            y = Math.random() * this.worldSize; 
+            isSafe = true;
+            
             for (let orb of this.orbs) {
-                if (orb.type === 'health' && distance(x, y, orb.x, orb.y) < minDist) { isSafe = false; break; }
+                if (orb.type === 'health' && distance(x, y, orb.x, orb.y) < minDist) { 
+                    isSafe = false; 
+                    break; 
+                }
             }
             attempts++;
         }
@@ -310,8 +341,11 @@ export class GameEngine {
 
     grantAccountXP(baseAmount, enemyPoints = 0) {
         let multiplier = 1;
-        if (enemyPoints > this.player.points) { multiplier = enemyPoints / Math.max(1, this.player.points); }
+        if (enemyPoints > this.player.points) { 
+            multiplier = enemyPoints / Math.max(1, this.player.points); 
+        }
         multiplier = Math.min(multiplier, 5);
+        
         let bonusFromScore = Math.floor(enemyPoints / 100); 
         const finalXP = Math.floor(baseAmount * multiplier) + bonusFromScore;
         window.globalAccountXP += finalXP;
@@ -322,10 +356,14 @@ export class GameEngine {
     checkAccountLevelUp() {
         let xpRequired = window.globalAccountLevel * 1000;
         let leveledUp = false;
+        
         while (window.globalAccountXP >= xpRequired) {
-            window.globalAccountLevel++; window.globalAccountXP -= xpRequired;
-            xpRequired = window.globalAccountLevel * 1000; leveledUp = true;
+            window.globalAccountLevel++; 
+            window.globalAccountXP -= xpRequired;
+            xpRequired = window.globalAccountLevel * 1000; 
+            leveledUp = true;
         }
+        
         if (leveledUp && !this.isDemo) {
             const notif = document.getElementById('account-level-notif');
             if (notif) {
@@ -344,32 +382,46 @@ export class GameEngine {
         
         const mobileControls = document.getElementById('mobile-controls');
         if (mobileControls) mobileControls.classList.add('hidden');
+        
         const brUi = document.getElementById('br-ui');
         if (brUi) brUi.classList.add('hidden');
+        
         const badgeUI = document.getElementById('upgrade-badges');
         if (badgeUI) badgeUI.innerHTML = '';
 
         this.worldSize = 4000;
         this.stormActive = false;
-        this.isDemo = true; this.isGameOver = false; this.spectateTarget = null;
-        this.bots = []; this.orbs = []; this.projectiles = []; this.particles = [];
-        this.teammates = []; this.safeZones = []; this.isCinematicIntro = false;
+        this.isDemo = true; 
+        this.isGameOver = false; 
+        this.spectateTarget = null;
+        this.bots = []; 
+        this.orbs = []; 
+        this.projectiles = []; 
+        this.particles = [];
+        this.teammates = []; 
+        this.safeZones = []; 
+        this.isCinematicIntro = false;
         
-        this.player = new Player(-10000, -10000, 'circle', ""); this.player.health = 999999; 
+        this.player = new Player(-10000, -10000, 'circle', ""); 
+        this.player.health = 999999; 
 
         for(let i = 0; i < 40; i++) {
             const types = ['triangle', 'square', 'circle'];
             this.bots.push(new Bot(Math.random() * this.worldSize, Math.random() * this.worldSize, types[Math.floor(Math.random()*3)], Math.random() * 5000));
         }
-        for(let i = 0; i < 400; i++) this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
+        for(let i = 0; i < 400; i++) {
+            this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
+        }
 
-        this.demoTargetX = this.worldSize / 2; this.demoTargetY = this.worldSize / 2;
-        this.camera.x = this.demoTargetX; this.camera.y = this.demoTargetY;
+        this.demoTargetX = this.worldSize / 2; 
+        this.demoTargetY = this.worldSize / 2;
+        this.camera.x = this.demoTargetX; 
+        this.camera.y = this.demoTargetY;
         this.cameraZoom = 1.0;
         
         this.accumulator = 0;
         this.lastTime = performance.now(); 
-        this.loop(this.lastTime);
+        this.loop();
     }
 
     start(playerClass) {
@@ -382,14 +434,21 @@ export class GameEngine {
         } else if (mobileControls) {
             mobileControls.classList.add('hidden');
         }
+        
         const brUi = document.getElementById('br-ui');
         if (brUi) brUi.classList.add('hidden');
         
         this.worldSize = 6000; 
         this.stormActive = false; 
 
-        this.isDemo = false; this.isGameOver = false; this.spectateTarget = null;
-        this.bots = []; this.orbs = []; this.projectiles = []; this.particles = []; this.teammates = [];
+        this.isDemo = false; 
+        this.isGameOver = false; 
+        this.spectateTarget = null;
+        this.bots = []; 
+        this.orbs = []; 
+        this.projectiles = []; 
+        this.particles = []; 
+        this.teammates = [];
         this.screenShake = 0;
         
         this.safeZones = [];
@@ -401,12 +460,18 @@ export class GameEngine {
         
         this.player = new Player(this.worldSize / 2, this.worldSize / 2, playerClass, "");
 
-        this.camera.x = this.player.x; this.camera.y = this.player.y;
-        this.cameraZoom = 1.0; this.isCinematicIntro = false;
+        this.camera.x = this.player.x; 
+        this.camera.y = this.player.y;
+        this.cameraZoom = 1.0; 
+        this.isCinematicIntro = false;
         
-        this.pointsToNextUpgrade = 10; this.matchStartTime = Date.now(); this.matchXPEarned = 0; 
-        this.distanceTraveled = 0; this.lastPlayerPos = { x: this.player.x, y: this.player.y };
-        this.pendingUpgrades = 0; this.isChoosingUpgrade = false;
+        this.pointsToNextUpgrade = 10; 
+        this.matchStartTime = Date.now(); 
+        this.matchXPEarned = 0; 
+        this.distanceTraveled = 0; 
+        this.lastPlayerPos = { x: this.player.x, y: this.player.y };
+        this.pendingUpgrades = 0; 
+        this.isChoosingUpgrade = false;
         
         document.getElementById('upgrade-ui').classList.add('hidden');
         document.getElementById('xp-bar').style.width = '0%';
@@ -417,16 +482,30 @@ export class GameEngine {
         let matchSeed = Math.random();
         
         for(let i = 0; i < 49; i++) {
-            const types = ['triangle', 'square', 'circle']; const type = types[Math.floor(Math.random()*3)]; const spawn = this.getSafeSpawnPosition();
+            const types = ['triangle', 'square', 'circle']; 
+            const type = types[Math.floor(Math.random()*3)]; 
+            const spawn = this.getSafeSpawnPosition();
             
             let startingPts = 0;
-            if (matchSeed > 0.9) { startingPts = Math.random() < 0.2 ? Math.random() * 25000 : Math.random() * 1500; } 
-            else if (matchSeed < 0.4) { startingPts = Math.random() * 80; } 
-            else { startingPts = Math.random() < 0.1 ? Math.random() * 3000 : Math.random() * 300; }
+            if (matchSeed > 0.9) { 
+                startingPts = Math.random() < 0.2 ? Math.random() * 25000 : Math.random() * 1500; 
+            } 
+            else if (matchSeed < 0.4) { 
+                startingPts = Math.random() * 80; 
+            } 
+            else { 
+                startingPts = Math.random() < 0.1 ? Math.random() * 3000 : Math.random() * 300; 
+            }
             this.bots.push(new Bot(spawn.x, spawn.y, type, startingPts));
         }
-        for(let i = 0; i < 300; i++) this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
-        for(let i = 0; i < 30; i++) { let pos = this.getSafeOrbPosition(500); this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0)); }
+        
+        for(let i = 0; i < 300; i++) {
+            this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
+        }
+        for(let i = 0; i < 30; i++) { 
+            let pos = this.getSafeOrbPosition(500); 
+            this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0)); 
+        }
 
         this.totalMatchPlayers = this.bots.length + 1; 
         
@@ -434,7 +513,7 @@ export class GameEngine {
         this.lastTime = performance.now(); 
         this.lastFpsTime = performance.now(); 
         this.framesThisSecond = 0;
-        this.loop(this.lastTime);
+        this.loop();
     }
 
     startMultiplayer(players, lobbyCode, isHost) {
@@ -692,7 +771,7 @@ export class GameEngine {
         this.lastTime = performance.now(); 
         this.lastFpsTime = performance.now(); 
         this.framesThisSecond = 0;
-        this.loop(this.lastTime);
+        this.loop();
     }
 
     updateLeaderboard() {
@@ -763,7 +842,6 @@ export class GameEngine {
             const card = document.getElementById(`card-${i+1}`);
             
             if (choice && card) {
-                // RESET THE CARD CLASSES FIRST SO THEY DONT STACK!
                 card.className = 'card';
                 
                 let isAbility = choice.id === 'shield' || choice.id === 'overdrive';
@@ -774,7 +852,6 @@ export class GameEngine {
                     let shortName = choice.title.replace('Active: ', '');
                     document.getElementById(`title-${i+1}`).innerHTML = `⭐ ABILITY:<br/>${shortName.toUpperCase()}`;
                 } else {
-                    // NEW DYNAMIC UPGRADE TIER COLORING!
                     if (currentTier === 1) card.classList.add('card-t1');
                     else if (currentTier === 2) card.classList.add('card-t2');
                     else if (currentTier === 3) card.classList.add('card-t3');
@@ -1222,7 +1299,10 @@ export class GameEngine {
                 let distToSZ = distance(bot.x, bot.y, sz.x, sz.y);
                 let minAllowed = sz.radius + bot.size;
                 if (distToSZ < minAllowed) {
-                    if (distToSZ === 0) { distToSZ = 1; bot.x += 1; }
+                    if (distToSZ === 0) { 
+                        distToSZ = 1; 
+                        bot.x += 1; 
+                    }
                     let overlap = minAllowed - distToSZ;
                     bot.x += ((bot.x - sz.x) / distToSZ) * overlap;
                     bot.y += ((bot.y - sz.y) / distToSZ) * overlap;
@@ -1315,6 +1395,7 @@ export class GameEngine {
                     const overlap = minDistance - dist; 
                     const nx = (p1.x - p2.x) / dist; 
                     const ny = (p1.y - p2.y) / dist;
+                    
                     p1.x += nx * (overlap / 2); 
                     p1.y += ny * (overlap / 2);
                     p2.x -= nx * (overlap / 2); 
@@ -1331,7 +1412,9 @@ export class GameEngine {
                             if (p2 === this.player) this.screenShake = Math.max(this.screenShake, 8);
                         }
                         p1.spikeCooldown = 30; 
-                        if (p2.health <= 0) this.processDeath(p2, p1);
+                        if (p2.health <= 0) {
+                            this.processDeath(p2, p1);
+                        }
                     }
                     
                     if (p2.spikes > 0 && p2.spikeCooldown <= 0 && !p1.isDead) {
@@ -1342,7 +1425,9 @@ export class GameEngine {
                             if (p1 === this.player) this.screenShake = Math.max(this.screenShake, 8);
                         }
                         p2.spikeCooldown = 30;
-                        if (p1.health <= 0) this.processDeath(p1, p2);
+                        if (p1.health <= 0) {
+                            this.processDeath(p1, p2);
+                        }
                     }
                 }
             }
@@ -1362,6 +1447,7 @@ export class GameEngine {
                     break;
                 }
             }
+            
             if (hitSafeZone) {
                 this.projectiles.splice(i, 1);
                 continue; 
@@ -1391,7 +1477,9 @@ export class GameEngine {
                         this.spawnParticles(proj.x, proj.y, proj.color, 4);
                         if (target === this.player) this.screenShake = Math.max(this.screenShake, 8);
                         
-                        if (target.health <= 0) this.processDeath(target, proj.owner);
+                        if (target.health <= 0) {
+                            this.processDeath(target, proj.owner);
+                        }
                     } else {
                         this.spawnParticles(proj.x, proj.y, '#0096ff', 3);
                         this.playSoundAt('hit', target.x, target.y, 0.1);
@@ -1406,6 +1494,7 @@ export class GameEngine {
                     break;
                 }
             }
+            
             if (hit || proj.life <= 0) {
                 this.projectiles.splice(i, 1);
             }
@@ -1732,22 +1821,26 @@ export class GameEngine {
         pointersContainer.innerHTML = html;
     }
 
-    loop(timestamp) {
-        if (!this.lastTime) this.lastTime = timestamp;
+    loop() {
+        let current = performance.now();
+        let dt = current - this.lastTime;
+        this.lastTime = current;
         
-        let dt = timestamp - this.lastTime;
-        this.lastTime = timestamp;
-        
-        if (dt > 100) dt = 16.666; 
+        if (dt > 100) {
+            dt = 16.666; 
+        }
+        if (dt < 0) {
+            dt = 0; 
+        }
         
         this.accumulator += dt;
 
         if (window.gameSettings.showFps) {
             this.framesThisSecond++;
-            if (timestamp - this.lastFpsTime >= 1000) {
+            if (current - this.lastFpsTime >= 1000) {
                 document.getElementById('fps-display').innerText = `${this.framesThisSecond} FPS`;
                 this.framesThisSecond = 0;
-                this.lastFpsTime = timestamp;
+                this.lastFpsTime = current;
             }
         }
 
@@ -1758,6 +1851,6 @@ export class GameEngine {
         
         this.draw();
         
-        this.animationId = requestAnimationFrame((t) => this.loop(t));
+        this.animationId = requestAnimationFrame(() => this.loop());
     }
 }

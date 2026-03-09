@@ -122,7 +122,10 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 
 #level-up-notif, #account-level-notif { position: absolute; left: -400px; padding: 12px 25px; border-radius: 0 12px 12px 0; font-weight: bold; transition: left 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none; z-index: 100; text-align: left; }
 #level-up-notif { bottom: 60px; background: linear-gradient(90deg, rgba(0,255,204,0.9), rgba(46,204,113,0.8)); border-left: 6px solid #00ffcc; box-shadow: 0 0 20px rgba(0,255,204,0.4); }
-#account-level-notif { bottom: 135px; background: linear-gradient(90deg, rgba(255,230,0,0.9), rgba(0,0,0,0.8)); border-left: 6px solid var(--accent); box-shadow: 0 0 20px rgba(255,230,0,0.5); }
+
+/* NEW: Yellow gradient background for Season Level Up! */
+#account-level-notif { bottom: 135px; background: linear-gradient(90deg, rgba(255,230,0,0.9), rgba(255,245,150,0.9)); border-left: 6px solid var(--accent); box-shadow: 0 0 20px rgba(255,230,0,0.5); }
+
 #level-up-notif.show, #account-level-notif.show { left: 0; }
 
 .notif-text { font-size: 1rem; color: var(--accent); text-shadow: 1px 1px 2px black; letter-spacing: 2px; }
@@ -136,7 +139,6 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .card-title { color: white; font-size: 1.1rem; font-weight: bold; margin-top: 10px; margin-bottom: 5px; transition: color 0.2s; }
 .card-desc { color: #aaa; font-size: 0.9rem; }
 
-/* --- DYNAMIC UPGRADE CARD COLORS FOR PRE-OWNED TIERS --- */
 .card.card-t1 { border-color: #cd7f32; box-shadow: 0 8px 20px rgba(205,127,50,0.2); }
 .card.card-t1 .card-key { background: #cd7f32; box-shadow: 0 0 10px #cd7f32; color: white; }
 .card.card-t1 .card-title { color: #cd7f32; }

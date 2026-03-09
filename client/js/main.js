@@ -126,15 +126,21 @@ let previewAngle = 0;
 let previewDummy = new Player(0, 0, 'triangle', "");
 previewDummy.isPlayer = false; 
 
-// PERFECT PREVIEW FIX: Use a fixed timestep accumulator so 144Hz monitors don't spin 2.5x faster!
+// BULLETPROOF FIXED TIMESTEP (No browser freezing!)
 let previewLastTime = performance.now();
 let previewAccumulator = 0;
 
-function renderPreview(timestamp) {
-    if (!timestamp) timestamp = performance.now();
-    let dt = timestamp - previewLastTime;
-    previewLastTime = timestamp;
-    if (dt > 100) dt = 16.666; // clamp lag spikes
+function renderPreview() {
+    let current = performance.now();
+    let dt = current - previewLastTime;
+    previewLastTime = current;
+    
+    if (dt > 100) {
+        dt = 16.666; 
+    }
+    if (dt < 0) {
+        dt = 0; 
+    }
     
     previewAccumulator += dt;
     
@@ -146,7 +152,9 @@ function renderPreview(timestamp) {
                 previewDummy.vx = Math.cos(previewAngle) * 4;
                 previewDummy.vy = Math.sin(previewAngle) * 4;
             } else {
-                previewDummy.vx = 0; previewDummy.vy = 0; previewDummy.trail = [];
+                previewDummy.vx = 0; 
+                previewDummy.vy = 0; 
+                previewDummy.trail = [];
             }
             previewDummy.update();
         }
@@ -156,7 +164,9 @@ function renderPreview(timestamp) {
                 previewDummy.vx = Math.cos(previewAngle) * 4;
                 previewDummy.vy = Math.sin(previewAngle) * 4;
             } else {
-                previewDummy.vx = 0; previewDummy.vy = 0; previewDummy.trail = [];
+                previewDummy.vx = 0; 
+                previewDummy.vy = 0; 
+                previewDummy.trail = [];
             }
             previewDummy.update();
         }
@@ -173,14 +183,17 @@ function renderPreview(timestamp) {
         if (previewDummy.equipped.Color && ITEMS_DB[previewDummy.equipped.Color]) {
             const dbColor = ITEMS_DB[previewDummy.equipped.Color].value;
             previewDummy.color = dbColor === 'gold' ? '#ffe600' : dbColor; 
-        } else { previewDummy.color = '#d3d3d3'; }
+        } else { 
+            previewDummy.color = '#d3d3d3'; 
+        }
         
         previewDummy.angle = previewAngle; 
         previewDummy.size = 60; 
         previewDummy.x = 150; 
         previewDummy.y = 150;
         
-        let tmp = window.gameSettings.showNames; window.gameSettings.showNames = false;
+        let tmp = window.gameSettings.showNames; 
+        window.gameSettings.showNames = false;
         previewDummy.draw(lockerCtx);
         window.gameSettings.showNames = tmp;
     }
@@ -200,14 +213,17 @@ function renderPreview(timestamp) {
         if (previewDummy.equipped.Color && ITEMS_DB[previewDummy.equipped.Color]) {
             const dbColor = ITEMS_DB[previewDummy.equipped.Color].value;
             previewDummy.color = dbColor === 'gold' ? '#ffe600' : dbColor; 
-        } else { previewDummy.color = '#d3d3d3'; }
+        } else { 
+            previewDummy.color = '#d3d3d3'; 
+        }
         
         previewDummy.angle = previewAngle; 
         previewDummy.size = 70; 
         previewDummy.x = 175; 
         previewDummy.y = 175;
         
-        let tmp = window.gameSettings.showNames; window.gameSettings.showNames = false;
+        let tmp = window.gameSettings.showNames; 
+        window.gameSettings.showNames = false;
         previewDummy.draw(fsCtx);
         window.gameSettings.showNames = tmp;
     }
