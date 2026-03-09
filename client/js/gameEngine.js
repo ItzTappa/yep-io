@@ -60,6 +60,10 @@ export class GameEngine {
         this.isChoosingUpgrade = false;
         this.pointsToNextUpgrade = 10; 
 
+        // Mobile Touch tracking variables
+        this.leftTouch = { id: null, originX: 0, originY: 0, x: 0, y: 0, active: false };
+        this.rightTouch = { id: null, originX: 0, originY: 0, x: 0, y: 0, active: false };
+
         this.initInput();
     }
 
@@ -90,6 +94,136 @@ export class GameEngine {
             if (e.target.tagName === 'INPUT') return;
             this.keys[e.key.toLowerCase()] = false; 
         });
+
+        // Mobile Touch Listeners - Bound safely
+        const leftZone = document.getElementById('joystick-left');
+        const rightZone = document.getElementById('joystick-right');
+        const leftBase = document.getElementById('base-left');
+        const leftStick = document.getElementById('stick-left');
+        const rightBase = document.getElementById('base-right');
+        const rightStick = document.getElementById('stick-right');
+        const dashBtn = document.getElementById('mobile-dash-btn');
+
+        if (leftZone) {
+            leftZone.addEventListener('touchstart', (e) => {
+                if (this.isDemo || this.isGameOver) return; 
+                e.preventDefault();
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const t = e.changedTouches[i];
+                    if (!this.leftTouch.active) {
+                        this.leftTouch.active = true;
+                        this.leftTouch.id = t.identifier;
+                        this.leftTouch.originX = t.clientX;
+                        this.leftTouch.originY = t.clientY;
+                        this.leftTouch.x = t.clientX;
+                        this.leftTouch.y = t.clientY;
+                        
+                        leftBase.style.left = t.clientX + 'px';
+                        leftBase.style.top = t.clientY + 'px';
+                        leftBase.classList.add('active');
+                        leftStick.style.transform = `translate(-50%, -50%)`;
+                    }
+                }
+            }, {passive: false});
+
+            leftZone.addEventListener('touchmove', (e) => {
+                if (this.isDemo || this.isGameOver) return; 
+                e.preventDefault();
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const t = e.changedTouches[i];
+                    if (this.leftTouch.active && t.identifier === this.leftTouch.id) {
+                        this.leftTouch.x = t.clientX;
+                        this.leftTouch.y = t.clientY;
+                        
+                        let dx = t.clientX - this.leftTouch.originX;
+                        let dy = t.clientY - this.leftTouch.originY;
+                        let dist = Math.hypot(dx, dy);
+                        let maxDist = 40; 
+                        if (dist > maxDist) { dx = (dx/dist) * maxDist; dy = (dy/dist) * maxDist; }
+                        leftStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+                    }
+                }
+            }, {passive: false});
+
+            const endLeft = (e) => {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const t = e.changedTouches[i];
+                    if (this.leftTouch.active && t.identifier === this.leftTouch.id) {
+                        this.leftTouch.active = false;
+                        leftBase.classList.remove('active'); 
+                    }
+                }
+            };
+            leftZone.addEventListener('touchend', endLeft);
+            leftZone.addEventListener('touchcancel', endLeft);
+        }
+
+        if (rightZone) {
+            rightZone.addEventListener('touchstart', (e) => {
+                if (this.isDemo || this.isGameOver) return; 
+                e.preventDefault();
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const t = e.changedTouches[i];
+                    if (!this.rightTouch.active) {
+                        this.rightTouch.active = true;
+                        this.rightTouch.id = t.identifier;
+                        this.rightTouch.originX = t.clientX;
+                        this.rightTouch.originY = t.clientY;
+                        this.rightTouch.x = t.clientX;
+                        this.rightTouch.y = t.clientY;
+                        
+                        rightBase.style.left = t.clientX + 'px';
+                        rightBase.style.top = t.clientY + 'px';
+                        rightBase.classList.add('active');
+                        rightStick.style.transform = `translate(-50%, -50%)`;
+                    }
+                }
+            }, {passive: false});
+
+            rightZone.addEventListener('touchmove', (e) => {
+                if (this.isDemo || this.isGameOver) return; 
+                e.preventDefault();
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const t = e.changedTouches[i];
+                    if (this.rightTouch.active && t.identifier === this.rightTouch.id) {
+                        this.rightTouch.x = t.clientX;
+                        this.rightTouch.y = t.clientY;
+                        
+                        let dx = t.clientX - this.rightTouch.originX;
+                        let dy = t.clientY - this.rightTouch.originY;
+                        let dist = Math.hypot(dx, dy);
+                        let maxDist = 40;
+                        if (dist > maxDist) { dx = (dx/dist) * maxDist; dy = (dy/dist) * maxDist; }
+                        rightStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+                    }
+                }
+            }, {passive: false});
+
+            const endRight = (e) => {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const t = e.changedTouches[i];
+                    if (this.rightTouch.active && t.identifier === this.rightTouch.id) {
+                        this.rightTouch.active = false;
+                        rightBase.classList.remove('active'); 
+                    }
+                }
+            };
+            rightZone.addEventListener('touchend', endRight);
+            rightZone.addEventListener('touchcancel', endRight);
+        }
+
+        if (dashBtn) {
+            dashBtn.addEventListener('touchstart', (e) => {
+                if (this.isDemo || this.isGameOver) return;
+                e.preventDefault();
+                this.keys[window.gameSettings.keybinds.dash] = true;
+            });
+            dashBtn.addEventListener('touchend', (e) => {
+                if (this.isDemo || this.isGameOver) return;
+                e.preventDefault();
+                this.keys[window.gameSettings.keybinds.dash] = false;
+            });
+        }
     }
 
     playSoundAt(soundName, x, y, baseVolume = 1.0) {
@@ -163,26 +297,21 @@ export class GameEngine {
     startDemo() {
         if (this.animationId) cancelAnimationFrame(this.animationId);
         
-        // HIDE MOBILE CONTROLS AND MINIMAP ON MENU
+        // HIDE MOBILE CONTROLS ON MAIN MENU
         const mobileControls = document.getElementById('mobile-controls');
         if (mobileControls) mobileControls.classList.add('hidden');
+        
+        // Ensure minimap hides when returning to menu
         const brUi = document.getElementById('br-ui');
         if (brUi) brUi.classList.add('hidden');
 
         this.worldSize = 4000;
         this.stormActive = false;
-        this.isDemo = true; 
-        this.isGameOver = false; 
-        this.spectateTarget = null;
-        this.bots = []; 
-        this.orbs = []; 
-        this.projectiles = []; 
-        this.particles = [];
-        this.teammates = []; 
-        this.isCinematicIntro = false;
+        this.isDemo = true; this.isGameOver = false; this.spectateTarget = null;
+        this.bots = []; this.orbs = []; this.projectiles = []; this.particles = [];
+        this.teammates = []; this.isCinematicIntro = false;
         
-        this.player = new Player(-10000, -10000, 'circle'); 
-        this.player.health = 999999; 
+        this.player = new Player(-10000, -10000, 'circle'); this.player.health = 999999; 
 
         for(let i = 0; i < 40; i++) {
             const types = ['triangle', 'square', 'circle'];
@@ -190,21 +319,20 @@ export class GameEngine {
         }
         for(let i = 0; i < 400; i++) this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
 
-        this.demoTargetX = this.worldSize / 2; 
-        this.demoTargetY = this.worldSize / 2;
-        this.camera.x = this.demoTargetX; 
-        this.camera.y = this.demoTargetY;
+        this.demoTargetX = this.worldSize / 2; this.demoTargetY = this.worldSize / 2;
+        this.camera.x = this.demoTargetX; this.camera.y = this.demoTargetY;
         this.cameraZoom = 1.0;
-        this.lastTime = performance.now(); 
-        this.loop(this.lastTime);
+        this.lastTime = performance.now(); this.loop(this.lastTime);
     }
 
     start(playerClass) {
         if (this.animationId) cancelAnimationFrame(this.animationId);
         
-        // SHOW CONTROLS, HIDE MINIMAP (SINGLEPLAYER)
+        // SHOW MOBILE CONTROLS FOR SINGLEPLAYER
         const mobileControls = document.getElementById('mobile-controls');
         if (mobileControls) mobileControls.classList.remove('hidden');
+        
+        // HIDE MINIMAP FOR SINGLEPLAYER
         const brUi = document.getElementById('br-ui');
         if (brUi) brUi.classList.add('hidden');
         
@@ -245,10 +373,13 @@ export class GameEngine {
         this.lastTime = performance.now(); this.lastFpsTime = performance.now(); this.framesThisSecond = 0;
         this.loop(this.lastTime);
     }
-
-    startMultiplayer(players, lobbyCode, isHost) {
+startMultiplayer(players, lobbyCode, isHost) {
         if (this.animationId) cancelAnimationFrame(this.animationId);
         
+        // SHOW MOBILE CONTROLS FOR MULTIPLAYER
+        const mobileControls = document.getElementById('mobile-controls');
+        if (mobileControls) mobileControls.classList.remove('hidden');
+
         this.lobbyCode = lobbyCode; 
         this.isHost = isHost || false;
         this.worldSize = 10000; 
@@ -464,8 +595,6 @@ export class GameEngine {
         if (this.isDemo) return; 
         
         const list = document.getElementById('leaderboard-list'); list.innerHTML = ''; 
-        
-        // CHECK IF MOBILE -> SHOW 5, DESKTOP -> SHOW 10
         const displayLimit = window.innerWidth <= 768 ? 5 : 10;
         
         allPlayers.slice(0, displayLimit).forEach((p, index) => {
@@ -602,8 +731,21 @@ export class GameEngine {
         const rank = allPlayers.indexOf(this.player) + 1;
         const totalPlayers = allPlayers.length;
 
+        // Custom Rank Suffixes
+        let suffix = "th";
+        if (rank % 10 === 1 && rank % 100 !== 11) suffix = "st";
+        else if (rank % 10 === 2 && rank % 100 !== 12) suffix = "nd";
+        else if (rank % 10 === 3 && rank % 100 !== 13) suffix = "rd";
+
         const placementEl = document.getElementById('go-placement');
-        if (placementEl) placementEl.innerText = `#${rank} / ${this.totalMatchPlayers}`;
+        if (placementEl) {
+            placementEl.parentElement.innerHTML = `Placed <span id="go-placement" style="color: #00ffcc;">${rank}${suffix}</span>`;
+        }
+
+        const xpEl = document.getElementById('go-xp');
+        if (xpEl) {
+            xpEl.parentElement.innerHTML = `Season Level XP Earned <span id="go-xp" style="color: #ffe600;">+${this.matchXPEarned}</span>`;
+        }
 
         window.lastMatchStats = {
             kills: this.player.kills || 0,
@@ -668,10 +810,22 @@ export class GameEngine {
             const binds = window.gameSettings.keybinds;
 
             if (!this.isCinematicIntro) {
+                // Keyboard Input
                 if (this.keys[binds.up]) dy -= 1; 
                 if (this.keys[binds.down]) dy += 1;
                 if (this.keys[binds.left]) dx -= 1; 
                 if (this.keys[binds.right]) dx += 1;
+
+                // MOBILE TOUCH MOVEMENT LOGIC
+                if (this.leftTouch && this.leftTouch.active) {
+                    let tdx = this.leftTouch.x - this.leftTouch.originX;
+                    let tdy = this.leftTouch.y - this.leftTouch.originY;
+                    let dist = Math.hypot(tdx, tdy);
+                    if (dist > 10) { 
+                        dx += tdx / dist;
+                        dy += tdy / dist;
+                    }
+                }
                 
                 if (this.keys[binds.dash]) {
                     let preDashPts = this.player.points;
@@ -688,7 +842,18 @@ export class GameEngine {
                     this.player.vx += (dx / length) * (this.player.speed * 0.2);
                     this.player.vy += (dy / length) * (this.player.speed * 0.2);
                 }
-                this.player.angle = Math.atan2(this.mouseY - this.height / 2, this.mouseX - this.width / 2);
+
+                // MOBILE TOUCH AIMING LOGIC
+                if (this.rightTouch && this.rightTouch.active) {
+                    let adx = this.rightTouch.x - this.rightTouch.originX;
+                    let ady = this.rightTouch.y - this.rightTouch.originY;
+                    if (Math.hypot(adx, ady) > 5) {
+                        this.player.angle = Math.atan2(ady, adx);
+                    }
+                } else {
+                    this.player.angle = Math.atan2(this.mouseY - this.height / 2, this.mouseX - this.width / 2);
+                }
+
             } else {
                 this.player.angle = -Math.PI / 2;
             }
