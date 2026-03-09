@@ -55,7 +55,6 @@ export class GameEngine {
         
         this.fpsInterval = 1000 / 60; 
         
-        // BULLETPROOF FIXED TIMESTEP 
         this.lastTime = performance.now();
         this.accumulator = 0; 
 
@@ -421,7 +420,9 @@ export class GameEngine {
         
         this.accumulator = 0;
         this.lastTime = performance.now(); 
-        this.loop();
+        
+        // PERFECT FIX: Ensure we pass a valid timestamp initially to prevent NaN freezes!
+        this.loop(this.lastTime);
     }
 
     start(playerClass) {
@@ -513,7 +514,9 @@ export class GameEngine {
         this.lastTime = performance.now(); 
         this.lastFpsTime = performance.now(); 
         this.framesThisSecond = 0;
-        this.loop();
+        
+        // PERFECT FIX
+        this.loop(this.lastTime);
     }
 
     startMultiplayer(players, lobbyCode, isHost) {
@@ -771,7 +774,9 @@ export class GameEngine {
         this.lastTime = performance.now(); 
         this.lastFpsTime = performance.now(); 
         this.framesThisSecond = 0;
-        this.loop();
+        
+        // PERFECT FIX
+        this.loop(this.lastTime);
     }
 
     updateLeaderboard() {
@@ -1821,10 +1826,11 @@ export class GameEngine {
         pointersContainer.innerHTML = html;
     }
 
-    loop() {
-        let current = performance.now();
-        let dt = current - this.lastTime;
-        this.lastTime = current;
+    loop(timestamp = performance.now()) {
+        if (!this.lastTime) this.lastTime = timestamp;
+        
+        let dt = timestamp - this.lastTime;
+        this.lastTime = timestamp;
         
         if (dt > 100) {
             dt = 16.666; 
@@ -1837,10 +1843,10 @@ export class GameEngine {
 
         if (window.gameSettings.showFps) {
             this.framesThisSecond++;
-            if (current - this.lastFpsTime >= 1000) {
+            if (timestamp - this.lastFpsTime >= 1000) {
                 document.getElementById('fps-display').innerText = `${this.framesThisSecond} FPS`;
                 this.framesThisSecond = 0;
-                this.lastFpsTime = current;
+                this.lastFpsTime = timestamp;
             }
         }
 
@@ -1851,6 +1857,6 @@ export class GameEngine {
         
         this.draw();
         
-        this.animationId = requestAnimationFrame(() => this.loop());
+        this.animationId = requestAnimationFrame((t) => this.loop(t));
     }
 }
