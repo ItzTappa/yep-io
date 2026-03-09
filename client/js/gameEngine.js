@@ -192,7 +192,7 @@ export class GameEngine {
         this.bots = []; this.orbs = []; this.projectiles = []; this.particles = []; this.teammates = [];
         
         this.player = new Player(this.worldSize / 2, this.worldSize / 2, playerClass);
-        this.player.name = "YOU"; // Force name to be YOU in singleplayer as well!
+        this.player.name = "YOU"; 
 
         this.camera.x = this.player.x; this.camera.y = this.player.y;
         this.cameraZoom = 1.0; this.isCinematicIntro = false;
@@ -253,7 +253,6 @@ export class GameEngine {
             if (pData.id === 'local') {
                 const activeBtn = document.querySelector('.class-btn.active');
                 let pClass = activeBtn ? activeBtn.dataset.class : 'triangle';
-                // THIS LINE RIGHT HERE: Force your own screen to call you "YOU"
                 this.player = new Player(px, py, pClass, "YOU");
                 this.player.color = pData.color; 
                 this.introTargetX = px;
@@ -440,8 +439,13 @@ export class GameEngine {
         const allPlayers = (this.isDemo || this.isGameOver) ? [...this.bots] : [this.player, ...this.bots];
         allPlayers.sort((a, b) => b.points - a.points); 
         if (this.isDemo) return; 
+        
         const list = document.getElementById('leaderboard-list'); list.innerHTML = ''; 
-        allPlayers.slice(0, 10).forEach((p, index) => {
+        
+        // CHECK IF MOBILE -> SHOW 5, DESKTOP -> SHOW 10
+        const displayLimit = window.innerWidth <= 768 ? 5 : 10;
+        
+        allPlayers.slice(0, displayLimit).forEach((p, index) => {
             const li = document.createElement('li'); li.innerText = `#${index + 1} ${p.name} - ${Math.floor(p.points)} Pts`;
             if (p === this.player) li.style.color = '#00ffcc';
             list.appendChild(li);
@@ -549,8 +553,7 @@ export class GameEngine {
 
             if (!this.isDemo && !this.stormActive && this.isHost) { 
                 const safePos = this.getSafeSpawnPosition();
-                const type = ['triangle', 'square', 'circle'][Math.floor(Math.random()*3)];
-                let newBot = new Bot(safePos.x, safePos.y, type, 0);
+                let newBot = new Bot(safePos.x, safePos.y, ['triangle', 'square', 'circle'][Math.floor(Math.random()*3)]);
                 newBot.id = 'b_respawn' + Math.random();
                 this.bots.push(newBot);
             }
