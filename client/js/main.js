@@ -85,80 +85,112 @@ document.body.addEventListener('click', (e) => {
     }
 });
 
-// --- PREVIEW CANVASES ---
-const previewCanvases = {
-    locker: document.getElementById('lockerPreviewCanvas'),
-    season: document.getElementById('seasonPreviewCanvas'),
-    store: document.getElementById('storePreviewCanvas')
-};
-const previewCtxs = {
-    locker: previewCanvases.locker?.getContext('2d'),
-    season: previewCanvases.season?.getContext('2d'),
-    store: previewCanvases.store?.getContext('2d')
+// --- NEW FULLSCREEN ITEM PREVIEW OVERLAY LOGIC ---
+window.activePreviewItem = null;
+
+window.showItemPreview = (itemId) => {
+    window.activePreviewItem = itemId;
+    const item = ITEMS_DB[itemId];
+    if (!item) return;
+    
+    document.getElementById('preview-screen-title').innerText = `PREVIEW: ${item.name}`;
+    document.getElementById('item-preview-screen').classList.remove('hidden');
 };
 
-const dpr = window.devicePixelRatio || 1;
-Object.values(previewCanvases).forEach(c => {
-    if (c) {
-        c.width = 300 * dpr; c.height = 300 * dpr; 
-        c.getContext('2d').scale(dpr, dpr);
-    }
+document.getElementById('close-preview-btn').addEventListener('click', () => {
+    window.activePreviewItem = null;
+    document.getElementById('item-preview-screen').classList.add('hidden');
 });
 
+// --- PREVIEW CANVASES ---
+const lockerCanvas = document.getElementById('lockerPreviewCanvas');
+const lockerCtx = lockerCanvas?.getContext('2d');
+const fsCanvas = document.getElementById('fullscreenPreviewCanvas');
+const fsCtx = fsCanvas?.getContext('2d');
+
+const dpr = window.devicePixelRatio || 1;
+if (lockerCanvas) {
+    lockerCanvas.width = 300 * dpr; lockerCanvas.height = 300 * dpr; 
+    lockerCtx.scale(dpr, dpr);
+}
+if (fsCanvas) {
+    fsCanvas.width = 350 * dpr; fsCanvas.height = 350 * dpr; 
+    fsCtx.scale(dpr, dpr);
+}
+
 let previewAngle = 0;
-let previewDummy = new Player(150, 150, 'triangle', "");
+let previewDummy = new Player(0, 0, 'triangle', "");
 previewDummy.isPlayer = false; 
-window.activePreviewItem = null;
 
 function renderPreview() {
     previewAngle += 0.015;
     
-    let activeTab = null;
-    if (document.getElementById('locker').classList.contains('active')) activeTab = 'locker';
-    else if (document.getElementById('season').classList.contains('active')) activeTab = 'season';
-    else if (document.getElementById('store').classList.contains('active')) activeTab = 'store';
-
-    if (activeTab && previewCtxs[activeTab]) {
-        let ctx = previewCtxs[activeTab];
-        ctx.clearRect(0, 0, 300, 300);
+    // 1. RENDER LOCKER PREVIEW
+    if (lockerCtx && document.getElementById('locker').classList.contains('active')) {
+        lockerCtx.clearRect(0, 0, 300, 300);
+        previewDummy.type = selectedClass || 'triangle';
+        previewDummy.equipped = { ...window.equippedItems };
         
+        if (previewDummy.equipped.Color && ITEMS_DB[previewDummy.equipped.Color]) {
+            const dbColor = ITEMS_DB[previewDummy.equipped.Color].value;
+            previewDummy.color = dbColor === 'gold' ? '#ffe600' : dbColor; 
+        } else { previewDummy.color = '#d3d3d3'; }
+        
+        previewDummy.angle = previewAngle; 
+        previewDummy.size = 60; 
+        
+        // Trail active logic specifically for the locker
+        if (currentLockerCategory === 'Trail') {
+            previewDummy.vx = Math.cos(previewAngle) * 4;
+            previewDummy.vy = Math.sin(previewAngle) * 4;
+        } else {
+            previewDummy.vx = 0; previewDummy.vy = 0; previewDummy.trail = [];
+        }
+        
+        previewDummy.update();
+        previewDummy.x = 150; previewDummy.y = 150;
+        
+        let tmp = window.gameSettings.showNames; window.gameSettings.showNames = false;
+        previewDummy.draw(lockerCtx);
+        window.gameSettings.showNames = tmp;
+    }
+
+    // 2. RENDER FULLSCREEN SHOP PREVIEW OVERLAY
+    if (fsCtx && !document.getElementById('item-preview-screen').classList.contains('hidden')) {
+        fsCtx.clearRect(0, 0, 350, 350);
         previewDummy.type = selectedClass || 'triangle';
         
         let equipState = { ...window.equippedItems };
         if (window.activePreviewItem && ITEMS_DB[window.activePreviewItem]) {
             let pItem = ITEMS_DB[window.activePreviewItem];
             equipState[pItem.category] = pItem.id;
-            
-            let label = document.getElementById(`${activeTab}-preview-label`);
-            if (label) label.innerText = `PREVIEWING: ${pItem.name}`;
-        } else {
-            let label = document.getElementById(`${activeTab}-preview-label`);
-            if (label) label.innerText = `EQUIPPED`;
         }
-        
         previewDummy.equipped = equipState;
         
         if (previewDummy.equipped.Color && ITEMS_DB[previewDummy.equipped.Color]) {
             const dbColor = ITEMS_DB[previewDummy.equipped.Color].value;
-            if (dbColor === 'gold') previewDummy.color = '#ffe600'; 
-            else previewDummy.color = dbColor; 
+            previewDummy.color = dbColor === 'gold' ? '#ffe600' : dbColor; 
         } else { previewDummy.color = '#d3d3d3'; }
         
         previewDummy.angle = previewAngle; 
-        previewDummy.size = 60; 
+        previewDummy.size = 70; 
         
-        // Simulates movement so the Trails emit cleanly in place!
-        previewDummy.vx = Math.cos(previewAngle) * 4;
-        previewDummy.vy = Math.sin(previewAngle) * 4;
+        // Trail active logic specifically for the preview overlay
+        if (window.activePreviewItem && ITEMS_DB[window.activePreviewItem].category === 'Trail') {
+            previewDummy.vx = Math.cos(previewAngle) * 4;
+            previewDummy.vy = Math.sin(previewAngle) * 4;
+        } else {
+            previewDummy.vx = 0; previewDummy.vy = 0; previewDummy.trail = [];
+        }
+        
         previewDummy.update();
-        previewDummy.x = 150;
-        previewDummy.y = 150;
+        previewDummy.x = 175; previewDummy.y = 175;
         
-        let tempShowNames = window.gameSettings.showNames;
-        window.gameSettings.showNames = false;
-        previewDummy.draw(ctx);
-        window.gameSettings.showNames = tempShowNames;
+        let tmp = window.gameSettings.showNames; window.gameSettings.showNames = false;
+        previewDummy.draw(fsCtx);
+        window.gameSettings.showNames = tmp;
     }
+
     requestAnimationFrame(renderPreview);
 }
 renderPreview();
@@ -185,8 +217,6 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
         e.target.classList.add('active');
         document.getElementById(targetTab).classList.add('active');
         
-        window.activePreviewItem = null; // Clear previews when switching tabs
-
         const seasonLevelUI = document.querySelector('.player-level-ui');
         if (seasonLevelUI) {
             if (targetTab === 'locker') seasonLevelUI.classList.add('hidden');
@@ -315,7 +345,7 @@ document.getElementById('return-lobby-btn').addEventListener('click', () => {
 });
 
 let currentLockerCategory = null;
-window.openLockerCategory = (cat) => { currentLockerCategory = cat; window.activePreviewItem = null; renderLocker(); };
+window.openLockerCategory = (cat) => { currentLockerCategory = cat; renderLocker(); };
 window.toggleEquip = (itemId, catOverride = null) => {
     if (itemId === null && catOverride) { window.equippedItems[catOverride] = null; } 
     else {
@@ -327,7 +357,7 @@ window.toggleEquip = (itemId, catOverride = null) => {
 };
 
 document.body.addEventListener('click', (e) => {
-    if (e.target.id === 'locker-back-btn') { currentLockerCategory = null; window.activePreviewItem = null; renderLocker(); }
+    if (e.target.id === 'locker-back-btn') { currentLockerCategory = null; renderLocker(); }
 });
 
 function renderLocker() {
@@ -351,11 +381,11 @@ function renderLocker() {
         const grid = document.getElementById('locker-item-grid'); grid.innerHTML = '';
         const isDefault = !window.equippedItems[currentLockerCategory];
         
-        grid.innerHTML += `<div class="store-item unlocked" style="--rarity-color: #888; cursor: pointer;" onclick="window.activePreviewItem = null">
-            <div class="item-icon">✖</div>
+        grid.innerHTML += `<div class="store-item unlocked" style="--rarity-color: #888;">
+            <div class="item-icon" onclick="window.activePreviewItem = null" style="cursor: pointer;">✖</div>
             <div style="font-size: 0.8rem; color: #888; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px;">DEFAULT</div>
             <div class="item-name">None</div>
-            <button class="btn-equip ${isDefault ? 'equipped' : ''}" onclick="event.stopPropagation(); window.toggleEquip(null, '${currentLockerCategory}')">${isDefault ? '✓ EQUIPPED' : 'EQUIP'}</button></div>`;
+            <button class="btn-equip ${isDefault ? 'equipped' : ''}" onclick="window.toggleEquip(null, '${currentLockerCategory}')">${isDefault ? '✓ EQUIPPED' : 'EQUIP'}</button></div>`;
         
         if (ITEMS_DB) {
             const sortedItems = Object.keys(window.claimedItems)
@@ -366,11 +396,11 @@ function renderLocker() {
             sortedItems.forEach(item => {
                 let color = item.color || RARITY_COLORS[item.rarity];
                 const isEquipped = window.equippedItems[item.category] === item.id;
-                grid.innerHTML += `<div class="store-item unlocked" style="--rarity-color: ${color}; cursor: pointer;" onclick="window.activePreviewItem = '${item.id}'">
-                    <div class="item-icon">${item.icon}</div>
+                grid.innerHTML += `<div class="store-item unlocked" style="--rarity-color: ${color};">
+                    <div class="item-icon" style="cursor: pointer;" title="Click to Preview">${item.icon}</div>
                     <div style="font-size: 0.8rem; color: ${color}; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px;">${item.category}</div>
                     <div class="item-name">${item.name}</div>
-                    <button class="btn-equip ${isEquipped ? 'equipped' : ''}" onclick="event.stopPropagation(); window.toggleEquip('${item.id}')">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button></div>`;
+                    <button class="btn-equip ${isEquipped ? 'equipped' : ''}" onclick="window.toggleEquip('${item.id}')">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button></div>`;
             });
         }
     }
@@ -483,14 +513,15 @@ function renderSeasonStore() {
         
         let buttonHtml = '';
         if (isUnlocked && !isClaimed) {
-            buttonHtml = `<button class="btn-claim" data-id="${item.id}" onclick="event.stopPropagation();"><div class="fill"></div><span>HOLD TO CLAIM</span></button>`;
+            buttonHtml = `<button class="btn-claim" data-id="${item.id}"><div class="fill"></div><span>HOLD TO CLAIM</span></button>`;
         } else if (isClaimed) {
-            buttonHtml = `<button class="btn-equip ${isEquipped ? 'equipped' : ''}" onclick="event.stopPropagation(); window.toggleEquip('${item.id}')">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button>`;
+            buttonHtml = `<button class="btn-equip ${isEquipped ? 'equipped' : ''}" onclick="window.toggleEquip('${item.id}')">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button>`;
         }
 
+        // NEW: Image is now deeply clickable to open overlay!
         const html = `
-            <div class="store-item ${isUnlocked ? 'unlocked' : 'locked'}" style="--rarity-color: ${item.color}; cursor: pointer;" onclick="window.activePreviewItem = '${item.id}'">
-                <div class="item-icon">${item.icon}</div>
+            <div class="store-item ${isUnlocked ? 'unlocked' : 'locked'}" style="--rarity-color: ${item.color};">
+                <div class="item-icon" onclick="window.showItemPreview('${item.id}')" style="cursor: pointer;" title="Click to Preview">${item.icon}</div>
                 <div style="font-size: 0.8rem; color: ${item.color}; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px; text-shadow: 0 0 5px ${item.color}40;">${item.category}</div>
                 <div class="item-name">${item.name}</div>
                 <div class="item-req" style="color: ${item.color};">${isClaimed ? '✓ CLAIMED' : isUnlocked ? 'UNLOCKED!' : `Requires Level ${item.req}`}</div>
@@ -523,16 +554,16 @@ function renderMainStore() {
         
         let buttonHtml = '';
         if (isUnlocked && !isClaimed) {
-            buttonHtml = `<button class="btn-claim" data-id="${item.id}" onclick="event.stopPropagation();"><div class="fill"></div><span>HOLD TO CLAIM</span></button>`;
+            buttonHtml = `<button class="btn-claim" data-id="${item.id}"><div class="fill"></div><span>HOLD TO CLAIM</span></button>`;
         } else if (isClaimed) {
-            buttonHtml = `<button class="btn-equip ${isEquipped ? 'equipped' : ''}" onclick="event.stopPropagation(); window.toggleEquip('${item.id}')">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button>`;
+            buttonHtml = `<button class="btn-equip ${isEquipped ? 'equipped' : ''}" onclick="window.toggleEquip('${item.id}')">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button>`;
         } else {
             buttonHtml = `<div class="item-progress-bg"><div class="item-progress-fill" style="width: ${progressPercent}%; background: ${color}; box-shadow: 0 0 10px ${color};"></div></div>`;
         }
         
         const html = `
-            <div class="store-item ${isUnlocked ? 'unlocked' : 'locked'}" style="--rarity-color: ${color}; cursor: pointer;" onclick="window.activePreviewItem = '${item.id}'">
-                <div class="item-icon">${item.icon}</div>
+            <div class="store-item ${isUnlocked ? 'unlocked' : 'locked'}" style="--rarity-color: ${color};">
+                <div class="item-icon" onclick="window.showItemPreview('${item.id}')" style="cursor: pointer;" title="Click to Preview">${item.icon}</div>
                 <div style="font-size: 0.8rem; color: ${color}; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px; text-shadow: 0 0 5px ${color}40;">${item.category}</div>
                 <div class="item-name">${item.name}</div>
                 <div class="item-req" style="color: ${color};">${isClaimed ? '✓ CLAIMED' : isUnlocked ? 'UNLOCKED!' : `${Math.floor(currentValue)} / ${shopItem.req} ${shopItem.label}`}</div>

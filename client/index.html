@@ -114,42 +114,26 @@
         </div>
         
         <div id="season" class="tab-content">
-            <div class="store-container" style="max-width: 1100px;">
-                <div class="locker-layout">
-                    <div class="locker-left">
-                        <div class="store-header">
-                            <h2>SEASON 1: GENESIS</h2>
-                        </div>
-                        <div class="season-progress">
-                            <div id="season-progress-bar"></div>
-                        </div>
-                        <p class="store-desc" style="text-align: left; margin-bottom: 20px;">Level up your account to unlock free permanent rewards.</p>
-                        <div class="store-grid" id="season-grid" style="justify-content: flex-start;"></div>
-                    </div>
-                    <div class="preview-container shop-preview">
-                        <canvas id="seasonPreviewCanvas" width="300" height="300"></canvas>
-                        <div id="season-preview-label" class="preview-label">EQUIPPED</div>
-                    </div>
+            <div class="store-container">
+                <div class="store-header">
+                    <h2>SEASON 1: GENESIS</h2>
                 </div>
+                <div class="season-progress">
+                    <div id="season-progress-bar"></div>
+                </div>
+                <p class="store-desc" style="text-align: center; margin-bottom: 20px;">Level up your account to unlock free permanent rewards. (Click icon to preview)</p>
+                <div class="store-grid" id="season-grid"></div>
             </div>
         </div>
 
         <div id="store" class="tab-content">
-            <div class="store-container" style="max-width: 1100px;">
-                <div class="locker-layout">
-                    <div class="locker-left">
-                        <div class="store-header">
-                            <h2>HOURLY ROTATION</h2>
-                            <div class="store-timer">Rotates in: <span id="shop-timer">59:59</span></div>
-                        </div>
-                        <p class="store-desc" style="text-align: left; margin-bottom: 20px;">Reach the required stats before the hour ends to unlock these cosmetics!</p>
-                        <div class="store-grid" id="main-store-grid" style="justify-content: flex-start;"></div>
-                    </div>
-                    <div class="preview-container shop-preview">
-                        <canvas id="storePreviewCanvas" width="300" height="300"></canvas>
-                        <div id="store-preview-label" class="preview-label">EQUIPPED</div>
-                    </div>
+            <div class="store-container">
+                <div class="store-header">
+                    <h2>HOURLY ROTATION</h2>
+                    <div class="store-timer">Rotates in: <span id="shop-timer">59:59</span></div>
                 </div>
+                <p class="store-desc" style="text-align: center; margin-bottom: 20px;">Reach the required stats before the hour ends to unlock these! (Click icon to preview)</p>
+                <div class="store-grid" id="main-store-grid"></div>
             </div>
         </div>
 
@@ -162,6 +146,14 @@
             </div>
             <button id="settings-btn">⚙️</button>
         </div>
+    </div>
+
+    <div id="item-preview-screen" class="hidden full-screen-overlay" style="z-index: 400;">
+        <h2 id="preview-screen-title" style="color: var(--accent); margin-bottom: 20px; letter-spacing: 2px; text-transform: uppercase;">PREVIEW</h2>
+        <div class="preview-container" style="width: 350px; height: 350px; position: relative; margin-bottom: 30px; box-shadow: 0 0 30px rgba(255,230,0,0.3); border-radius: 50%;">
+            <canvas id="fullscreenPreviewCanvas" width="350" height="350"></canvas>
+        </div>
+        <button id="close-preview-btn" class="footer-btn dark-btn-outline" style="width: 250px;">BACK TO SHOP</button>
     </div>
 
     <div id="settings-modal" class="hidden">

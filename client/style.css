@@ -77,7 +77,9 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .store-item.unlocked { border-color: var(--rarity-color); box-shadow: 0 0 20px var(--rarity-color); }
 .store-item.locked { opacity: 0.7; filter: grayscale(0.8); }
 
-.item-icon { width: 80px; height: 80px; background: #222; margin: 0 auto; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; border: 1px solid #444; }
+.item-icon { width: 80px; height: 80px; background: #222; margin: 0 auto; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; border: 1px solid #444; transition: transform 0.2s; }
+.item-icon:hover { transform: scale(1.1); box-shadow: 0 0 10px rgba(255,255,255,0.3); }
+
 .item-name { font-weight: bold; font-size: 1.1rem; color: white; }
 .item-req { font-size: 0.9rem; font-weight: bold; }
 .item-progress-bg { width: 100%; height: 15px; background: #111; border-radius: 8px; overflow: hidden; margin-top: auto; border: 1px solid #333; }
@@ -160,7 +162,7 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 
 .match-card.expanded .match-upgrades { display: flex !important; }
 
-/* LOCKER & SHOP PREVIEW STYLES */
+/* LOCKER SECTION STYLES */
 .locker-layout { display: flex; width: 100%; gap: 50px; align-items: flex-start; justify-content: space-between; padding-top: 10px; }
 .locker-left { flex: 0 0 55%; display: flex; flex-direction: column; min-height: 400px; width: 100%; }
 
@@ -176,10 +178,10 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 #locker-back-btn:hover { background: var(--accent); color: black; }
 #locker-category-title { color: var(--accent); font-size: 1.5rem; letter-spacing: 2px; text-transform: uppercase; }
 
-/* STICKY PREVIEW CONTAINER FOR ALL SHOPS */
+/* STICKY PREVIEW CONTAINER FOR LOCKER */
 .preview-container { position: sticky; top: 100px; align-self: flex-start; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%); width: 350px; height: 350px; border-radius: 50%; margin-left: 20px; }
-.preview-container canvas { display: block; margin: 0 auto; position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-.preview-label { position: absolute; bottom: 20px; color: white; font-weight: bold; text-shadow: 1px 1px 3px black; text-transform: uppercase; font-size: 1.1rem; text-align: center; width: 100%; z-index: 5; }
+.preview-container canvas { display: block; margin: 0 auto; position: absolute; top: 0; left: 0; }
+.preview-label { position: absolute; bottom: 20px; color: white; font-weight: bold; text-shadow: 1px 1px 3px black; text-transform: uppercase; font-size: 1.1rem; text-align: center; width: 100%; z-index: 5; pointer-events: none;}
 
 #locker-items-view { width: 100%; display: flex; flex-direction: column; }
 #locker-item-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; padding: 10px; padding-bottom: 40px; align-content: start; }
@@ -325,7 +327,6 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
     .locker-layout { flex-direction: column-reverse; align-items: center; gap: 20px; }
     
     .preview-container { position: sticky; top: 70px; z-index: 50; width: 150px; height: 150px; margin: 0 auto; flex-shrink: 0; background: var(--bg-color); border-radius: 50%; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
-    .preview-container canvas { width: 150px; height: 150px; }
     .preview-label { font-size: 0.7rem; bottom: 5px; }
     
     .locker-slots-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; width: 100%; }
