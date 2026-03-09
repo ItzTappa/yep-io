@@ -85,15 +85,20 @@ document.body.addEventListener('click', (e) => {
     }
 });
 
-// --- NEW FULLSCREEN ITEM PREVIEW OVERLAY LOGIC ---
+// --- FULLSCREEN ITEM PREVIEW OVERLAY LOGIC ---
 window.activePreviewItem = null;
 
 window.showItemPreview = (itemId) => {
-    window.activePreviewItem = itemId;
     const item = ITEMS_DB[itemId];
-    if (!item) return;
+    // PREVENTS BANNERS FROM OPENING A FULLSCREEN PREVIEW
+    if (!item || item.category === 'Banner') return; 
+    
+    window.activePreviewItem = itemId;
     
     document.getElementById('preview-screen-title').innerText = `PREVIEW: ${item.name}`;
+    const catEl = document.getElementById('preview-screen-category');
+    if(catEl) catEl.innerText = item.category;
+    
     document.getElementById('item-preview-screen').classList.remove('hidden');
 };
 
@@ -139,7 +144,6 @@ function renderPreview() {
         previewDummy.angle = previewAngle; 
         previewDummy.size = 60; 
         
-        // Trail active logic specifically for the locker
         if (currentLockerCategory === 'Trail') {
             previewDummy.vx = Math.cos(previewAngle) * 4;
             previewDummy.vy = Math.sin(previewAngle) * 4;
@@ -175,7 +179,6 @@ function renderPreview() {
         previewDummy.angle = previewAngle; 
         previewDummy.size = 70; 
         
-        // Trail active logic specifically for the preview overlay
         if (window.activePreviewItem && ITEMS_DB[window.activePreviewItem].category === 'Trail') {
             previewDummy.vx = Math.cos(previewAngle) * 4;
             previewDummy.vy = Math.sin(previewAngle) * 4;
@@ -217,6 +220,8 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
         e.target.classList.add('active');
         document.getElementById(targetTab).classList.add('active');
         
+        window.activePreviewItem = null; 
+
         const seasonLevelUI = document.querySelector('.player-level-ui');
         if (seasonLevelUI) {
             if (targetTab === 'locker') seasonLevelUI.classList.add('hidden');
@@ -345,7 +350,7 @@ document.getElementById('return-lobby-btn').addEventListener('click', () => {
 });
 
 let currentLockerCategory = null;
-window.openLockerCategory = (cat) => { currentLockerCategory = cat; renderLocker(); };
+window.openLockerCategory = (cat) => { currentLockerCategory = cat; window.activePreviewItem = null; renderLocker(); };
 window.toggleEquip = (itemId, catOverride = null) => {
     if (itemId === null && catOverride) { window.equippedItems[catOverride] = null; } 
     else {
@@ -357,7 +362,7 @@ window.toggleEquip = (itemId, catOverride = null) => {
 };
 
 document.body.addEventListener('click', (e) => {
-    if (e.target.id === 'locker-back-btn') { currentLockerCategory = null; renderLocker(); }
+    if (e.target.id === 'locker-back-btn') { currentLockerCategory = null; window.activePreviewItem = null; renderLocker(); }
 });
 
 function renderLocker() {
@@ -513,15 +518,19 @@ function renderSeasonStore() {
         
         let buttonHtml = '';
         if (isUnlocked && !isClaimed) {
-            buttonHtml = `<button class="btn-claim" data-id="${item.id}"><div class="fill"></div><span>HOLD TO CLAIM</span></button>`;
+            buttonHtml = `<button class="btn-claim" data-id="${item.id}" onclick="event.stopPropagation();"><div class="fill"></div><span>HOLD TO CLAIM</span></button>`;
         } else if (isClaimed) {
-            buttonHtml = `<button class="btn-equip ${isEquipped ? 'equipped' : ''}" onclick="window.toggleEquip('${item.id}')">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button>`;
+            buttonHtml = `<button class="btn-equip ${isEquipped ? 'equipped' : ''}" onclick="event.stopPropagation(); window.toggleEquip('${item.id}')">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button>`;
         }
 
-        // NEW: Image is now deeply clickable to open overlay!
+        let isPreviewable = item.category !== 'Banner';
+        let clickAttr = isPreviewable ? `onclick="window.showItemPreview('${item.id}')"` : '';
+        let cursorStyle = isPreviewable ? 'cursor: pointer;' : 'cursor: default;';
+        let titleAttr = isPreviewable ? 'title="Click to Preview"' : '';
+
         const html = `
             <div class="store-item ${isUnlocked ? 'unlocked' : 'locked'}" style="--rarity-color: ${item.color};">
-                <div class="item-icon" onclick="window.showItemPreview('${item.id}')" style="cursor: pointer;" title="Click to Preview">${item.icon}</div>
+                <div class="item-icon" ${clickAttr} style="${cursorStyle}" ${titleAttr}>${item.icon}</div>
                 <div style="font-size: 0.8rem; color: ${item.color}; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px; text-shadow: 0 0 5px ${item.color}40;">${item.category}</div>
                 <div class="item-name">${item.name}</div>
                 <div class="item-req" style="color: ${item.color};">${isClaimed ? '✓ CLAIMED' : isUnlocked ? 'UNLOCKED!' : `Requires Level ${item.req}`}</div>
@@ -554,16 +563,21 @@ function renderMainStore() {
         
         let buttonHtml = '';
         if (isUnlocked && !isClaimed) {
-            buttonHtml = `<button class="btn-claim" data-id="${item.id}"><div class="fill"></div><span>HOLD TO CLAIM</span></button>`;
+            buttonHtml = `<button class="btn-claim" data-id="${item.id}" onclick="event.stopPropagation();"><div class="fill"></div><span>HOLD TO CLAIM</span></button>`;
         } else if (isClaimed) {
-            buttonHtml = `<button class="btn-equip ${isEquipped ? 'equipped' : ''}" onclick="window.toggleEquip('${item.id}')">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button>`;
+            buttonHtml = `<button class="btn-equip ${isEquipped ? 'equipped' : ''}" onclick="event.stopPropagation(); window.toggleEquip('${item.id}')">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button>`;
         } else {
             buttonHtml = `<div class="item-progress-bg"><div class="item-progress-fill" style="width: ${progressPercent}%; background: ${color}; box-shadow: 0 0 10px ${color};"></div></div>`;
         }
         
+        let isPreviewable = item.category !== 'Banner';
+        let clickAttr = isPreviewable ? `onclick="window.showItemPreview('${item.id}')"` : '';
+        let cursorStyle = isPreviewable ? 'cursor: pointer;' : 'cursor: default;';
+        let titleAttr = isPreviewable ? 'title="Click to Preview"' : '';
+
         const html = `
             <div class="store-item ${isUnlocked ? 'unlocked' : 'locked'}" style="--rarity-color: ${color};">
-                <div class="item-icon" onclick="window.showItemPreview('${item.id}')" style="cursor: pointer;" title="Click to Preview">${item.icon}</div>
+                <div class="item-icon" ${clickAttr} style="${cursorStyle}" ${titleAttr}>${item.icon}</div>
                 <div style="font-size: 0.8rem; color: ${color}; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px; text-shadow: 0 0 5px ${color}40;">${item.category}</div>
                 <div class="item-name">${item.name}</div>
                 <div class="item-req" style="color: ${color};">${isClaimed ? '✓ CLAIMED' : isUnlocked ? 'UNLOCKED!' : `${Math.floor(currentValue)} / ${shopItem.req} ${shopItem.label}`}</div>
