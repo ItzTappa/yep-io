@@ -4,8 +4,16 @@ import { UPGRADE_POOL } from './upgrades.js';
 
 export function getWeightedUpgrades(entity, count = 3) {
     let available = UPGRADE_POOL.filter(upg => {
-        let underMax = entity.upgrades[upg.id] < entity.maxUpgradeTier;
+        // NEW: If it is an active ability, ONLY show it if it is NOT the one currently equipped!
+        if (upg.id === 'shield' || upg.id === 'overdrive') {
+            return entity.activeAbility !== upg.id;
+        }
+
+        // NEW: Properly read the specific maxTier of the card (instead of allowing everything to reach tier 5)
+        let maxAllowed = upg.maxTier !== undefined ? upg.maxTier : entity.maxUpgradeTier;
+        let underMax = entity.upgrades[upg.id] < maxAllowed;
         let classAllowed = !upg.classes || upg.classes.includes(entity.type);
+        
         return underMax && classAllowed;
     });
 
@@ -96,19 +104,31 @@ export class Entity {
     }
 
     applyUpgrade(upgradeId) {
-        if (this.upgrades[upgradeId] >= this.maxUpgradeTier) return; 
+        const upgradeDef = UPGRADE_POOL.find(u => u.id === upgradeId);
+        if (!upgradeDef) return;
+
+        // NEW: If picking a special ability, overwrite the current one cleanly!
+        if (upgradeId === 'shield' || upgradeId === 'overdrive') {
+            this.activeAbility = upgradeId;
+            this.upgrades['shield'] = 0;
+            this.upgrades['overdrive'] = 0;
+            this.upgrades[upgradeId] = 1;
+            return;
+        }
+
+        let maxAllowed = upgradeDef.maxTier !== undefined ? upgradeDef.maxTier : this.maxUpgradeTier;
+        if (this.upgrades[upgradeId] >= maxAllowed) return; 
         
         if (upgradeId === 'spikes' && !this.frontVisual) this.frontVisual = 'spikes';
         if ((upgradeId === 'fireRate' || upgradeId === 'multiShot' || upgradeId === 'damage') && !this.frontVisual) this.frontVisual = 'gun';
         
-        const armorUpgrades = ['maxHealth', 'health', 'plating', 'armor', 'defense', 'shield'];
+        const armorUpgrades = ['maxHealth', 'health', 'plating', 'armor', 'defense'];
         if (armorUpgrades.includes(upgradeId) && !this.bodyVisual) this.bodyVisual = 'armor';
         
         if ((upgradeId === 'speed' || upgradeId === 'dash') && !this.rearVisual) this.rearVisual = 'thrusters';
         if ((upgradeId === 'regen' || upgradeId === 'vampirism') && !this.auraVisual) this.auraVisual = 'regen';
 
-        const upgradeDef = UPGRADE_POOL.find(u => u.id === upgradeId);
-        if (upgradeDef && upgradeDef.apply) {
+        if (upgradeDef.apply) {
             upgradeDef.apply(this); 
             this.upgrades[upgradeId]++;
         }
@@ -653,7 +673,7 @@ export class Entity {
         }
         
         let hideArrow = (this.frontVisual !== null);
-        if (this.isPlayer && !hideArrow) {
+        if (this.isPlayer && !hideArrow && this.name !== "") {
             ctx.save(); 
             ctx.translate(this.x, this.y); 
             ctx.rotate(this.angle);
@@ -723,159 +743,6 @@ export class Entity {
                 }
             }
         }
-    }
-}
-
-export class Player extends Entity {
-    constructor(x, y, type, name = "") {
-        super(x, y, type); 
-        this.name = name; 
-        this.isPlayer = true; 
-        this.equipped = window.equippedItems || { Skin: null, Trail: null, Banner: null, Color: null };
-        if (this.equipped.Color && ITEMS_DB && ITEMS_DB[this.equipped.Color]) {
-            this.color = ITEMS_DB[this.equipped.Color].value; 
-        } else { this.color = '#d3d3d3'; }
-    }
-}
-
-export class Bot extends Entity {
-    constructor(x, y, type, startingPoints = 0) {
-        super(x, y, type); 
-        this.targetX = x; this.targetY = y; this.changeTargetTimer = 0;
-        this.isTeammate = false; 
-
-        const names = ['OrbHunter', 'NovaStrike', 'PixelSlayer', 'GhostBlade', 'RogueBot', 'Vanguard', 'Titan', 'Apex'];
-        this.name = names[Math.floor(Math.random() * names.length)] + Math.floor(Math.random() * 99);
-        this.points = startingPoints; 
-        this.upgradeProgress = startingPoints; 
-        
-        this.botPointsToNextUpgrade = 10;
-        this.dashTendency = Math.random();
-        this.strafeDir = Math.random() > 0.5 ? 1 : -1; 
-        this.personality = Math.random(); 
-        
-        while (this.upgradeProgress >= this.botPointsToNextUpgrade) {
-            this.upgradeProgress -= this.botPointsToNextUpgrade;
-            this.upgradeCount++; 
-            this.botPointsToNextUpgrade = Math.floor(this.botPointsToNextUpgrade * 1.25) + 15;
-            let choices = getWeightedUpgrades(this, 1); if (choices.length > 0) this.applyUpgrade(choices[0].id);
-        }
-        
-        if (ITEMS_DB && Math.random() < 0.15) {
-            const items = Object.values(ITEMS_DB);
-            if (Math.random() < 0.2) {
-                let skins = items.filter(i => i.category === 'Skin'); if (skins.length) this.equipped.Skin = skins[Math.floor(Math.random()*skins.length)].id;
-            }
-            if (Math.random() < 0.2) {
-                let trails = items.filter(i => i.category === 'Trail'); if (trails.length) this.equipped.Trail = trails[Math.floor(Math.random()*trails.length)].id;
-            }
-        }
-    }
-    
-    updateBot(allPlayers, isCinematicIntro = false) {
-        if (isCinematicIntro && (this.isTeammate || this.isPlayer)) {
-            this.angle = -Math.PI / 2; 
-            super.update(); 
-            return;
-        }
-
-        this.changeTargetTimer--; let nearestEnemy = null; let minDist = 800;
-        
-        let highestScore = 0;
-
-        allPlayers.forEach(p => { 
-            if (p.points > highestScore) highestScore = p.points;
-
-            if (p === this || p.isDead) return; 
-            if (this.isTeammate && (p.isPlayer || p.isTeammate)) return;
-            if (p.inSafeZone) return; 
-
-            const dist = distance(this.x, this.y, p.x, p.y); 
-            let randomizedDist = dist + (Math.random() * 100); 
-            
-            if (randomizedDist < minDist) { minDist = randomizedDist; nearestEnemy = p; } 
-        });
-
-        let catchUpGain = (highestScore > this.points) ? (highestScore - this.points) * 0.002 : 0;
-        let passiveGain = 0.5 + catchUpGain; 
-        
-        this.points += passiveGain; 
-        this.upgradeProgress += passiveGain;
-        
-        while (this.upgradeProgress >= this.botPointsToNextUpgrade) {
-            this.upgradeProgress -= this.botPointsToNextUpgrade; 
-            this.upgradeCount++; 
-            this.botPointsToNextUpgrade = Math.floor(this.botPointsToNextUpgrade * 1.25) + 15;
-            let choices = getWeightedUpgrades(this, 1); if (choices.length > 0) this.applyUpgrade(choices[0].id);
-        }
-
-        if (this.isTeammate && !nearestEnemy) {
-            const player = allPlayers.find(p => p.isPlayer);
-            if (player && !player.isDead) {
-                const distToPlayer = distance(this.x, this.y, player.x, player.y);
-                if (distToPlayer > 200) {
-                    this.angle = Math.atan2(player.y - this.y, player.x - this.x);
-                    const dx = player.x - this.x; const dy = player.y - this.y;
-                    
-                    let currentSpeed = this.speed * (this.abilityTimer > 0 && this.activeAbility === 'overdrive' ? 1.8 : 1.0);
-                    this.vx += (dx / distToPlayer) * (currentSpeed * 0.12);
-                    this.vy += (dy / distToPlayer) * (currentSpeed * 0.12);
-                } else {
-                    this.vx *= 0.9; this.vy *= 0.9;
-                }
-            }
-        } else if (nearestEnemy) {
-            const trueDist = distance(this.x, this.y, nearestEnemy.x, nearestEnemy.y);
-            const dx = nearestEnemy.x - this.x; 
-            const dy = nearestEnemy.y - this.y;
-            
-            let currentSpeed = this.speed * (this.abilityTimer > 0 && this.activeAbility === 'overdrive' ? 1.8 : 1.0);
-            let fleeThreshold = 0.15 + (this.personality * 0.25); 
-            
-            if (this.activeAbility && this.abilityCooldown <= 0) {
-                if (this.health < this.maxHealth * 0.3 || (this.activeAbility === 'overdrive' && trueDist < 300)) {
-                    this.useAbility();
-                }
-            }
-
-            if (this.health < this.maxHealth * fleeThreshold) {
-                this.angle = Math.atan2(-dy, -dx);
-                this.vx += Math.cos(this.angle) * (currentSpeed * 0.14);
-                this.vy += Math.sin(this.angle) * (currentSpeed * 0.14);
-                
-                if (this.dashCooldown <= 0 && Math.random() < 0.03) {
-                    this.dash(-dx, -dy);
-                }
-            } else {
-                this.angle = Math.atan2(dy, dx);
-                if (trueDist > 150 && trueDist < 400 && Math.random() < (0.002 + this.dashTendency * 0.005)) {
-                    this.dash(dx, dy);
-                }
-                let optimalDist = this.type === 'square' ? 100 : (this.type === 'triangle' ? 300 : 200);
-                if (Math.random() < 0.01) this.strafeDir *= -1; 
-                
-                if (trueDist > optimalDist + 50) { 
-                    this.vx += (dx / trueDist) * (currentSpeed * 0.12); 
-                    this.vy += (dy / trueDist) * (currentSpeed * 0.12); 
-                } else if (trueDist < optimalDist - 50) { 
-                    this.vx -= (dx / trueDist) * (currentSpeed * 0.12); 
-                    this.vy -= (dy / trueDist) * (currentSpeed * 0.12); 
-                } else {
-                    this.vx += (-dy / trueDist) * (currentSpeed * 0.08) * this.strafeDir;
-                    this.vy += (dx / trueDist) * (currentSpeed * 0.08) * this.strafeDir;
-                }
-            }
-        } else {
-            if (this.changeTargetTimer <= 0) {
-                this.targetX = this.x + (Math.random() - 0.5) * 800; this.targetY = this.y + (Math.random() - 0.5) * 800; this.changeTargetTimer = 60 + Math.random() * 60; 
-            }
-            this.angle = Math.atan2(this.targetY - this.y, this.targetX - this.x);
-            const dx = this.targetX - this.x; const dy = this.targetY - this.y; const dist = Math.hypot(dx, dy);
-            let currentSpeed = this.speed * (this.abilityTimer > 0 && this.activeAbility === 'overdrive' ? 1.8 : 1.0);
-            
-            if (dist > 10) { this.vx += (dx / dist) * (currentSpeed * 0.10); this.vy += (dy / dist) * (currentSpeed * 0.10); }
-        }
-        super.update();
     }
 }
 
