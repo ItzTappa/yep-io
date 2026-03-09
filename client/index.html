@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>yep.io</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="main-menu">
+        <nav class="top-nav">
+            <button class="tab-btn active" data-target="lobby">Lobby</button>
+            <button class="tab-btn" data-target="multiplayer">Multiplayer</button>
+            <button class="tab-btn" data-target="stats">Stats</button>
+            <button class="tab-btn" data-target="locker">Locker</button>
+            <button class="tab-btn" data-target="season">Season Store</button>
+            <button class="tab-btn" data-target="store">Main Store</button>
+        </nav>
+
+        <div id="lobby" class="tab-content active">
+            <div class="lobby-content">
+                <div class="lobby-center">
+                    <h1>yep.io</h1>
+                    <div class="class-selection">
+                        <button class="class-btn active" data-class="triangle">Jet (Triangle)</button>
+                        <button class="class-btn" data-class="square">Tank (Square)</button>
+                        <button class="class-btn" data-class="circle">Soldier (Circle)</button>
+                    </div>
+                    <button id="play-btn">PLAY</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="multiplayer" class="tab-content">
+            <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+                <h2 style="color: var(--accent); margin-bottom: 20px; font-size: 2rem;">SELECT MODE</h2>
+                <div class="mode-cards">
+                    <div class="mode-card" data-mode="duos">
+                        <h3>DUOS</h3>
+                        <p>2 Players</p>
+                    </div>
+                    <div class="mode-card" data-mode="trios">
+                        <h3>TRIOS</h3>
+                        <p>3 Players</p>
+                    </div>
+                    <div class="mode-card" data-mode="squads">
+                        <h3>SQUADS</h3>
+                        <p>4 Players</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="stats" class="tab-content">
+            <div class="store-container">
+                <div class="store-header">
+                    <h2>CAREER STATS</h2>
+                </div>
+                <div class="lifetime-stats-grid">
+                    <div class="stat-box"><div>ACCOUNT LEVEL</div><div id="stat-account-level" class="stat-val">1</div></div>
+                    <div class="stat-box"><div>MATCHES</div><div id="stat-matches" class="stat-val">0</div></div>
+                    <div class="stat-box"><div>TOTAL KILLS</div><div id="stat-kills" class="stat-val">0</div></div>
+                    <div class="stat-box"><div>TOTAL POINTS</div><div id="stat-points" class="stat-val">0</div></div>
+                    <div class="stat-box"><div>TIME ALIVE</div><div id="stat-time" class="stat-val">0m 0s</div></div>
+                </div>
+                
+                <div class="store-header" style="margin-top: 20px;">
+                    <h2>MATCH HISTORY</h2>
+                </div>
+
+                <div class="match-history-header">
+                    <div>RANK</div>
+                    <div>CLASS</div>
+                    <div>KILLS</div>
+                    <div>POINTS</div>
+                    <div>TIME ALIVE</div>
+                </div>
+
+                <div id="match-history-list" class="match-history-list">
+                    <p style="color: #aaa; text-align: center; padding: 20px; grid-column: span 5;">Play a match to see your history!</p>
+                </div>
+            </div>
+        </div>
+        
+        <div id="locker" class="tab-content">
+            <div class="store-container" style="max-width: 1100px;">
+                <div class="store-header">
+                    <h2>YOUR LOCKER</h2>
+                </div>
+                <p class="store-desc" style="text-align: left; margin-bottom: 20px; width: 100%;">Equip your claimed cosmetics to use them in the arena.</p>
+                
+                <div class="locker-layout">
+                    <div class="locker-left">
+                        <div id="locker-slots-view" class="locker-slots-grid"></div>
+
+                        <div id="locker-items-view" class="hidden">
+                            <div class="locker-items-header">
+                                <button id="locker-back-btn">◀ BACK</button>
+                                <h3 id="locker-category-title">CHOOSE ITEM</h3>
+                            </div>
+                            <div class="store-grid" id="locker-item-grid" style="justify-content: flex-start;"></div>
+                        </div>
+                    </div>
+
+                    <div class="preview-container locker-preview">
+                        <canvas id="lockerPreviewCanvas" width="300" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="season" class="tab-content">
+            <div class="store-container">
+                <div class="store-header">
+                    <h2>SEASON 1: GENESIS</h2>
+                </div>
+                <div class="season-progress">
+                    <div id="season-progress-bar"></div>
+                </div>
+                <p class="store-desc" style="text-align: center; margin-bottom: 20px;">Level up your account to unlock free permanent rewards.</p>
+                <div class="store-grid" id="season-grid"></div>
+            </div>
+        </div>
+
+        <div id="store" class="tab-content">
+            <div class="store-container">
+                <div class="store-header">
+                    <h2>HOURLY ROTATION</h2>
+                    <div class="store-timer">Rotates in: <span id="shop-timer">59:59</span></div>
+                </div>
+                <p class="store-desc" style="text-align: center; margin-bottom: 20px;">Reach the required stats before the hour ends to unlock these cosmetics!</p>
+                <div class="store-grid" id="main-store-grid"></div>
+            </div>
+        </div>
+
+        <div class="player-level-ui">
+            <div>Season Level: <span id="menu-level">1</span></div>
+            <div class="menu-xp-bar-container">
+                <div id="menu-xp-bar"></div>
+            </div>
+        </div>
+        
+        <button id="settings-btn">⚙️</button>
+    </div>
+
+    <div id="settings-modal" class="hidden">
+        <div class="settings-content">
+            <h2>SETTINGS</h2>
+            
+            <div class="setting-row">
+                <label for="set-hq">High Quality Graphics (Glow)</label>
+                <input type="checkbox" id="set-hq" checked>
+            </div>
+            <div class="setting-row">
+                <label for="set-particles">Enable Particle Effects</label>
+                <input type="checkbox" id="set-particles" checked>
+            </div>
+            <div class="setting-row">
+                <label for="set-names">Show Player Names</label>
+                <input type="checkbox" id="set-names" checked>
+            </div>
+            <div class="setting-row">
+                <label for="set-fps">Show FPS Counter</label>
+                <input type="checkbox" id="set-fps">
+            </div>
+
+            <hr style="border-color: #444; margin: 20px 0;">
+            <h3 style="color: var(--accent); margin-bottom: 15px; text-align: center;">CONTROLS</h3>
+            
+            <div class="setting-row">
+                <label>Move Up</label>
+                <button class="keybind-btn" data-action="up">W</button>
+            </div>
+            <div class="setting-row">
+                <label>Move Down</label>
+                <button class="keybind-btn" data-action="down">S</button>
+            </div>
+            <div class="setting-row">
+                <label>Move Left</label>
+                <button class="keybind-btn" data-action="left">A</button>
+            </div>
+            <div class="setting-row">
+                <label>Move Right</label>
+                <button class="keybind-btn" data-action="right">D</button>
+            </div>
+            <div class="setting-row">
+                <label>Dash</label>
+                <button class="keybind-btn" data-action="dash">SPACE</button>
+            </div>
+
+            <button id="close-settings-btn">APPLY & CLOSE</button>
+        </div>
+    </div>
+
+    <div id="game-ui" class="hidden">
+        <div class="hud">
+            <div id="fps-display" class="hidden">60 FPS</div>
+            <div class="xp-bar-container">
+                <div id="xp-bar"></div>
+                <span id="level-display">0 PTS</span>
+            </div>
+            <div class="leaderboard">
+                <h3>Leaderboard</h3>
+                <ul id="leaderboard-list"></ul>
+            </div>
+        </div>
+
+        <div id="level-up-notif">
+            <div class="notif-text">BAR FILLED!</div>
+            <div class="notif-level">UPGRADE READY</div>
+        </div>
+        <div id="account-level-notif">
+            <div class="notif-text" style="color: white;">SEASON LEVEL UP!</div>
+            <div class="notif-level" style="color: #ffe600;">REACHED LEVEL <span id="account-notif-level-num">2</span></div>
+        </div>
+
+        <div id="upgrade-ui" class="hidden">
+            <div class="upgrade-header">CHOOSE UPGRADE (Press 1, 2, or 3)</div>
+            <div class="upgrade-cards">
+                <div class="card" id="card-1"><div class="card-key">1</div><div class="card-title" id="title-1">Speed</div><div class="card-desc" id="desc-1"></div></div>
+                <div class="card" id="card-2"><div class="card-key">2</div><div class="card-title" id="title-2">Damage</div><div class="card-desc" id="desc-2"></div></div>
+                <div class="card" id="card-3"><div class="card-key">3</div><div class="card-title" id="title-3">Fire Rate</div><div class="card-desc" id="desc-3"></div></div>
+            </div>
+        </div>
+
+        <div id="br-ui" class="hidden">
+            <div id="minimap-container">
+                <canvas id="minimap-canvas"></canvas>
+                <div id="player-count-display">ALIVE: --</div>
+            </div>
+            <div id="teammate-pointers"></div>
+        </div>
+
+        <div id="game-over-screen" class="hidden">
+            <h2>MATCH OVER</h2>
+            <div class="killed-by">SPECTATING: <span id="go-killer-name" style="color: #ffe600;">UNKNOWN</span></div>
+            <div class="stats-grid">
+                <div>Placement: <span id="go-placement" style="color: #00ffcc;">#1 / 100</span></div>
+                <div>Points: <span id="go-points">0</span></div>
+                <div>Kills: <span id="go-kills">0</span></div>
+                <div>Time Alive: <span id="go-time">0s</span></div>
+            </div>
+            <div class="xp-gained">Season XP Earned: <span id="go-xp" style="color: #ffe600;">+0</span></div>
+            <button id="return-lobby-btn">Return to Lobby</button>
+        </div>
+    </div>
+
+    <div id="dev-console" class="hidden">
+        <div id="dev-log">
+            <div style="color: #aaa;">Developer Console Started. Press ` to close. Type /help for commands.</div>
+        </div>
+        <input type="text" id="dev-input" placeholder="Enter command (e.g., /level 50)" autocomplete="off">
+    </div>
+
+    <div id="lobby-screen" class="hidden full-screen-overlay">
+        <div class="lobby-header">
+            <h2 style="font-size: 2.5rem; color: var(--accent); margin-bottom: 40px; letter-spacing: 3px;">MULTIPLAYER LOBBY</h2>
+            
+            <div class="lobby-header-controls">
+                <div class="control-box">
+                    <div class="code-label">CODE: <span id="lobby-code-display">-----</span></div>
+                    <button id="copy-code-btn" class="control-btn dark-btn">COPY</button>
+                </div>
+                
+                <div class="control-box">
+                    <input type="text" id="join-code-input" placeholder="ENTER CODE" maxlength="5">
+                    <button id="join-lobby-btn" class="control-btn yellow-btn">JOIN</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="player-slots-container" class="player-slots"></div>
+
+        <div class="lobby-footer">
+            <button id="leave-lobby-btn" class="footer-btn dark-btn-outline">LEAVE</button>
+            <button id="ready-btn" class="footer-btn yellow-btn-solid">READY</button>
+        </div>
+    </div>
+
+    <div id="black-fade-overlay"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
