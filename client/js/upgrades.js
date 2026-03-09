@@ -3,6 +3,16 @@
 // ==========================================
 
 export const UPGRADE_POOL = [
+    // --- SPECIAL ACTIVE ABILITIES ---
+    { 
+        id: 'shield', title: 'Active: Dome Shield', desc: 'Press E (or tap Ability) to become invincible for 3s', weight: 60, maxTier: 1,
+        apply: (e) => { e.activeAbility = 'shield'; } 
+    },
+    { 
+        id: 'overdrive', title: 'Active: Overdrive', desc: 'Press E (or tap Ability) to double speed & fire rate for 3s', weight: 60, maxTier: 1,
+        apply: (e) => { e.activeAbility = 'overdrive'; } 
+    },
+
     // --- UNIVERSAL UPGRADES ---
     { 
         id: 'speed', title: 'Thrusters', desc: '+Movement Speed', weight: 100,
@@ -60,7 +70,8 @@ export const UPGRADE_POOL = [
         id: 'extendedDash', title: 'Extended Dash', desc: 'Dash travels further', weight: 70,
         apply: (e) => { e.extendedDash += 1.5; }
     },
-// --- JET (Triangle) EXCLUSIVES ---
+
+    // --- JET (Triangle) EXCLUSIVES ---
     { 
         id: 'piercing', title: 'Piercing Tip', desc: 'Frontal Ram Damage', classes: ['triangle'], weight: 50,
         apply: (e) => { e.piercing += 1; }
