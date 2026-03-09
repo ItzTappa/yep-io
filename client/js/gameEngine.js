@@ -4,22 +4,32 @@ import { sounds } from './soundManager.js';
 
 export class GameEngine {
     constructor(canvas) {
-        this.canvas = canvas; this.ctx = canvas.getContext('2d');
-        this.width = window.innerWidth; this.height = window.innerHeight;
+        this.canvas = canvas; 
+        this.ctx = canvas.getContext('2d');
+        this.width = window.innerWidth; 
+        this.height = window.innerHeight;
         const dpr = window.devicePixelRatio || 1;
-        this.canvas.width = this.width * dpr; this.canvas.height = this.height * dpr;
-        this.canvas.style.width = `${this.width}px`; this.canvas.style.height = `${this.height}px`;
+        this.canvas.width = this.width * dpr; 
+        this.canvas.height = this.height * dpr;
+        this.canvas.style.width = `${this.width}px`; 
+        this.canvas.style.height = `${this.height}px`;
         this.ctx.scale(dpr, dpr);
 
         this.worldSize = 4000;
-        this.player = null; this.bots = []; this.orbs = []; this.projectiles = []; this.particles = [];
+        this.player = null; 
+        this.bots = []; 
+        this.orbs = []; 
+        this.projectiles = []; 
+        this.particles = [];
         this.teammates = []; 
         
         this.lobbyCode = null; 
         this.isHost = false; 
         
-        this.mouseX = this.width / 2; this.mouseY = this.height / 2;
-        this.keys = {}; this.frameCount = 0; 
+        this.mouseX = this.width / 2; 
+        this.mouseY = this.height / 2;
+        this.keys = {}; 
+        this.frameCount = 0; 
         
         this.camera = { x: this.worldSize / 2, y: this.worldSize / 2 };
         this.cameraZoom = 1.0; 
@@ -60,7 +70,7 @@ export class GameEngine {
         this.isChoosingUpgrade = false;
         this.pointsToNextUpgrade = 10; 
 
-        // Touch Control Variables
+        // Mobile Controls State
         this.leftTouch = { id: null, originX: 0, originY: 0, x: 0, y: 0, active: false };
         this.rightTouch = { id: null, originX: 0, originY: 0, x: 0, y: 0, active: false };
 
@@ -69,18 +79,27 @@ export class GameEngine {
 
     initInput() {
         window.addEventListener('resize', () => {
-            this.width = window.innerWidth; this.height = window.innerHeight;
+            this.width = window.innerWidth; 
+            this.height = window.innerHeight;
             const dpr = window.devicePixelRatio || 1;
-            this.canvas.width = this.width * dpr; this.canvas.height = this.height * dpr;
-            this.canvas.style.width = `${this.width}px`; this.canvas.style.height = `${this.height}px`;
+            this.canvas.width = this.width * dpr; 
+            this.canvas.height = this.height * dpr;
+            this.canvas.style.width = `${this.width}px`; 
+            this.canvas.style.height = `${this.height}px`;
             this.ctx.scale(dpr, dpr);
         });
-        window.addEventListener('mousemove', (e) => { this.mouseX = e.clientX; this.mouseY = e.clientY; });
+
+        window.addEventListener('mousemove', (e) => { 
+            this.mouseX = e.clientX; 
+            this.mouseY = e.clientY; 
+        });
         
         window.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'INPUT') return;
             const key = e.key.toLowerCase();
-            if (Object.values(window.gameSettings.keybinds).includes(key)) { e.preventDefault(); }
+            if (Object.values(window.gameSettings.keybinds).includes(key)) { 
+                e.preventDefault(); 
+            }
             this.keys[key] = true;
             
             if (this.isChoosingUpgrade && !this.isDemo && !this.isGameOver) {
@@ -95,9 +114,7 @@ export class GameEngine {
             this.keys[e.key.toLowerCase()] = false; 
         });
 
-        // ==========================================
-        // MOBILE TOUCH CONTROLS
-        // ==========================================
+        // Mobile Control Registration
         const leftZone = document.getElementById('joystick-left');
         const rightZone = document.getElementById('joystick-right');
         const leftBase = document.getElementById('base-left');
@@ -108,9 +125,9 @@ export class GameEngine {
 
         if (leftZone) {
             leftZone.addEventListener('touchstart', (e) => {
+                if (this.isDemo) return;
                 e.preventDefault();
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    const t = e.changedTouches[i];
+                for (let t of e.changedTouches) {
                     if (!this.leftTouch.active) {
                         this.leftTouch.active = true;
                         this.leftTouch.id = t.identifier;
@@ -118,40 +135,36 @@ export class GameEngine {
                         this.leftTouch.originY = t.clientY;
                         this.leftTouch.x = t.clientX;
                         this.leftTouch.y = t.clientY;
-                        
                         leftBase.style.left = t.clientX + 'px';
                         leftBase.style.top = t.clientY + 'px';
                         leftBase.classList.add('active');
-                        leftStick.style.transform = `translate(-50%, -50%)`;
                     }
                 }
             }, {passive: false});
 
             leftZone.addEventListener('touchmove', (e) => {
                 e.preventDefault();
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    const t = e.changedTouches[i];
+                for (let t of e.changedTouches) {
                     if (this.leftTouch.active && t.identifier === this.leftTouch.id) {
                         this.leftTouch.x = t.clientX;
                         this.leftTouch.y = t.clientY;
-                        
                         let dx = t.clientX - this.leftTouch.originX;
                         let dy = t.clientY - this.leftTouch.originY;
                         let dist = Math.hypot(dx, dy);
-                        let maxDist = 40; 
-                        if (dist > maxDist) { dx = (dx/dist) * maxDist; dy = (dy/dist) * maxDist; }
+                        if (dist > 40) { 
+                            dx = (dx/dist)*40; 
+                            dy = (dy/dist)*40; 
+                        }
                         leftStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
                     }
                 }
             }, {passive: false});
 
             const endLeft = (e) => {
-                e.preventDefault();
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    const t = e.changedTouches[i];
+                for (let t of e.changedTouches) {
                     if (this.leftTouch.active && t.identifier === this.leftTouch.id) {
                         this.leftTouch.active = false;
-                        leftBase.classList.remove('active'); 
+                        leftBase.classList.remove('active');
                     }
                 }
             };
@@ -161,9 +174,9 @@ export class GameEngine {
 
         if (rightZone) {
             rightZone.addEventListener('touchstart', (e) => {
+                if (this.isDemo) return;
                 e.preventDefault();
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    const t = e.changedTouches[i];
+                for (let t of e.changedTouches) {
                     if (!this.rightTouch.active) {
                         this.rightTouch.active = true;
                         this.rightTouch.id = t.identifier;
@@ -171,40 +184,36 @@ export class GameEngine {
                         this.rightTouch.originY = t.clientY;
                         this.rightTouch.x = t.clientX;
                         this.rightTouch.y = t.clientY;
-                        
                         rightBase.style.left = t.clientX + 'px';
                         rightBase.style.top = t.clientY + 'px';
                         rightBase.classList.add('active');
-                        rightStick.style.transform = `translate(-50%, -50%)`;
                     }
                 }
             }, {passive: false});
 
             rightZone.addEventListener('touchmove', (e) => {
                 e.preventDefault();
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    const t = e.changedTouches[i];
+                for (let t of e.changedTouches) {
                     if (this.rightTouch.active && t.identifier === this.rightTouch.id) {
                         this.rightTouch.x = t.clientX;
                         this.rightTouch.y = t.clientY;
-                        
                         let dx = t.clientX - this.rightTouch.originX;
                         let dy = t.clientY - this.rightTouch.originY;
                         let dist = Math.hypot(dx, dy);
-                        let maxDist = 40;
-                        if (dist > maxDist) { dx = (dx/dist) * maxDist; dy = (dy/dist) * maxDist; }
+                        if (dist > 40) { 
+                            dx = (dx/dist)*40; 
+                            dy = (dy/dist)*40; 
+                        }
                         rightStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
                     }
                 }
             }, {passive: false});
 
             const endRight = (e) => {
-                e.preventDefault();
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    const t = e.changedTouches[i];
+                for (let t of e.changedTouches) {
                     if (this.rightTouch.active && t.identifier === this.rightTouch.id) {
                         this.rightTouch.active = false;
-                        rightBase.classList.remove('active'); 
+                        rightBase.classList.remove('active');
                     }
                 }
             };
@@ -213,13 +222,15 @@ export class GameEngine {
         }
 
         if (dashBtn) {
-            dashBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                this.keys[window.gameSettings.keybinds.dash] = true;
+            dashBtn.addEventListener('touchstart', (e) => { 
+                if (this.isDemo) return;
+                e.preventDefault(); 
+                this.keys[window.gameSettings.keybinds.dash] = true; 
             });
-            dashBtn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                this.keys[window.gameSettings.keybinds.dash] = false;
+            dashBtn.addEventListener('touchend', (e) => { 
+                if (this.isDemo) return;
+                e.preventDefault(); 
+                this.keys[window.gameSettings.keybinds.dash] = false; 
             });
         }
     }
@@ -237,18 +248,28 @@ export class GameEngine {
     getSafeSpawnPosition() {
         let x, y, isSafe = false;
         while (!isSafe) {
-            x = Math.random() * this.worldSize; y = Math.random() * this.worldSize;
-            if (!this.player || distance(x, y, this.player.x, this.player.y) > 1000) isSafe = true;
+            x = Math.random() * this.worldSize; 
+            y = Math.random() * this.worldSize;
+            if (!this.player || distance(x, y, this.player.x, this.player.y) > 1000) {
+                isSafe = true;
+            }
         }
         return { x, y };
     }
 
     getSafeOrbPosition(minDist = 500) {
-        let x, y; let isSafe = false; let attempts = 0;
+        let x, y; 
+        let isSafe = false; 
+        let attempts = 0;
         while (!isSafe && attempts < 50) {
-            x = Math.random() * this.worldSize; y = Math.random() * this.worldSize; isSafe = true;
+            x = Math.random() * this.worldSize; 
+            y = Math.random() * this.worldSize; 
+            isSafe = true;
             for (let orb of this.orbs) {
-                if (orb.type === 'health' && distance(x, y, orb.x, orb.y) < minDist) { isSafe = false; break; }
+                if (orb.type === 'health' && distance(x, y, orb.x, orb.y) < minDist) { 
+                    isSafe = false; 
+                    break; 
+                }
             }
             attempts++;
         }
@@ -264,7 +285,9 @@ export class GameEngine {
 
     grantAccountXP(baseAmount, enemyPoints = 0) {
         let multiplier = 1;
-        if (enemyPoints > this.player.points) { multiplier = enemyPoints / Math.max(1, this.player.points); }
+        if (enemyPoints > this.player.points) { 
+            multiplier = enemyPoints / Math.max(1, this.player.points); 
+        }
         multiplier = Math.min(multiplier, 5);
         let bonusFromScore = Math.floor(enemyPoints / 100); 
         const finalXP = Math.floor(baseAmount * multiplier) + bonusFromScore;
@@ -277,8 +300,10 @@ export class GameEngine {
         let xpRequired = window.globalAccountLevel * 1000;
         let leveledUp = false;
         while (window.globalAccountXP >= xpRequired) {
-            window.globalAccountLevel++; window.globalAccountXP -= xpRequired;
-            xpRequired = window.globalAccountLevel * 1000; leveledUp = true;
+            window.globalAccountLevel++; 
+            window.globalAccountXP -= xpRequired;
+            xpRequired = window.globalAccountLevel * 1000; 
+            leveledUp = true;
         }
         if (leveledUp && !this.isDemo) {
             const notif = document.getElementById('account-level-notif');
@@ -295,56 +320,89 @@ export class GameEngine {
     startDemo() {
         if (this.animationId) cancelAnimationFrame(this.animationId);
         
-        // HIDE GAME UI, MINIMAP, AND MOBILE CONTROLS ON MENU
+        // Hide Multiplayer Minimap and Controls on Menu
         const brUi = document.getElementById('br-ui');
         if (brUi) brUi.classList.add('hidden');
+        
         const mobileControls = document.getElementById('mobile-controls');
-        if (mobileControls) mobileControls.classList.add('hidden');
+        if (mobileControls) { 
+            mobileControls.classList.add('hidden'); 
+            mobileControls.style.pointerEvents = 'none'; 
+        }
 
         this.worldSize = 4000;
         this.stormActive = false;
-        this.isDemo = true; this.isGameOver = false; this.spectateTarget = null;
-        this.bots = []; this.orbs = []; this.projectiles = []; this.particles = [];
-        this.teammates = []; this.isCinematicIntro = false;
+        this.isDemo = true; 
+        this.isGameOver = false; 
+        this.spectateTarget = null;
+        this.bots = []; 
+        this.orbs = []; 
+        this.projectiles = []; 
+        this.particles = [];
+        this.teammates = []; 
+        this.isCinematicIntro = false;
         
-        this.player = new Player(-10000, -10000, 'circle'); this.player.health = 999999; 
+        this.player = new Player(-10000, -10000, 'circle'); 
+        this.player.health = 999999; 
 
         for(let i = 0; i < 40; i++) {
             const types = ['triangle', 'square', 'circle'];
             this.bots.push(new Bot(Math.random() * this.worldSize, Math.random() * this.worldSize, types[Math.floor(Math.random()*3)], Math.random() * 5000));
         }
-        for(let i = 0; i < 400; i++) this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
+        
+        for(let i = 0; i < 400; i++) {
+            this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
+        }
 
-        this.demoTargetX = this.worldSize / 2; this.demoTargetY = this.worldSize / 2;
-        this.camera.x = this.demoTargetX; this.camera.y = this.demoTargetY;
+        this.demoTargetX = this.worldSize / 2; 
+        this.demoTargetY = this.worldSize / 2;
+        this.camera.x = this.demoTargetX; 
+        this.camera.y = this.demoTargetY;
         this.cameraZoom = 1.0;
-        this.lastTime = performance.now(); this.loop(this.lastTime);
+        this.lastTime = performance.now(); 
+        this.loop(this.lastTime);
     }
 
     start(playerClass) {
         if (this.animationId) cancelAnimationFrame(this.animationId);
         
-        // REVEAL MOBILE CONTROLS, KEEP MINIMAP HIDDEN
+        // Mobile Controls Prep
         const mobileControls = document.getElementById('mobile-controls');
-        if (mobileControls) mobileControls.classList.remove('hidden');
+        if (mobileControls) { 
+            mobileControls.classList.remove('hidden'); 
+            mobileControls.style.pointerEvents = 'auto'; 
+        }
+        
         const brUi = document.getElementById('br-ui');
-        if (brUi) brUi.classList.add('hidden');
+        if (brUi) brUi.classList.add('hidden'); // Force hide minimap in Singleplayer
         
         this.worldSize = 4000; 
         this.stormActive = false; 
 
-        this.isDemo = false; this.isGameOver = false; this.spectateTarget = null;
-        this.bots = []; this.orbs = []; this.projectiles = []; this.particles = []; this.teammates = [];
+        this.isDemo = false; 
+        this.isGameOver = false; 
+        this.spectateTarget = null;
+        this.bots = []; 
+        this.orbs = []; 
+        this.projectiles = []; 
+        this.particles = []; 
+        this.teammates = [];
         
         this.player = new Player(this.worldSize / 2, this.worldSize / 2, playerClass);
         this.player.name = "YOU"; 
 
-        this.camera.x = this.player.x; this.camera.y = this.player.y;
-        this.cameraZoom = 1.0; this.isCinematicIntro = false;
+        this.camera.x = this.player.x; 
+        this.camera.y = this.player.y;
+        this.cameraZoom = 1.0; 
+        this.isCinematicIntro = false;
         
-        this.pointsToNextUpgrade = 10; this.matchStartTime = Date.now(); this.matchXPEarned = 0; 
-        this.distanceTraveled = 0; this.lastPlayerPos = { x: this.player.x, y: this.player.y };
-        this.pendingUpgrades = 0; this.isChoosingUpgrade = false;
+        this.pointsToNextUpgrade = 10; 
+        this.matchStartTime = Date.now(); 
+        this.matchXPEarned = 0; 
+        this.distanceTraveled = 0; 
+        this.lastPlayerPos = { x: this.player.x, y: this.player.y };
+        this.pendingUpgrades = 0; 
+        this.isChoosingUpgrade = false;
         
         document.getElementById('upgrade-ui').classList.add('hidden');
         document.getElementById('xp-bar').style.width = '0%';
@@ -352,28 +410,46 @@ export class GameEngine {
         
         let matchSeed = Math.random();
         for(let i = 0; i < 35; i++) {
-            const types = ['triangle', 'square', 'circle']; const type = types[Math.floor(Math.random()*3)]; const spawn = this.getSafeSpawnPosition();
+            const types = ['triangle', 'square', 'circle']; 
+            const type = types[Math.floor(Math.random()*3)]; 
+            const spawn = this.getSafeSpawnPosition();
             
             let startingPts = 0;
-            if (matchSeed > 0.9) { startingPts = Math.random() < 0.2 ? Math.random() * 25000 : Math.random() * 1500; } 
-            else if (matchSeed < 0.4) { startingPts = Math.random() * 80; } 
-            else { startingPts = Math.random() < 0.1 ? Math.random() * 3000 : Math.random() * 300; }
+            if (matchSeed > 0.9) { 
+                startingPts = Math.random() < 0.2 ? Math.random() * 25000 : Math.random() * 1500; 
+            } else if (matchSeed < 0.4) { 
+                startingPts = Math.random() * 80; 
+            } else { 
+                startingPts = Math.random() < 0.1 ? Math.random() * 3000 : Math.random() * 300; 
+            }
+            
             this.bots.push(new Bot(spawn.x, spawn.y, type, startingPts));
         }
-        for(let i = 0; i < 300; i++) this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
-        for(let i = 0; i < 15; i++) { let pos = this.getSafeOrbPosition(500); this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0)); }
+        
+        for(let i = 0; i < 300; i++) {
+            this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
+        }
+        
+        for(let i = 0; i < 15; i++) { 
+            let pos = this.getSafeOrbPosition(500); 
+            this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0)); 
+        }
 
         this.totalMatchPlayers = this.bots.length + 1; 
-        this.lastTime = performance.now(); this.lastFpsTime = performance.now(); this.framesThisSecond = 0;
+        this.lastTime = performance.now(); 
+        this.lastFpsTime = performance.now(); 
+        this.framesThisSecond = 0;
         this.loop(this.lastTime);
     }
-
-    startMultiplayer(players, lobbyCode, isHost) {
+startMultiplayer(players, lobbyCode, isHost) {
         if (this.animationId) cancelAnimationFrame(this.animationId);
         
-        // REVEAL MOBILE CONTROLS AND MINIMAP
+        // REVEAL AND ENABLE MOBILE CONTROLS
         const mobileControls = document.getElementById('mobile-controls');
-        if (mobileControls) mobileControls.classList.remove('hidden');
+        if (mobileControls) {
+            mobileControls.classList.remove('hidden');
+            mobileControls.style.pointerEvents = 'auto';
+        }
         
         this.lobbyCode = lobbyCode; 
         this.isHost = isHost || false;
@@ -382,8 +458,14 @@ export class GameEngine {
         this.stormCenter = { x: this.worldSize / 2, y: this.worldSize / 2 };
         this.stormRadius = 7500; 
 
-        this.isDemo = false; this.isGameOver = false; this.spectateTarget = null;
-        this.bots = []; this.orbs = []; this.projectiles = []; this.particles = []; this.teammates = [];
+        this.isDemo = false; 
+        this.isGameOver = false; 
+        this.spectateTarget = null;
+        this.bots = []; 
+        this.orbs = []; 
+        this.projectiles = []; 
+        this.particles = [];
+        this.teammates = [];
 
         document.getElementById('game-ui').classList.remove('hidden');
         document.querySelector('.hud').classList.remove('hidden');
@@ -437,8 +519,14 @@ export class GameEngine {
                     window.gameSocket.emit('hostInit', {
                         code: this.lobbyCode,
                         bots: this.bots.filter(b => !b.isRemotePlayer).map(b => ({ 
-                            id: b.id, x: Math.round(b.x), y: Math.round(b.y), type: b.type, pts: Math.round(b.points),
-                            c: b.color, u: b.upgrades || {}, n: b.name
+                            id: b.id, 
+                            x: Math.round(b.x), 
+                            y: Math.round(b.y), 
+                            type: b.type, 
+                            pts: Math.round(b.points),
+                            c: b.color, 
+                            u: b.upgrades || {}, 
+                            n: b.name
                         }))
                     });
                 }
@@ -450,6 +538,7 @@ export class GameEngine {
         for(let i = 0; i < 1500; i++) {
             this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
         }
+        
         for(let i = 0; i < 60; i++) { 
             let pos = this.getSafeOrbPosition(500); 
             this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0));
@@ -534,7 +623,9 @@ export class GameEngine {
             window.gameSocket.on('teammateMoved', (data) => {
                 let tm = this.teammates.find(t => t.remoteId === data.id);
                 if (tm) {
-                    tm.x = data.x; tm.y = data.y; tm.angle = data.angle;
+                    tm.x = data.x; 
+                    tm.y = data.y; 
+                    tm.angle = data.angle;
                     if (data.health) tm.health = data.health;
                     if (data.maxHealth) tm.maxHealth = data.maxHealth;
                     if (data.points !== undefined) tm.points = data.points; 
@@ -574,16 +665,22 @@ export class GameEngine {
         
         this.cameraZoom = this.introStartZoom;
 
-        this.pointsToNextUpgrade = 10; this.matchStartTime = Date.now(); this.matchXPEarned = 0; 
-        this.distanceTraveled = 0; this.lastPlayerPos = { x: this.player.x, y: this.player.y };
-        this.pendingUpgrades = 0; this.isChoosingUpgrade = false;
+        this.pointsToNextUpgrade = 10; 
+        this.matchStartTime = Date.now(); 
+        this.matchXPEarned = 0; 
+        this.distanceTraveled = 0; 
+        this.lastPlayerPos = { x: this.player.x, y: this.player.y };
+        this.pendingUpgrades = 0; 
+        this.isChoosingUpgrade = false;
 
         document.getElementById('upgrade-ui').classList.add('hidden');
         document.getElementById('xp-bar').style.width = '0%';
         document.getElementById('level-display').innerText = '0 PTS';
 
         this.totalMatchPlayers = 97; 
-        this.lastTime = performance.now(); this.lastFpsTime = performance.now(); this.framesThisSecond = 0;
+        this.lastTime = performance.now(); 
+        this.lastFpsTime = performance.now(); 
+        this.framesThisSecond = 0;
         this.loop(this.lastTime);
     }
 
@@ -592,11 +689,15 @@ export class GameEngine {
         allPlayers.sort((a, b) => b.points - a.points); 
         if (this.isDemo) return; 
         
-        const list = document.getElementById('leaderboard-list'); list.innerHTML = ''; 
+        const list = document.getElementById('leaderboard-list'); 
+        list.innerHTML = ''; 
+        
+        // Show Top 5 on Mobile, Top 10 on Desktop
         const displayLimit = window.innerWidth <= 768 ? 5 : 10;
         
         allPlayers.slice(0, displayLimit).forEach((p, index) => {
-            const li = document.createElement('li'); li.innerText = `#${index + 1} ${p.name} - ${Math.floor(p.points)} Pts`;
+            const li = document.createElement('li'); 
+            li.innerText = `#${index + 1} ${p.name} - ${Math.floor(p.points)} Pts`;
             if (p === this.player) li.style.color = '#00ffcc';
             list.appendChild(li);
         });
@@ -604,32 +705,51 @@ export class GameEngine {
 
     showNextUpgrade() {
         if (this.pendingUpgrades <= 0 || this.isDemo || this.isGameOver) return;
-        this.isChoosingUpgrade = true; this.currentUpgradeChoices = getWeightedUpgrades(this.player, 3);
-        if (this.currentUpgradeChoices.length === 0) { this.pendingUpgrades = 0; this.isChoosingUpgrade = false; return; }
+        
+        this.isChoosingUpgrade = true; 
+        this.currentUpgradeChoices = getWeightedUpgrades(this.player, 3);
+        
+        if (this.currentUpgradeChoices.length === 0) { 
+            this.pendingUpgrades = 0; 
+            this.isChoosingUpgrade = false; 
+            return; 
+        }
 
         for (let i = 0; i < 3; i++) {
-            const choice = this.currentUpgradeChoices[i]; const card = document.getElementById(`card-${i+1}`);
+            const choice = this.currentUpgradeChoices[i]; 
+            const card = document.getElementById(`card-${i+1}`);
+            
             if (choice && card) {
                 const currentTier = this.player.upgrades[choice.id];
                 document.getElementById(`title-${i+1}`).innerText = `${choice.title} [T${currentTier+1}]`;
                 document.getElementById(`desc-${i+1}`).innerText = choice.desc;
                 card.style.display = 'block';
-            } else if (card) { card.style.display = 'none'; }
+            } else if (card) { 
+                card.style.display = 'none'; 
+            }
         }
         document.getElementById('upgrade-ui').classList.remove('hidden');
     }
 
     selectUpgrade(index) {
         if (this.isDemo || this.isGameOver) return;
+        
         const choice = this.currentUpgradeChoices[index];
-        this.player.applyUpgrade(choice.id); this.grantAccountXP(15); 
+        this.player.applyUpgrade(choice.id); 
+        this.grantAccountXP(15); 
+        
         document.getElementById('upgrade-ui').classList.add('hidden');
-        this.isChoosingUpgrade = false; this.pendingUpgrades--;
-        if (this.pendingUpgrades > 0) setTimeout(() => this.showNextUpgrade(), 200); 
+        this.isChoosingUpgrade = false; 
+        this.pendingUpgrades--;
+        
+        if (this.pendingUpgrades > 0) {
+            setTimeout(() => this.showNextUpgrade(), 200); 
+        }
     }
 
     triggerUpgradeReady() {
         if (this.isDemo || this.isGameOver) return;
+        
         const notif = document.getElementById('level-up-notif');
         if (notif) {
             sounds.play('upgradeReady', 0.6); 
@@ -637,13 +757,18 @@ export class GameEngine {
             if (this.levelUpTimeout) clearTimeout(this.levelUpTimeout);
             this.levelUpTimeout = setTimeout(() => notif.classList.remove('show'), 3000);
         }
-        this.pendingUpgrades++; if (!this.isChoosingUpgrade) this.showNextUpgrade();
+        
+        this.pendingUpgrades++; 
+        if (!this.isChoosingUpgrade) {
+            this.showNextUpgrade();
+        }
     }
 
     fireProjectile(owner, angle) {
         let p = new Projectile(owner.x, owner.y, angle, owner);
         this.projectiles.push(p);
         this.playSoundAt('shoot', owner.x, owner.y, 0.25);
+        
         if (owner.rearguard > 0) {
             this.projectiles.push(new Projectile(owner.x, owner.y, angle + Math.PI, owner));
         }
@@ -692,7 +817,9 @@ export class GameEngine {
             this.handleGameOver(killer);
         } else {
             const botIndex = this.bots.indexOf(victim);
-            if (botIndex > -1) this.bots.splice(botIndex, 1);
+            if (botIndex > -1) {
+                this.bots.splice(botIndex, 1);
+            }
             
             if (this.spectateTarget === victim) {
                 this.spectateTarget = killer;
@@ -717,8 +844,12 @@ export class GameEngine {
         this.spectateTarget = killer;
         document.getElementById('upgrade-ui').classList.add('hidden'); 
         
+        // Hide Joysticks on Death Screen
         const mobileControls = document.getElementById('mobile-controls');
-        if (mobileControls) mobileControls.classList.add('hidden'); // Hide joysticks on death screen
+        if (mobileControls) {
+            mobileControls.classList.add('hidden');
+            mobileControls.style.pointerEvents = 'none';
+        }
 
         const timeAlive = Math.floor((Date.now() - this.matchStartTime) / 1000);
         this.grantAccountXP(timeAlive * 2);
@@ -728,22 +859,20 @@ export class GameEngine {
         const rank = allPlayers.indexOf(this.player) + 1;
         const totalPlayers = allPlayers.length;
 
-        // FOOLPROOF TEXT REPLACEMENTS!
+        // Custom Rank Suffixes
         let suffix = "th";
         if (rank % 10 === 1 && rank % 100 !== 11) suffix = "st";
         else if (rank % 10 === 2 && rank % 100 !== 12) suffix = "nd";
         else if (rank % 10 === 3 && rank % 100 !== 13) suffix = "rd";
 
-        const placementEl = document.getElementById('go-placement');
-        if (placementEl) {
-            placementEl.parentElement.childNodes[0].nodeValue = "Placed ";
-            placementEl.innerText = `${rank}${suffix}`;
+        const placementBox = document.getElementById('go-placement-container');
+        if (placementBox) {
+            placementBox.innerHTML = `Placed <span id=\"go-placement\" style=\"color: #00ffcc;\">${rank}${suffix}</span>`;
         }
         
-        const xpEl = document.getElementById('go-xp');
-        if (xpEl) {
-            xpEl.parentElement.childNodes[0].nodeValue = "Season Level XP Earned ";
-            xpEl.innerText = `+${this.matchXPEarned}`;
+        const xpBox = document.getElementById('go-xp-container');
+        if (xpBox) {
+            xpBox.innerHTML = `Season Level XP Earned <span id=\"go-xp\" style=\"color: #ffe600;\">+${this.matchXPEarned}</span>`;
         }
 
         window.lastMatchStats = {
@@ -765,7 +894,9 @@ export class GameEngine {
 
     update() {
         this.frameCount++;
-        if (this.frameCount % 30 === 0) this.updateLeaderboard(); 
+        if (this.frameCount % 30 === 0) {
+            this.updateLeaderboard(); 
+        }
 
         let pointsGainedThisFrame = 0;
 
@@ -805,7 +936,8 @@ export class GameEngine {
         }
 
         if (!this.isDemo && !this.isGameOver) {
-            let dx = 0; let dy = 0;
+            let dx = 0; 
+            let dy = 0;
             const binds = window.gameSettings.keybinds;
 
             if (!this.isCinematicIntro) {
@@ -884,6 +1016,7 @@ export class GameEngine {
                     this.player.wantsShockwave = false;
                     this.playSoundAt('explosion', this.player.x, this.player.y, 0.4); 
                     this.spawnParticles(this.player.x, this.player.y, '#ffcc00', 20); 
+                    
                     allPlayers.forEach(p => {
                         if (p === this.player || p.isDead) return;
                         if (p.isTeammate) return;
@@ -891,7 +1024,9 @@ export class GameEngine {
                             p.health -= this.player.shockwave * 25; 
                             p.vx += (p.x - this.player.x) * 0.05; 
                             p.vy += (p.y - this.player.y) * 0.05;
-                            if (p.health <= 0) this.processDeath(p, this.player);
+                            if (p.health <= 0) {
+                                this.processDeath(p, this.player);
+                            }
                         }
                     });
                 }
@@ -913,7 +1048,9 @@ export class GameEngine {
                     
                     for (let s = 0; s < totalShots; s++) {
                         let finalAngle = startAngle + (s * spreadAngle);
-                        if (this.player.type === 'triangle') finalAngle += (Math.random() - 0.5) * 0.15;
+                        if (this.player.type === 'triangle') {
+                            finalAngle += (Math.random() - 0.5) * 0.15;
+                        }
                         this.fireProjectile(this.player, finalAngle);
                     }
                     this.player.fireCooldown = this.player.fireRate;
@@ -940,7 +1077,9 @@ export class GameEngine {
 
         for (let i = this.particles.length - 1; i >= 0; i--) {
             this.particles[i].update();
-            if (this.particles[i].life <= 0) this.particles.splice(i, 1);
+            if (this.particles[i].life <= 0) {
+                this.particles.splice(i, 1);
+            }
         }
 
         for (let i = this.bots.length - 1; i >= 0; i--) {
@@ -966,6 +1105,7 @@ export class GameEngine {
                 bot.wantsShockwave = false;
                 this.playSoundAt('explosion', bot.x, bot.y, 0.4); 
                 this.spawnParticles(bot.x, bot.y, '#ffcc00', 20); 
+                
                 allPlayers.forEach(p => {
                     if (p === bot || p.isDead) return;
                     if (bot.isTeammate && (p.isPlayer || p.isTeammate)) return;
@@ -973,14 +1113,20 @@ export class GameEngine {
                         p.health -= bot.shockwave * 25; 
                         p.vx += (p.x - bot.x) * 0.05; 
                         p.vy += (p.y - bot.y) * 0.05;
-                        if (p.health <= 0) this.processDeath(p, bot);
+                        if (p.health <= 0) {
+                            this.processDeath(p, bot);
+                        }
                     }
                 });
             }
 
             if (bot.dashTimer > 0 && bot.afterburner > 0 && this.frameCount % 2 === 0) {
                 let fireProj = new Projectile(bot.x, bot.y, 0, bot);
-                fireProj.speed = 0; fireProj.life = 30 + (bot.afterburner * 10); fireProj.damage = 10 * bot.afterburner; fireProj.color = '#ffaa00'; fireProj.sizeScale = 1.5; 
+                fireProj.speed = 0; 
+                fireProj.life = 30 + (bot.afterburner * 10); 
+                fireProj.damage = 10 * bot.afterburner; 
+                fireProj.color = '#ffaa00'; 
+                fireProj.sizeScale = 1.5; 
                 this.projectiles.push(fireProj);
             }
 
@@ -991,7 +1137,8 @@ export class GameEngine {
                 if (!bot.isTeammate && (p.isPlayer || p.isTeammate)) enemyClose = true; 
                 
                 if (distance(bot.x, bot.y, p.x, p.y) < 600 && !(p.ghostDash && p.dashTimer > 0)) { 
-                    enemyClose = true; break; 
+                    enemyClose = true; 
+                    break; 
                 }
             }
             
@@ -1002,7 +1149,9 @@ export class GameEngine {
                 
                 for (let s = 0; s < totalShots; s++) {
                     let finalAngle = startAngle + (s * spreadAngle);
-                    if (bot.type === 'triangle') finalAngle += (Math.random() - 0.5) * 0.15;
+                    if (bot.type === 'triangle') {
+                        finalAngle += (Math.random() - 0.5) * 0.15;
+                    }
                     this.fireProjectile(bot, finalAngle);
                 }
                 bot.fireCooldown = bot.fireRate;
@@ -1019,7 +1168,9 @@ export class GameEngine {
 
         for (let i = 0; i < allPlayers.length; i++) {
             for (let j = i + 1; j < allPlayers.length; j++) {
-                const p1 = allPlayers[i]; const p2 = allPlayers[j];
+                const p1 = allPlayers[i]; 
+                const p2 = allPlayers[j];
+                
                 if (p1.isDead || p2.isDead) continue;
                 if ((p1.ghostDash && p1.dashTimer > 0) || (p2.ghostDash && p2.dashTimer > 0)) continue;
 
@@ -1027,9 +1178,13 @@ export class GameEngine {
                 const minDistance = p1.size + p2.size; 
                 
                 if (dist < minDistance && dist > 0) {
-                    const overlap = minDistance - dist; const nx = (p1.x - p2.x) / dist; const ny = (p1.y - p2.y) / dist;
-                    p1.x += nx * (overlap / 2); p1.y += ny * (overlap / 2);
-                    p2.x -= nx * (overlap / 2); p2.y -= ny * (overlap / 2);
+                    const overlap = minDistance - dist; 
+                    const nx = (p1.x - p2.x) / dist; 
+                    const ny = (p1.y - p2.y) / dist;
+                    p1.x += nx * (overlap / 2); 
+                    p1.y += ny * (overlap / 2);
+                    p2.x -= nx * (overlap / 2); 
+                    p2.y -= ny * (overlap / 2);
                     
                     let areTeammates = (p1.isPlayer || p1.isTeammate) && (p2.isPlayer || p2.isTeammate);
                     if (areTeammates) continue;
@@ -1039,14 +1194,19 @@ export class GameEngine {
                         p2.health -= Math.max(1, dmg - (p2.plating * 2)); 
                         p1.spikeCooldown = 30; 
                         this.spawnParticles(p2.x, p2.y, '#ff4444', 5);
-                        if (p2.health <= 0) this.processDeath(p2, p1);
+                        if (p2.health <= 0) {
+                            this.processDeath(p2, p1);
+                        }
                     }
+                    
                     if (p2.spikes > 0 && p2.spikeCooldown <= 0 && !p1.isDead) {
                         let dmg = p2.type === 'square' ? p2.spikes * 2.5 : p2.spikes * 5;
                         p1.health -= Math.max(1, dmg - (p1.plating * 2)); 
                         p2.spikeCooldown = 30;
                         this.spawnParticles(p1.x, p1.y, '#ff4444', 5);
-                        if (p1.health <= 0) this.processDeath(p1, p2);
+                        if (p1.health <= 0) {
+                            this.processDeath(p1, p2);
+                        }
                     }
                 }
             }
@@ -1072,7 +1232,10 @@ export class GameEngine {
                     proj.hitTargets.push(target);
                     
                     let dmg = proj.damage;
-                    if (target.health < target.maxHealth * 0.5) dmg *= (1 + proj.owner.executioner);
+                    if (target.health < target.maxHealth * 0.5) {
+                        dmg *= (1 + proj.owner.executioner);
+                    }
+                    
                     target.health -= Math.max(1, dmg - (target.plating * 2));
                     
                     this.playSoundAt('hit', target.x, target.y, 0.4);
@@ -1082,11 +1245,18 @@ export class GameEngine {
                         this.processDeath(target, proj.owner);
                     }
                     
-                    if (proj.pierce > 0) { proj.pierce--; hit = false; } else { hit = true; }
+                    if (proj.pierce > 0) { 
+                        proj.pierce--; 
+                        hit = false; 
+                    } else { 
+                        hit = true; 
+                    }
                     break;
                 }
             }
-            if (hit || proj.life <= 0) this.projectiles.splice(i, 1);
+            if (hit || proj.life <= 0) {
+                this.projectiles.splice(i, 1);
+            }
         }
 
         for (let i = this.orbs.length - 1; i >= 0; i--) {
@@ -1100,10 +1270,12 @@ export class GameEngine {
                 
                 let distP = distance(this.player.x, this.player.y, orb.x, orb.y);
                 let canPlayerTouch = (orb.lockedOwner !== this.player || orb.lockoutTimer <= 0);
+                
                 if (distP < pullRadius && canPlayerTouch) { 
                     orb.x += (this.player.x - orb.x) * 0.1; 
                     orb.y += (this.player.y - orb.y) * 0.1; 
                 }
+                
                 if (distP < this.player.size + orb.size && canPlayerTouch) {
                     collectedBy = this.player;
                 }
@@ -1112,13 +1284,16 @@ export class GameEngine {
             if (!collectedBy) {
                 for (let b of this.bots) {
                     if (b.isDead) continue;
+                    
                     let pullRadius = 150 + (b.magnet * 100);
                     let distB = distance(b.x, b.y, orb.x, orb.y);
                     let canBotTouch = (orb.lockedOwner !== b || orb.lockoutTimer <= 0);
+                    
                     if (distB < pullRadius && canBotTouch) {
                         orb.x += (b.x - orb.x) * 0.1;
                         orb.y += (b.y - orb.y) * 0.1;
                     }
+                    
                     if (distB < b.size + orb.size && canBotTouch) {
                         collectedBy = b;
                         break;
@@ -1128,14 +1303,18 @@ export class GameEngine {
 
             if (collectedBy) {
                 if (collectedBy === this.player) sounds.play('collect', 0.4); 
+                
                 if (orb.type === 'health') {
-                    if (collectedBy.health < collectedBy.maxHealth) collectedBy.health = Math.min(collectedBy.maxHealth, collectedBy.health + orb.healAmount);
+                    if (collectedBy.health < collectedBy.maxHealth) {
+                        collectedBy.health = Math.min(collectedBy.maxHealth, collectedBy.health + orb.healAmount);
+                    }
                 } else {
                     let finalVal = orb.value * collectedBy.scavenger;
                     collectedBy.points += finalVal;
                     collectedBy.upgradeProgress += finalVal;
                     if (collectedBy === this.player) pointsGainedThisFrame += finalVal;
                 }
+                
                 this.orbs.splice(i, 1);
             }
         }
@@ -1159,10 +1338,16 @@ export class GameEngine {
             for (let b of this.bots) {
                 if (!b.isRemotePlayer) {
                     syncData.push({ 
-                        id: b.id, x: Math.round(b.x), y: Math.round(b.y), 
-                        h: Math.round(b.health), d: b.isDead,
-                        pts: Math.round(b.points), type: b.type,
-                        c: b.color, u: b.upgrades || {}, n: b.name 
+                        id: b.id, 
+                        x: Math.round(b.x), 
+                        y: Math.round(b.y), 
+                        h: Math.round(b.health), 
+                        d: b.isDead,
+                        pts: Math.round(b.points), 
+                        type: b.type,
+                        c: b.color, 
+                        u: b.upgrades || {}, 
+                        n: b.name 
                     });
                 }
             }
@@ -1171,7 +1356,8 @@ export class GameEngine {
     }
 
     draw() {
-        this.ctx.fillStyle = '#111'; this.ctx.fillRect(0, 0, this.width, this.height);
+        this.ctx.fillStyle = '#111'; 
+        this.ctx.fillRect(0, 0, this.width, this.height);
         this.ctx.save();
         
         let targetCamX, targetCamY;
@@ -1189,16 +1375,21 @@ export class GameEngine {
         } else if (this.isCinematicIntro) {
             this.introTimer++;
             if (this.introTimer < 120) {
-                targetCamX = this.introTargetX; targetCamY = this.introTargetY; glideSpeed = 1.0; 
+                targetCamX = this.introTargetX; 
+                targetCamY = this.introTargetY; 
+                glideSpeed = 1.0; 
             } else if (this.introTimer < 240) {
                 let progress = (this.introTimer - 120) / 120;
                 let ease = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-                targetCamX = this.player.x; targetCamY = this.player.y;
+                targetCamX = this.player.x; 
+                targetCamY = this.player.y;
                 glideSpeed = 0.05 + (ease * 0.1); 
                 this.cameraZoom = this.introStartZoom + (1.0 - this.introStartZoom) * ease;
             } else {
                 this.isCinematicIntro = false;
-                targetCamX = this.player.x; targetCamY = this.player.y; this.cameraZoom = 1.0;
+                targetCamX = this.player.x; 
+                targetCamY = this.player.y; 
+                this.cameraZoom = 1.0;
             }
         } else {
             targetCamX = this.player.x;
@@ -1212,6 +1403,7 @@ export class GameEngine {
 
         let camX = this.width / 2 - this.camera.x * this.cameraZoom;
         let camY = this.height / 2 - this.camera.y * this.cameraZoom;
+        
         this.ctx.translate(camX, camY);
         this.ctx.scale(this.cameraZoom, this.cameraZoom);
         
@@ -1235,7 +1427,10 @@ export class GameEngine {
             this.ctx.restore();
         }
 
-        this.ctx.strokeStyle = '#222'; this.ctx.lineWidth = 1; const gridSize = 100;
+        this.ctx.strokeStyle = '#222'; 
+        this.ctx.lineWidth = 1; 
+        const gridSize = 100;
+        
         const startX = Math.floor(this.camera.x - (this.width / this.cameraZoom) / 2); 
         const startY = Math.floor(this.camera.y - (this.height / this.cameraZoom) / 2);
         const endX = startX + (this.width / this.cameraZoom) + gridSize;
@@ -1243,10 +1438,12 @@ export class GameEngine {
         
         this.ctx.beginPath();
         for (let x = startX - (startX % gridSize); x < endX; x += gridSize) {
-            this.ctx.moveTo(x, startY - gridSize); this.ctx.lineTo(x, endY);
+            this.ctx.moveTo(x, startY - gridSize); 
+            this.ctx.lineTo(x, endY);
         }
         for (let y = startY - (startY % gridSize); y < endY; y += gridSize) {
-            this.ctx.moveTo(startX - gridSize, y); this.ctx.lineTo(endX, y);
+            this.ctx.moveTo(startX - gridSize, y); 
+            this.ctx.lineTo(endX, y);
         }
         this.ctx.stroke();
 
@@ -1255,7 +1452,9 @@ export class GameEngine {
         this.projectiles.forEach(proj => proj.draw(this.ctx));
         this.bots.forEach(bot => { if (!bot.isDead) bot.draw(this.ctx) });
         
-        if (!this.isDemo && !this.player.isDead) this.player.draw(this.ctx);
+        if (!this.isDemo && !this.player.isDead) {
+            this.player.draw(this.ctx);
+        }
 
         this.ctx.restore();
 
