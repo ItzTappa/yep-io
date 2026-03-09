@@ -76,7 +76,12 @@ function formatTime(secs) {
 const canvas = document.getElementById('gameCanvas');
 const game = new GameEngine(canvas);
 window.game = game; 
-game.startDemo();
+
+try {
+    game.startDemo();
+} catch(e) {
+    console.error("Failed to start demo on load: ", e);
+}
 
 // --- BUTTON SOUNDS ---
 document.body.addEventListener('click', (e) => {
@@ -135,12 +140,8 @@ function renderPreview() {
     let dt = current - previewLastTime;
     previewLastTime = current;
     
-    if (dt > 100) {
-        dt = 16.666; 
-    }
-    if (dt < 0) {
-        dt = 0; 
-    }
+    if (dt > 100) dt = 16.666; 
+    if (dt < 0) dt = 0; 
     
     previewAccumulator += dt;
     
@@ -486,7 +487,7 @@ function renderStats() {
                 let tier = match.upgrades[key];
                 if (tier > 0) {
                     let tClass = tier === 1 ? 'badge-t1' : tier === 2 ? 'badge-t2' : tier === 3 ? 'badge-t3' : tier === 4 ? 'badge-t4' : 'badge-t5';
-                    let def = UPGRADE_POOL.find(u => u.id === key);
+                    let def = UPGRADE_POOL.find(u => u && u.id === key);
                     let title = def ? def.title.toUpperCase() : key.toUpperCase();
                     
                     upgradesHtml += `

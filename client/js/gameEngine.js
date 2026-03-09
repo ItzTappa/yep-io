@@ -55,6 +55,7 @@ export class GameEngine {
         
         this.fpsInterval = 1000 / 60; 
         
+        // PERFECT TIME LOOP
         this.lastTime = performance.now();
         this.accumulator = 0; 
 
@@ -421,7 +422,6 @@ export class GameEngine {
         this.accumulator = 0;
         this.lastTime = performance.now(); 
         
-        // PERFECT FIX: Ensure we pass a valid timestamp initially to prevent NaN freezes!
         this.loop(this.lastTime);
     }
 
@@ -515,7 +515,6 @@ export class GameEngine {
         this.lastFpsTime = performance.now(); 
         this.framesThisSecond = 0;
         
-        // PERFECT FIX
         this.loop(this.lastTime);
     }
 
@@ -775,7 +774,6 @@ export class GameEngine {
         this.lastFpsTime = performance.now(); 
         this.framesThisSecond = 0;
         
-        // PERFECT FIX
         this.loop(this.lastTime);
     }
 
@@ -817,7 +815,7 @@ export class GameEngine {
             
             let tier = this.player.upgrades[upgId];
             if (tier > 0) {
-                let def = UPGRADE_POOL.find(u => u.id === upgId);
+                let def = UPGRADE_POOL.find(u => u && u.id === upgId);
                 let title = def ? def.title.toUpperCase() : upgId.toUpperCase();
                 let tierClass = tier === 1 ? 'badge-t1' : tier === 2 ? 'badge-t2' : tier === 3 ? 'badge-t3' : tier === 4 ? 'badge-t4' : 'badge-t5';
                 
@@ -1826,18 +1824,15 @@ export class GameEngine {
         pointersContainer.innerHTML = html;
     }
 
-    loop(timestamp = performance.now()) {
+    loop(timestamp) {
+        if (!timestamp) timestamp = performance.now();
         if (!this.lastTime) this.lastTime = timestamp;
         
         let dt = timestamp - this.lastTime;
         this.lastTime = timestamp;
         
-        if (dt > 100) {
-            dt = 16.666; 
-        }
-        if (dt < 0) {
-            dt = 0; 
-        }
+        if (dt > 100) dt = 16.666; 
+        if (dt < 0) dt = 0; 
         
         this.accumulator += dt;
 
