@@ -119,7 +119,6 @@ export class GameEngine {
                         this.leftTouch.x = t.clientX;
                         this.leftTouch.y = t.clientY;
                         
-                        // Move base perfectly to touch point and make visible
                         leftBase.style.left = t.clientX + 'px';
                         leftBase.style.top = t.clientY + 'px';
                         leftBase.classList.add('active');
@@ -152,7 +151,7 @@ export class GameEngine {
                     const t = e.changedTouches[i];
                     if (this.leftTouch.active && t.identifier === this.leftTouch.id) {
                         this.leftTouch.active = false;
-                        leftBase.classList.remove('active'); // Hide joystick
+                        leftBase.classList.remove('active'); 
                     }
                 }
             };
@@ -205,7 +204,7 @@ export class GameEngine {
                     const t = e.changedTouches[i];
                     if (this.rightTouch.active && t.identifier === this.rightTouch.id) {
                         this.rightTouch.active = false;
-                        rightBase.classList.remove('active'); // Hide joystick
+                        rightBase.classList.remove('active'); 
                     }
                 }
             };
@@ -295,6 +294,11 @@ export class GameEngine {
 
     startDemo() {
         if (this.animationId) cancelAnimationFrame(this.animationId);
+        
+        // HIDE MINIMAP IN DEMO
+        const brUi = document.getElementById('br-ui');
+        if (brUi) brUi.classList.add('hidden');
+
         this.worldSize = 4000;
         this.stormActive = false;
         this.isDemo = true; this.isGameOver = false; this.spectateTarget = null;
@@ -317,6 +321,10 @@ export class GameEngine {
 
     start(playerClass) {
         if (this.animationId) cancelAnimationFrame(this.animationId);
+        
+        // HIDE MINIMAP IN SINGLEPLAYER
+        const brUi = document.getElementById('br-ui');
+        if (brUi) brUi.classList.add('hidden');
         
         this.worldSize = 4000; 
         this.stormActive = false; 
@@ -706,8 +714,21 @@ export class GameEngine {
         const rank = allPlayers.indexOf(this.player) + 1;
         const totalPlayers = allPlayers.length;
 
+        // Automatically format "1st", "2nd", "3rd", "4th", etc!
+        let suffix = "th";
+        if (rank % 10 === 1 && rank % 100 !== 11) suffix = "st";
+        else if (rank % 10 === 2 && rank % 100 !== 12) suffix = "nd";
+        else if (rank % 10 === 3 && rank % 100 !== 13) suffix = "rd";
+
         const placementEl = document.getElementById('go-placement');
-        if (placementEl) placementEl.innerText = `#${rank} / ${this.totalMatchPlayers}`;
+        if (placementEl) {
+            placementEl.parentElement.innerHTML = `Placed <span id="go-placement" style="color: #00ffcc;">${rank}${suffix}</span>`;
+        }
+        
+        const xpEl = document.getElementById('go-xp');
+        if (xpEl) {
+            xpEl.parentElement.innerHTML = `Season Level XP Earned <span id="go-xp" style="color: #ffe600;">+${this.matchXPEarned}</span>`;
+        }
 
         window.lastMatchStats = {
             kills: this.player.kills || 0,
@@ -723,7 +744,6 @@ export class GameEngine {
         document.getElementById('go-points').innerText = Math.floor(this.player.points);
         document.getElementById('go-kills').innerText = this.player.kills;
         document.getElementById('go-time').innerText = `${timeAlive}s`;
-        document.getElementById('go-xp').innerText = `+${this.matchXPEarned}`; 
         document.getElementById('game-over-screen').classList.remove('hidden');
     }
 
@@ -784,7 +804,7 @@ export class GameEngine {
                     let tdx = this.leftTouch.x - this.leftTouch.originX;
                     let tdy = this.leftTouch.y - this.leftTouch.originY;
                     let dist = Math.hypot(tdx, tdy);
-                    if (dist > 10) { // Slight deadzone so tapping doesn't move you instantly
+                    if (dist > 10) { 
                         dx += tdx / dist;
                         dy += tdy / dist;
                     }
