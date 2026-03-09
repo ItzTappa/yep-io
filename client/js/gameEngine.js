@@ -162,13 +162,27 @@ export class GameEngine {
 
     startDemo() {
         if (this.animationId) cancelAnimationFrame(this.animationId);
+        
+        // HIDE MOBILE CONTROLS AND MINIMAP ON MENU
+        const mobileControls = document.getElementById('mobile-controls');
+        if (mobileControls) mobileControls.classList.add('hidden');
+        const brUi = document.getElementById('br-ui');
+        if (brUi) brUi.classList.add('hidden');
+
         this.worldSize = 4000;
         this.stormActive = false;
-        this.isDemo = true; this.isGameOver = false; this.spectateTarget = null;
-        this.bots = []; this.orbs = []; this.projectiles = []; this.particles = [];
-        this.teammates = []; this.isCinematicIntro = false;
+        this.isDemo = true; 
+        this.isGameOver = false; 
+        this.spectateTarget = null;
+        this.bots = []; 
+        this.orbs = []; 
+        this.projectiles = []; 
+        this.particles = [];
+        this.teammates = []; 
+        this.isCinematicIntro = false;
         
-        this.player = new Player(-10000, -10000, 'circle'); this.player.health = 999999; 
+        this.player = new Player(-10000, -10000, 'circle'); 
+        this.player.health = 999999; 
 
         for(let i = 0; i < 40; i++) {
             const types = ['triangle', 'square', 'circle'];
@@ -176,14 +190,23 @@ export class GameEngine {
         }
         for(let i = 0; i < 400; i++) this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
 
-        this.demoTargetX = this.worldSize / 2; this.demoTargetY = this.worldSize / 2;
-        this.camera.x = this.demoTargetX; this.camera.y = this.demoTargetY;
+        this.demoTargetX = this.worldSize / 2; 
+        this.demoTargetY = this.worldSize / 2;
+        this.camera.x = this.demoTargetX; 
+        this.camera.y = this.demoTargetY;
         this.cameraZoom = 1.0;
-        this.lastTime = performance.now(); this.loop(this.lastTime);
+        this.lastTime = performance.now(); 
+        this.loop(this.lastTime);
     }
 
     start(playerClass) {
         if (this.animationId) cancelAnimationFrame(this.animationId);
+        
+        // SHOW CONTROLS, HIDE MINIMAP (SINGLEPLAYER)
+        const mobileControls = document.getElementById('mobile-controls');
+        if (mobileControls) mobileControls.classList.remove('hidden');
+        const brUi = document.getElementById('br-ui');
+        if (brUi) brUi.classList.add('hidden');
         
         this.worldSize = 4000; 
         this.stormActive = false; 
@@ -567,6 +590,10 @@ export class GameEngine {
         this.spectateTarget = killer;
         document.getElementById('upgrade-ui').classList.add('hidden'); 
 
+        // HIDE MOBILE CONTROLS ON DEATH SCREEN
+        const mobileControls = document.getElementById('mobile-controls');
+        if (mobileControls) mobileControls.classList.add('hidden');
+
         const timeAlive = Math.floor((Date.now() - this.matchStartTime) / 1000);
         this.grantAccountXP(timeAlive * 2);
 
@@ -592,7 +619,6 @@ export class GameEngine {
         document.getElementById('go-points').innerText = Math.floor(this.player.points);
         document.getElementById('go-kills').innerText = this.player.kills;
         document.getElementById('go-time').innerText = `${timeAlive}s`;
-        document.getElementById('go-xp').innerText = `+${this.matchXPEarned}`; 
         document.getElementById('game-over-screen').classList.remove('hidden');
     }
 
