@@ -377,7 +377,6 @@ export class GameEngine {
         const brUi = document.getElementById('br-ui');
         if (brUi) brUi.classList.add('hidden');
         
-        // NEW: Increased map size and Safe Zone spawns!
         this.worldSize = 6000; 
         this.stormActive = false; 
 
@@ -408,7 +407,8 @@ export class GameEngine {
         if (badgeUI) badgeUI.innerHTML = '';
         
         let matchSeed = Math.random();
-        for(let i = 0; i < 60; i++) {
+        
+        for(let i = 0; i < 49; i++) {
             const types = ['triangle', 'square', 'circle']; const type = types[Math.floor(Math.random()*3)]; const spawn = this.getSafeSpawnPosition();
             
             let startingPts = 0;
@@ -499,7 +499,9 @@ export class GameEngine {
         }
 
         if (this.isHost) {
-            for(let i = 0; i < 96; i++) {
+            let botsToSpawn = 50 - players.length;
+            
+            for(let i = 0; i < botsToSpawn; i++) {
                 const types = ['triangle', 'square', 'circle']; 
                 const type = types[Math.floor(Math.random()*3)]; 
                 const spawn = this.getSafeSpawnPosition();
@@ -671,7 +673,7 @@ export class GameEngine {
         document.getElementById('xp-bar').style.width = '0%';
         document.getElementById('level-display').innerText = '0 PTS';
 
-        this.totalMatchPlayers = 97; 
+        this.totalMatchPlayers = 50; 
         this.lastTime = performance.now(); 
         this.lastFpsTime = performance.now(); 
         this.framesThisSecond = 0;
@@ -1038,7 +1040,6 @@ export class GameEngine {
 
             this.player.update();
 
-            // NEW: Safe Zone Processing
             this.player.inSafeZone = false;
             for (let i = this.safeZones.length - 1; i >= 0; i--) {
                 let sz = this.safeZones[i];
@@ -1053,7 +1054,7 @@ export class GameEngine {
                 
                 if (sz.state === 'active' && sz.lifeTimer <= 0) {
                     this.safeZones.splice(i, 1);
-                    this.safeZoneSpawnTimer = 600; // 10 seconds respawn
+                    this.safeZoneSpawnTimer = 600; 
                 }
             }
 
@@ -1171,6 +1172,18 @@ export class GameEngine {
 
             bot.x = Math.max(0, Math.min(this.worldSize, bot.x)); 
             bot.y = Math.max(0, Math.min(this.worldSize, bot.y));
+            
+            // NEW: Solid collision against Safe Zones so bots cannot enter!
+            for (let sz of this.safeZones) {
+                let distToSZ = distance(bot.x, bot.y, sz.x, sz.y);
+                let minAllowed = sz.radius + bot.size;
+                if (distToSZ < minAllowed) {
+                    if (distToSZ === 0) { distToSZ = 1; bot.x += 1; }
+                    let overlap = minAllowed - distToSZ;
+                    bot.x += ((bot.x - sz.x) / distToSZ) * overlap;
+                    bot.y += ((bot.y - sz.y) / distToSZ) * overlap;
+                }
+            }
 
             if (bot.wantsShockwave) {
                 bot.wantsShockwave = false;
@@ -1295,7 +1308,6 @@ export class GameEngine {
             const proj = this.projectiles[i];
             proj.update(allPlayers); 
             
-            // NEW: Safe Zone Bullet Block Logic
             let hitSafeZone = false;
             for (let sz of this.safeZones) {
                 if (distance(proj.x, proj.y, sz.x, sz.y) < sz.radius) {
@@ -1548,7 +1560,6 @@ export class GameEngine {
         }
         this.ctx.stroke();
 
-        // NEW: Draw Safe Zones
         this.safeZones.forEach(sz => sz.draw(this.ctx));
 
         this.orbs.forEach(orb => orb.draw(this.ctx));
