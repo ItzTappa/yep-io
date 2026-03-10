@@ -82,16 +82,27 @@ export class Entity {
         this.regen = 0; this.wantsShockwave = false; this.shockwave = 0;
         this.heavyArt = 0; this.plating = 0; this.vampirism = 0;
         this.magnet = 0; this.rearguard = 0; this.efficiency = 0; this.shrapnel = 0;
+        
+        // NEW: Visual upgrade trackers
+        this.frontVisual = null;
+        this.bodyVisual = null;
     }
 
     applyUpgrade(upgradeId) {
         if (this.upgrades[upgradeId] >= this.maxUpgradeTier) return; 
+        
+        // Setup visual upgrades (priority to whichever is picked first)
+        if (upgradeId === 'spikes' && !this.frontVisual) this.frontVisual = 'spikes';
+        if ((upgradeId === 'fireRate' || upgradeId === 'multiShot') && !this.frontVisual) this.frontVisual = 'gun';
+        if (upgradeId === 'maxHealth' && !this.bodyVisual) this.bodyVisual = 'armor';
+
         const upgradeDef = UPGRADE_POOL.find(u => u.id === upgradeId);
         if (upgradeDef && upgradeDef.apply) {
             upgradeDef.apply(this); 
             this.upgrades[upgradeId]++;
         }
     }
+
     dash(dx, dy) {
         let dashCost = Math.max(0, 2 - this.efficiency); 
         if (this.dashCooldown <= 0 && this.points >= dashCost) {
@@ -170,6 +181,31 @@ export class Entity {
             }
             ctx.restore();
         });
+
+        // VISUAL ARMOR BODY
+        if (this.bodyVisual === 'armor') {
+            ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
+            ctx.strokeStyle = '#888'; ctx.lineWidth = 4;
+            ctx.beginPath();
+            if (this.type === 'circle') ctx.arc(0, 0, this.size + 4, 0, Math.PI*2);
+            else if (this.type === 'square') ctx.rect(-this.size/2-4, -this.size/2-4, this.size+8, this.size+8);
+            else if (this.type === 'triangle') {
+                let S = this.size + 6;
+                ctx.moveTo(S, 0); ctx.lineTo(-S / 2, -S * 0.866); ctx.lineTo(-S / 2, S * 0.866); ctx.closePath();
+            }
+            ctx.stroke(); ctx.restore();
+        }
+
+        // VISUAL GUN BARREL (Behind spikes if they somehow glitched together)
+        if (this.frontVisual === 'gun') {
+            ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
+            ctx.fillStyle = '#555';
+            ctx.fillRect(this.size - 2, -4, 14, 8);
+            ctx.fillStyle = '#222';
+            ctx.fillRect(this.size + 10, -3, 4, 6);
+            ctx.restore();
+        }
+
         if (this.spikes > 0 && (this.type === 'circle' || this.type === 'square')) {
             ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle); ctx.fillStyle = '#ff4444';
             if (this.type === 'circle') {
@@ -193,10 +229,11 @@ export class Entity {
             }
             ctx.restore();
         }
-        if (this.type === 'triangle' && this.piercing > 0) {
+        if (this.type === 'triangle' && this.frontVisual === 'spikes') {
             ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle); ctx.fillStyle = '#ff4444'; ctx.beginPath();
-            let S = this.size; ctx.moveTo(S + 4 + (this.piercing * 4), 0); ctx.lineTo(S * 0.3, -S * 0.4); ctx.lineTo(S * 0.3, S * 0.4); ctx.fill(); ctx.restore();
+            let S = this.size; ctx.moveTo(S + 4 + (this.spikes * 4), 0); ctx.lineTo(S * 0.3, -S * 0.4); ctx.lineTo(S * 0.3, S * 0.4); ctx.fill(); ctx.restore();
         }
+
         ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
         ctx.fillStyle = this.color; 
         if (window.gameSettings.highQuality) { ctx.shadowBlur = 15; ctx.shadowColor = this.color; } else { ctx.shadowBlur = 0; }
@@ -223,15 +260,19 @@ export class Entity {
             ctx.restore();
         }
         
-        if (this.isPlayer && this.name !== "") {
+        // Hides arrow if it's a triangle with spikes
+        let hideArrow = (this.type === 'triangle' && this.spikes > 0);
+        
+        if (this.isPlayer && !hideArrow) {
             ctx.save(); 
             ctx.translate(this.x, this.y); 
             ctx.rotate(this.angle);
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
             ctx.beginPath();
-            ctx.moveTo(this.size + 4, -5);
-            ctx.lineTo(this.size + 14, 0);
-            ctx.lineTo(this.size + 4, 5);
+            let offset = this.size + (this.frontVisual === 'gun' ? 15 : 4);
+            ctx.moveTo(offset, -4);
+            ctx.lineTo(offset + 8, 0);
+            ctx.lineTo(offset, 4);
             ctx.fill();
             ctx.restore();
         }
@@ -281,9 +322,9 @@ export class Entity {
 }
 
 export class Player extends Entity {
-    constructor(x, y, type, name = "YOU") {
+    constructor(x, y, type, name = "") {
         super(x, y, type); 
-        this.name = name;
+        this.name = name; // Now defaults to an empty string so "YOU" doesn't show up
         this.isPlayer = true; 
         this.equipped = window.equippedItems || { Skin: null, Trail: null, Banner: null, Color: null };
         if (this.equipped.Color && ITEMS_DB && ITEMS_DB[this.equipped.Color]) {
@@ -301,8 +342,6 @@ export class Bot extends Entity {
         const names = ['OrbHunter', 'NovaStrike', 'PixelSlayer', 'GhostBlade', 'RogueBot', 'Vanguard', 'Titan', 'Apex'];
         this.name = names[Math.floor(Math.random() * names.length)] + Math.floor(Math.random() * 99);
         this.points = startingPoints; this.upgradeProgress = startingPoints; this.botPointsToNextUpgrade = 10;
-        
-        // NEW: Personality traits for AI
         this.dashTendency = Math.random();
         this.strafeDir = Math.random() > 0.5 ? 1 : -1; 
         this.personality = Math.random(); 
@@ -331,18 +370,13 @@ export class Bot extends Entity {
             return;
         }
 
-        this.changeTargetTimer--; let nearestEnemy = null; let minDist = 800; // Increased vision range
+        this.changeTargetTimer--; let nearestEnemy = null; let minDist = 800;
         
         allPlayers.forEach(p => { 
             if (p === this || p.isDead) return; 
-            
-            // Teammates ignore the local player and other teammates
             if (this.isTeammate && (p.isPlayer || p.isTeammate)) return;
 
-            // NEW: Enemies now see everyone! We removed the code making them ignore each other.
             const dist = distance(this.x, this.y, p.x, p.y); 
-            
-            // Add a little randomness so bots don't perfectly laser the closest person identically
             let randomizedDist = dist + (Math.random() * 100); 
             
             if (randomizedDist < minDist) { minDist = randomizedDist; nearestEnemy = p; } 
@@ -368,15 +402,13 @@ export class Bot extends Entity {
                 }
             }
         } else if (nearestEnemy) {
-            // Re-calculate raw true distance
             const trueDist = distance(this.x, this.y, nearestEnemy.x, nearestEnemy.y);
             const dx = nearestEnemy.x - this.x; 
             const dy = nearestEnemy.y - this.y;
             
-            let fleeThreshold = 0.15 + (this.personality * 0.25); // Run away if HP drops to 15-40%
+            let fleeThreshold = 0.15 + (this.personality * 0.25); 
 
             if (this.health < this.maxHealth * fleeThreshold) {
-                // FLEE MODE
                 this.angle = Math.atan2(-dy, -dx);
                 this.vx += Math.cos(this.angle) * (this.speed * 0.14);
                 this.vy += Math.sin(this.angle) * (this.speed * 0.14);
@@ -385,34 +417,25 @@ export class Bot extends Entity {
                     this.dash(-dx, -dy);
                 }
             } else {
-                // ATTACK MODE
                 this.angle = Math.atan2(dy, dx);
-                
                 if (trueDist > 150 && trueDist < 400 && Math.random() < (0.002 + this.dashTendency * 0.005)) {
                     this.dash(dx, dy);
                 }
-                
-                // Optimal fighting distance changes depending on their class!
                 let optimalDist = this.type === 'square' ? 100 : (this.type === 'triangle' ? 300 : 200);
-                
-                if (Math.random() < 0.01) this.strafeDir *= -1; // 1% chance per frame to reverse circle-strafe
+                if (Math.random() < 0.01) this.strafeDir *= -1; 
                 
                 if (trueDist > optimalDist + 50) { 
-                    // Move in
                     this.vx += (dx / trueDist) * (this.speed * 0.12); 
                     this.vy += (dy / trueDist) * (this.speed * 0.12); 
                 } else if (trueDist < optimalDist - 50) { 
-                    // Move away (kite)
                     this.vx -= (dx / trueDist) * (this.speed * 0.12); 
                     this.vy -= (dy / trueDist) * (this.speed * 0.12); 
                 } else {
-                    // Circle strafe around the player to dodge shots
                     this.vx += (-dy / trueDist) * (this.speed * 0.08) * this.strafeDir;
                     this.vy += (dx / trueDist) * (this.speed * 0.08) * this.strafeDir;
                 }
             }
         } else {
-            // ROAM MODE
             if (this.changeTargetTimer <= 0) {
                 this.targetX = this.x + (Math.random() - 0.5) * 800; this.targetY = this.y + (Math.random() - 0.5) * 800; this.changeTargetTimer = 60 + Math.random() * 60; 
             }
@@ -447,7 +470,28 @@ export class Projectile {
                 let diff = targetAngle - this.angle; while (diff < -Math.PI) diff += Math.PI * 2; while (diff > Math.PI) diff -= Math.PI * 2;
                 if (diff > 0) this.angle += Math.min(this.turnSpeed, diff); else this.angle += Math.max(-this.turnSpeed, diff);
             }
+        } 
+        // NEW: AIM ASSIST FOR THE LOCAL PLAYER
+        else if (!this.isMissile && this.owner.isPlayer && targets) {
+            let nearest = null; let minDist = 350; // Small aim assist radius
+            targets.forEach(t => { 
+                if (t === this.owner || t.isDead || t.isTeammate) return; 
+                let d = distance(this.x, this.y, t.x, t.y); 
+                if (d < minDist) { minDist = d; nearest = t; } 
+            });
+            if (nearest) {
+                let targetAngle = Math.atan2(nearest.y - this.y, nearest.x - this.x);
+                let diff = targetAngle - this.angle; 
+                while (diff < -Math.PI) diff += Math.PI * 2; 
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                
+                // Only gently curve if the player is already aiming in their general direction
+                if (Math.abs(diff) < 0.4) {
+                    this.angle += diff * 0.05; 
+                }
+            }
         }
+
         this.x += Math.cos(this.angle) * this.speed; this.y += Math.sin(this.angle) * this.speed; this.life--; 
     }
     draw(ctx) {

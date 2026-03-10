@@ -1,6 +1,7 @@
 import { Player, Bot, Orb, Projectile, Particle, getWeightedUpgrades } from './entities.js';
 import { distance } from './utils.js';
 import { sounds } from './soundManager.js';
+import { UPGRADE_POOL } from './upgrades.js'; // NEW: Imported to get title info for badges
 
 export class GameEngine {
     constructor(canvas) {
@@ -322,6 +323,8 @@ export class GameEngine {
         if (mobileControls) mobileControls.classList.add('hidden');
         const brUi = document.getElementById('br-ui');
         if (brUi) brUi.classList.add('hidden');
+        const badgeUI = document.getElementById('upgrade-badges');
+        if (badgeUI) badgeUI.innerHTML = '';
 
         this.worldSize = 4000;
         this.stormActive = false;
@@ -329,7 +332,7 @@ export class GameEngine {
         this.bots = []; this.orbs = []; this.projectiles = []; this.particles = [];
         this.teammates = []; this.isCinematicIntro = false;
         
-        this.player = new Player(-10000, -10000, 'circle'); this.player.health = 999999; 
+        this.player = new Player(-10000, -10000, 'circle', ""); this.player.health = 999999; 
 
         for(let i = 0; i < 40; i++) {
             const types = ['triangle', 'square', 'circle'];
@@ -361,8 +364,7 @@ export class GameEngine {
         this.isDemo = false; this.isGameOver = false; this.spectateTarget = null;
         this.bots = []; this.orbs = []; this.projectiles = []; this.particles = []; this.teammates = [];
         
-        this.player = new Player(this.worldSize / 2, this.worldSize / 2, playerClass);
-        this.player.name = "YOU"; 
+        this.player = new Player(this.worldSize / 2, this.worldSize / 2, playerClass, "");
 
         this.camera.x = this.player.x; this.camera.y = this.player.y;
         this.cameraZoom = 1.0; this.isCinematicIntro = false;
@@ -374,6 +376,8 @@ export class GameEngine {
         document.getElementById('upgrade-ui').classList.add('hidden');
         document.getElementById('xp-bar').style.width = '0%';
         document.getElementById('level-display').innerText = '0 PTS';
+        const badgeUI = document.getElementById('upgrade-badges');
+        if (badgeUI) badgeUI.innerHTML = '';
         
         let matchSeed = Math.random();
         for(let i = 0; i < 35; i++) {
@@ -421,6 +425,8 @@ export class GameEngine {
 
         document.getElementById('game-ui').classList.remove('hidden');
         document.querySelector('.hud').classList.remove('hidden');
+        const badgeUI = document.getElementById('upgrade-badges');
+        if (badgeUI) badgeUI.innerHTML = '';
         
         const brUi = document.getElementById('br-ui');
         if (brUi) brUi.classList.remove('hidden'); 
@@ -439,7 +445,7 @@ export class GameEngine {
             if (pData.id === 'local') {
                 const activeBtn = document.querySelector('.class-btn.active');
                 let pClass = activeBtn ? activeBtn.dataset.class : 'triangle';
-                this.player = new Player(px, py, pClass, "YOU");
+                this.player = new Player(px, py, pClass, "");
                 this.player.color = pData.color; 
                 this.introTargetX = px;
                 this.introTargetY = py;
@@ -654,6 +660,26 @@ export class GameEngine {
         });
     }
 
+    // NEW: Updates the visual badges on the top left
+    updateUpgradeBadges() {
+        const container = document.getElementById('upgrade-badges');
+        if (!container) return;
+        container.innerHTML = '';
+        
+        for (let upgId in this.player.upgrades) {
+            let tier = this.player.upgrades[upgId];
+            if (tier > 0) {
+                let def = UPGRADE_POOL.find(u => u.id === upgId);
+                let tierClass = tier === 1 ? 'badge-t1' : tier === 2 ? 'badge-t2' : tier === 3 ? 'badge-t3' : tier === 4 ? 'badge-t4' : 'badge-t5';
+                container.innerHTML += `
+                    <div class="upgrade-badge ${tierClass}" title="${def.title}">
+                        <div class="badge-icon">${def.id.substring(0,3).toUpperCase()}</div>
+                        <div class="badge-tier">T${tier}</div>
+                    </div>`;
+            }
+        }
+    }
+
     showNextUpgrade() {
         if (this.pendingUpgrades <= 0 || this.isDemo || this.isGameOver) return;
         
@@ -688,6 +714,7 @@ export class GameEngine {
         const choice = this.currentUpgradeChoices[index];
         this.player.applyUpgrade(choice.id); 
         this.grantAccountXP(15); 
+        this.updateUpgradeBadges(); // Refresh the visual UI
         
         document.getElementById('upgrade-ui').classList.add('hidden');
         this.isChoosingUpgrade = false; 
@@ -823,6 +850,7 @@ export class GameEngine {
             xpEl.innerText = `+${this.matchXPEarned}`;
         }
 
+        // We now deeply clone the player's upgrades so they are saved safely to match history
         window.lastMatchStats = {
             kills: this.player.kills || 0,
             time: timeAlive || 0,
@@ -830,7 +858,8 @@ export class GameEngine {
             distance: Math.floor(this.distanceTraveled || 0),
             rank: rank || 0,
             totalPlayers: totalPlayers || 0,
-            playerClass: this.player.type || 'Unknown' 
+            playerClass: this.player.type || 'Unknown',
+            upgrades: JSON.parse(JSON.stringify(this.player.upgrades || {})) 
         };
 
         document.getElementById('go-killer-name').innerText = killer ? killer.name : "UNKNOWN";
@@ -1072,12 +1101,9 @@ export class GameEngine {
                 this.projectiles.push(fireProj);
             }
 
-            // NEW: Simplified targeting so enemies will shoot at ANY enemy close to them
             let enemyClose = false;
             for(let p of allPlayers) {
                 if (p === bot || p.isDead) continue;
-                
-                // If I am a teammate, ignore the player and other teammates
                 if (bot.isTeammate && (p.isPlayer || p.isTeammate)) continue;
                 
                 if (distance(bot.x, bot.y, p.x, p.y) < 600 && !(p.ghostDash && p.dashTimer > 0)) { 

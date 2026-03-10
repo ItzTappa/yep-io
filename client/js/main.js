@@ -4,7 +4,7 @@ import { ITEMS_DB, RARITY_COLORS } from './items.js';
 import { sounds } from './soundManager.js';
 import { lobbyUI } from './networkLobby.js';
 
-let selectedClass = 'triangle';
+let selectedClass = null; // NEW: Starts as null to force selection
 
 window.globalAccountXP = 0;
 window.globalAccountLevel = 1;
@@ -98,7 +98,8 @@ function renderPreview() {
     previewAngle += 0.015;
     if (lockerPreviewCtx) {
         lockerPreviewCtx.clearRect(0, 0, 300, 300);
-        const dummy = new Player(150, 150, selectedClass, ""); 
+        const dummyClass = selectedClass || 'triangle'; // Default to triangle if none selected yet
+        const dummy = new Player(150, 150, dummyClass, ""); 
         dummy.equipped = window.equippedItems;
         if (dummy.equipped.Color && ITEMS_DB && ITEMS_DB[dummy.equipped.Color]) {
             const dbColor = ITEMS_DB[dummy.equipped.Color].value;
@@ -119,10 +120,24 @@ renderPreview();
 // --- TABS & CLASSES ---
 document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
+        const targetTab = e.target.dataset.target;
+        
+        // NEW: Prevent entering multiplayer without a class
+        if (targetTab === 'multiplayer' && !selectedClass) {
+            const info = document.getElementById('class-info');
+            if (info) {
+                info.innerText = "PLEASE SELECT A CLASS FIRST!";
+                info.style.color = "red";
+                info.classList.remove('fade-out', 'hidden');
+                if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
+                window.classInfoTimeout = setTimeout(() => info.classList.add('fade-out'), 2000);
+            }
+            return;
+        }
+
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         e.target.classList.add('active');
-        const targetTab = e.target.dataset.target;
         document.getElementById(targetTab).classList.add('active');
         const seasonLevelUI = document.querySelector('.player-level-ui');
         if (seasonLevelUI) {
@@ -141,6 +156,21 @@ document.querySelectorAll('.class-btn').forEach(btn => {
         document.querySelectorAll('.class-btn').forEach(b => b.classList.remove('active'));
         e.target.classList.add('active');
         selectedClass = e.target.dataset.class;
+
+        const info = document.getElementById('class-info');
+        if (info) {
+            if (selectedClass === 'triangle') info.innerText = "JET: Fast & agile. Lower health. Good for hit-and-run.";
+            if (selectedClass === 'square') info.innerText = "TANK: High health, slow speed. Excels in close-quarters brawls.";
+            if (selectedClass === 'circle') info.innerText = "SOLDIER: Balanced speed and health. The perfect all-rounder.";
+            
+            info.style.color = "var(--accent)";
+            info.classList.remove('hidden', 'fade-out');
+            
+            if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
+            window.classInfoTimeout = setTimeout(() => {
+                info.classList.add('fade-out');
+            }, 4000);
+        }
     });
 });
 
@@ -195,6 +225,19 @@ function updateMenuXPBar() {
 
 // --- PLAY & GAME OVER ---
 document.getElementById('play-btn').addEventListener('click', () => {
+    // NEW: Prevent playing without a class
+    if (!selectedClass) {
+        const info = document.getElementById('class-info');
+        if (info) {
+            info.innerText = "PLEASE SELECT A CLASS FIRST!";
+            info.style.color = "red";
+            info.classList.remove('fade-out', 'hidden');
+            if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
+            window.classInfoTimeout = setTimeout(() => info.classList.add('fade-out'), 2000);
+        }
+        return;
+    }
+
     document.getElementById('main-menu').classList.add('hidden');
     document.getElementById('game-ui').classList.remove('hidden');
     const hud = document.querySelector('.hud');
@@ -286,6 +329,7 @@ function renderLocker() {
         }
     }
 }
+
 // --- STATS LOGIC ---
 function renderStats() {
     document.getElementById('stat-account-level').innerText = window.globalAccountLevel;
@@ -322,29 +366,45 @@ function renderStats() {
         
         let pClass = match.playerClass ? match.playerClass.charAt(0).toUpperCase() + match.playerClass.slice(1) : 'Unknown';
 
+        let upgradesHtml = '';
+        if (match.upgrades) {
+            for(let key in match.upgrades) {
+                let tier = match.upgrades[key];
+                if (tier > 0) {
+                    let tColor = tier === 1 ? '#cd7f32' : tier === 2 ? '#c0c0c0' : tier === 3 ? '#ffd700' : tier === 4 ? '#00ffcc' : '#ff00ff';
+                    upgradesHtml += `<div style="color:${tColor}; font-size:0.75rem; background:rgba(0,0,0,0.5); padding:4px 8px; border-radius:4px; border:1px solid ${tColor};">${key.toUpperCase()} T${tier}</div>`;
+                }
+            }
+        }
+
         const html = `
-            <div class="match-card" style="border-left-color: ${rankColor};">
-                <div class="match-detail-item">
-                    <span class="match-detail-label">RANK</span>
-                    <div class="match-rank" style="color: ${rankColor};">
-                        ${displayRank}
+            <div class="match-card" onclick="this.classList.toggle('expanded')" style="border-left-color: ${rankColor};">
+                <div class="match-card-main">
+                    <div class="match-detail-item">
+                        <span class="match-detail-label">RANK</span>
+                        <div class="match-rank" style="color: ${rankColor};">
+                            ${displayRank}
+                        </div>
+                    </div>
+                    <div class="match-detail-item">
+                        <span class="match-detail-label">CLASS</span>
+                        <span class="match-detail-val" style="color: #bbb;">${pClass}</span>
+                    </div>
+                    <div class="match-detail-item">
+                        <span class="match-detail-label">KILLS</span>
+                        <span class="match-detail-val">${match.kills || 0}</span>
+                    </div>
+                    <div class="match-detail-item">
+                        <span class="match-detail-label">POINTS</span>
+                        <span class="match-detail-val">${Math.floor(match.points || 0)}</span>
+                    </div>
+                    <div class="match-detail-item">
+                        <span class="match-detail-label">TIME ALIVE</span>
+                        <span class="match-detail-val">${formatTime(match.time || 0)}</span>
                     </div>
                 </div>
-                <div class="match-detail-item">
-                    <span class="match-detail-label">CLASS</span>
-                    <span class="match-detail-val" style="color: #bbb;">${pClass}</span>
-                </div>
-                <div class="match-detail-item">
-                    <span class="match-detail-label">KILLS</span>
-                    <span class="match-detail-val">${match.kills || 0}</span>
-                </div>
-                <div class="match-detail-item">
-                    <span class="match-detail-label">POINTS</span>
-                    <span class="match-detail-val">${Math.floor(match.points || 0)}</span>
-                </div>
-                <div class="match-detail-item">
-                    <span class="match-detail-label">TIME ALIVE</span>
-                    <span class="match-detail-val">${formatTime(match.time || 0)}</span>
+                <div class="match-upgrades" style="grid-column: span 5; display:none; flex-wrap:wrap; justify-content:center; gap:5px; padding-top:15px; border-top:1px solid #333; margin-top:5px;">
+                    ${upgradesHtml || '<span style="color:#666; font-size:0.8rem; font-style:italic;">No upgrades acquired.</span>'}
                 </div>
             </div>
         `;

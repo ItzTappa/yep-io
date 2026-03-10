@@ -24,10 +24,11 @@
                 <div class="lobby-center">
                     <h1>yep.io</h1>
                     <div class="class-selection">
-                        <button class="class-btn active" data-class="triangle">Jet (Triangle)</button>
+                        <button class="class-btn" data-class="triangle">Jet (Triangle)</button>
                         <button class="class-btn" data-class="square">Tank (Square)</button>
                         <button class="class-btn" data-class="circle">Soldier (Circle)</button>
                     </div>
+                    <div id="class-info" class="hidden fade-out"></div>
                     <button id="play-btn">PLAY</button>
                 </div>
             </div>
@@ -198,6 +199,9 @@
     <div id="game-ui" class="hidden">
         <div class="hud">
             <div id="fps-display" class="hidden">60 FPS</div>
+            
+            <div id="upgrade-badges" class="upgrade-badges-container"></div>
+            
             <div class="xp-bar-container">
                 <div id="xp-bar"></div>
                 <span id="level-display">0 PTS</span>
@@ -218,7 +222,7 @@
         </div>
 
         <div id="upgrade-ui" class="hidden">
-            <div class="upgrade-header">CHOOSE UPGRADE (Press 1, 2, or 3)</div>
+            <div class="upgrade-header">CHOOSE UPGRADE</div>
             <div class="upgrade-cards">
                 <div class="card" id="card-1"><div class="card-key">1</div><div class="card-title" id="title-1">Speed</div><div class="card-desc" id="desc-1"></div></div>
                 <div class="card" id="card-2"><div class="card-key">2</div><div class="card-title" id="title-2">Damage</div><div class="card-desc" id="desc-2"></div></div>
