@@ -24,7 +24,7 @@ html, body {
 #main-menu { 
     position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh; z-index: 10;
     display: flex; flex-direction: column; justify-content: flex-start;
-    background: rgba(15, 15, 20, 0.4); /* FIX: Lighter background to see the game behind it! */
+    background: rgba(15, 15, 20, 0.4); 
     backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
     overflow-y: auto; 
 }
@@ -94,8 +94,8 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 1.1rem; }
 .setting-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer; }
 
-/* Custom Range Slider for Volume */
-.slider { -webkit-appearance: none; width: 150px; height: 8px; border-radius: 4px; background: #444; outline: none; border: 1px solid #222; }
+/* Custom Range Slider for Volume - FIXED APPEARANCE ERROR */
+.slider { -webkit-appearance: none; appearance: none; width: 150px; height: 8px; border-radius: 4px; background: #444; outline: none; border: 1px solid #222; }
 .slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 5px rgba(255, 230, 0, 0.8); }
 
 .settings-divider { border: 0; border-top: 2px solid #444; margin: 20px 0; }
@@ -128,10 +128,10 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .item-progress-bg { width: 100%; height: 15px; background: #111; border-radius: 8px; overflow: hidden; margin-top: auto; border: 1px solid #333; }
 .item-progress-fill { height: 100%; width: 0%; transition: width 0.3s; }
 
-.btn-equip { padding: 10px; background: transparent; border: 2px solid var(--rarity-color); color: var(--rarity-color); border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 5px; transition: all 0.2s; pointer-events: auto; }
+.btn-equip { padding: 10px; background: transparent; border: 2px solid var(--rarity-color); color: var(--rarity-color); border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 5px; transition: all 0.2s; pointer-events: auto;}
 .btn-equip.equipped { background: var(--rarity-color); color: #000; box-shadow: 0 0 15px var(--rarity-color); }
 
-.btn-claim { padding: 10px; background: transparent; border: 2px solid var(--rarity-color); border-radius: 5px; cursor: pointer; margin-top: 5px; position: relative; overflow: hidden; pointer-events: auto; }
+.btn-claim { padding: 10px; background: transparent; border: 2px solid var(--rarity-color); border-radius: 5px; cursor: pointer; margin-top: 5px; position: relative; overflow: hidden; pointer-events: auto;}
 .btn-claim span { position: relative; z-index: 2; font-weight: bold; color: var(--rarity-color); text-shadow: 1px 1px 2px black; pointer-events: none; }
 .btn-claim .fill { position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: var(--rarity-color); transition: width 0s; z-index: 0; opacity: 0.6; pointer-events: none; }
 .btn-claim.holding .fill { width: 100%; transition: width 1s linear; }
@@ -235,7 +235,7 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 #upgrade-ui { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 100; }
 .upgrade-header { background: rgba(0, 0, 0, 0.7); padding: 5px 20px; border-radius: 20px; color: var(--accent); font-weight: bold; letter-spacing: 2px; font-size: 0.9rem; border: 1px solid var(--accent); }
 .upgrade-cards { display: flex; gap: 20px; }
-.card { background: rgba(20, 20, 25, 0.9); border: 2px solid #444; border-radius: 10px; width: 200px; padding: 15px; text-align: center; position: relative; box-shadow: 0 10px 20px rgba(0,0,0,0.5); transition: border-color 0.2s, box-shadow 0.2s; }
+.card { background: rgba(20, 20, 25, 0.9); border: 2px solid #444; border-radius: 10px; width: 200px; padding: 15px; text-align: center; position: relative; box-shadow: 0 10px 20px rgba(0,0,0,0.5); transition: border-color 0.2s, box-shadow 0.2s; cursor: pointer; }
 .card-key { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); background: var(--accent); color: black; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: bold; font-size: 1.2rem; box-shadow: 0 0 10px var(--accent); transition: background 0.2s, color 0.2s, box-shadow 0.2s; }
 .card-title { color: white; font-size: 1.1rem; font-weight: bold; margin-top: 10px; margin-bottom: 5px; transition: color 0.2s; }
 .card-desc { color: #aaa; font-size: 0.9rem; }

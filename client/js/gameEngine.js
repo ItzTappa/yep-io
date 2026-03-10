@@ -52,12 +52,10 @@ export class GameEngine {
         this.levelUpTimeout = null; 
         this.accountLevelUpTimeout = null; 
         this.animationId = null; 
+        this.isRunning = false; // PREVENTS OVERLAPPING LOOPS!
         
-        // PERFECT 60 FPS LOCK
         this.fpsInterval = 1000 / 60; 
         this.lastTime = performance.now();
-        this.accumulator = 0; 
-        
         this.lastFpsTime = performance.now(); 
         this.framesThisSecond = 0;
 
@@ -89,6 +87,10 @@ export class GameEngine {
         this.initInput();
     }
 
+    getVol() { 
+        return (window.gameSettings && window.gameSettings.volume !== undefined) ? window.gameSettings.volume : 1.0; 
+    }
+
     initInput() {
         window.addEventListener('resize', () => {
             this.width = window.innerWidth; 
@@ -101,21 +103,18 @@ export class GameEngine {
             this.ctx.scale(dpr, dpr);
         });
         
-        window.addEventListener('touchstart', () => {
-            this.isTouchDevice = true;
-        }, { passive: true });
-
+        window.addEventListener('touchstart', () => { this.isTouchDevice = true; }, { passive: true });
         window.addEventListener('mousemove', (e) => { 
-            if (!this.isTouchDevice) {
+            if (!this.isTouchDevice) { 
                 this.mouseX = e.clientX; 
                 this.mouseY = e.clientY; 
-            }
+            } 
         });
         
         window.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'INPUT') return;
             const key = e.key.toLowerCase();
-            if (Object.values(window.gameSettings.keybinds).includes(key)) { 
+            if (Object.values(window.gameSettings.keybinds).includes(key)) {
                 e.preventDefault(); 
             }
             this.keys[key] = true;
@@ -157,13 +156,7 @@ export class GameEngine {
                 for (let i = 0; i < e.changedTouches.length; i++) {
                     const t = e.changedTouches[i];
                     if (!this.leftTouch.active) {
-                        this.leftTouch.active = true;
-                        this.leftTouch.id = t.identifier;
-                        this.leftTouch.originX = t.clientX;
-                        this.leftTouch.originY = t.clientY;
-                        this.leftTouch.x = t.clientX;
-                        this.leftTouch.y = t.clientY;
-                        
+                        this.leftTouch = { active: true, id: t.identifier, originX: t.clientX, originY: t.clientY, x: t.clientX, y: t.clientY };
                         leftBase.style.bottom = 'auto'; 
                         leftBase.style.left = t.clientX + 'px';
                         leftBase.style.top = t.clientY + 'px';
@@ -182,15 +175,10 @@ export class GameEngine {
                     if (this.leftTouch.active && t.identifier === this.leftTouch.id) {
                         this.leftTouch.x = t.clientX;
                         this.leftTouch.y = t.clientY;
-                        
                         let dx = t.clientX - this.leftTouch.originX;
                         let dy = t.clientY - this.leftTouch.originY;
                         let dist = Math.hypot(dx, dy);
-                        let maxDist = 40; 
-                        if (dist > maxDist) { 
-                            dx = (dx/dist) * maxDist; 
-                            dy = (dy/dist) * maxDist; 
-                        }
+                        if (dist > 40) { dx = (dx/dist) * 40; dy = (dy/dist) * 40; }
                         leftStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
                     }
                 }
@@ -198,11 +186,9 @@ export class GameEngine {
 
             const endLeft = (e) => {
                 for (let i = 0; i < e.changedTouches.length; i++) {
-                    const t = e.changedTouches[i];
-                    if (this.leftTouch.active && t.identifier === this.leftTouch.id) {
+                    if (this.leftTouch.active && e.changedTouches[i].identifier === this.leftTouch.id) {
                         this.leftTouch.active = false;
                         leftBase.classList.remove('active'); 
-                        
                         leftBase.style.top = 'auto';
                         leftBase.style.bottom = '40px';
                         leftBase.style.left = '40px';
@@ -220,11 +206,8 @@ export class GameEngine {
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const t = e.changedTouches[i];
                 if ((!this.leftTouch.active || t.identifier !== this.leftTouch.id) && 
-                    e.target.id !== 'mobile-dash-btn' && 
-                    e.target.id !== 'mobile-ability-btn' && 
-                    !e.target.closest('#joystick-left') &&
-                    !e.target.closest('.card')) { 
-                    
+                    !e.target.closest('#joystick-left') && !e.target.closest('.card') && 
+                    e.target.id !== 'mobile-dash-btn' && e.target.id !== 'mobile-ability-btn') { 
                     this.aimTouchId = t.identifier;
                     this.aimOriginX = t.clientX;
                     this.aimOriginY = t.clientY;
@@ -240,14 +223,8 @@ export class GameEngine {
                 if (t.identifier === this.aimTouchId) {
                     let dx = t.clientX - this.aimOriginX;
                     let dy = t.clientY - this.aimOriginY;
-                    
-                    if (!this.isAimDragging && Math.hypot(dx, dy) > 10) { 
-                        this.isAimDragging = true;
-                    }
-
-                    if (this.isAimDragging) {
-                        this.player.angle = Math.atan2(dy, dx);
-                    }
+                    if (!this.isAimDragging && Math.hypot(dx, dy) > 10) this.isAimDragging = true;
+                    if (this.isAimDragging) this.player.angle = Math.atan2(dy, dx);
                 }
             }
         }, {passive: false});
@@ -262,29 +239,12 @@ export class GameEngine {
         });
 
         if (dashBtn) {
-            dashBtn.addEventListener('touchstart', (e) => {
-                if (this.isDemo || this.isGameOver) return;
-                e.preventDefault();
-                this.keys[window.gameSettings.keybinds.dash] = true;
-            });
-            dashBtn.addEventListener('touchend', (e) => {
-                if (this.isDemo || this.isGameOver) return;
-                e.preventDefault();
-                this.keys[window.gameSettings.keybinds.dash] = false;
-            });
+            dashBtn.addEventListener('touchstart', (e) => { if (!this.isDemo && !this.isGameOver) { e.preventDefault(); this.keys[window.gameSettings.keybinds.dash] = true; }});
+            dashBtn.addEventListener('touchend', (e) => { if (!this.isDemo && !this.isGameOver) { e.preventDefault(); this.keys[window.gameSettings.keybinds.dash] = false; }});
         }
-        
         if (abilityBtn) {
-            abilityBtn.addEventListener('touchstart', (e) => {
-                if (this.isDemo || this.isGameOver) return;
-                e.preventDefault();
-                this.keys[window.gameSettings.keybinds.ability] = true;
-            });
-            abilityBtn.addEventListener('touchend', (e) => {
-                if (this.isDemo || this.isGameOver) return;
-                e.preventDefault();
-                this.keys[window.gameSettings.keybinds.ability] = false;
-            });
+            abilityBtn.addEventListener('touchstart', (e) => { if (!this.isDemo && !this.isGameOver) { e.preventDefault(); this.keys[window.gameSettings.keybinds.ability] = true; }});
+            abilityBtn.addEventListener('touchend', (e) => { if (!this.isDemo && !this.isGameOver) { e.preventDefault(); this.keys[window.gameSettings.keybinds.ability] = false; }});
         }
     }
 
@@ -293,7 +253,7 @@ export class GameEngine {
         const maxHearingDistance = 2000; 
         if (dist < maxHearingDistance) {
             const falloff = 1 - (dist / maxHearingDistance);
-            const spatialVolume = baseVolume * (falloff * falloff);
+            const spatialVolume = baseVolume * (falloff * falloff) * this.getVol();
             sounds.play(soundName, spatialVolume);
         }
     }
@@ -311,19 +271,14 @@ export class GameEngine {
     }
 
     getSafeOrbPosition(minDist = 500) {
-        let x, y; 
-        let isSafe = false; 
-        let attempts = 0;
-        
+        let x, y, isSafe = false, attempts = 0;
         while (!isSafe && attempts < 50) {
             x = Math.random() * this.worldSize; 
             y = Math.random() * this.worldSize; 
             isSafe = true;
-            
             for (let orb of this.orbs) {
                 if (orb.type === 'health' && distance(x, y, orb.x, orb.y) < minDist) { 
-                    isSafe = false; 
-                    break; 
+                    isSafe = false; break; 
                 }
             }
             attempts++;
@@ -339,12 +294,7 @@ export class GameEngine {
     }
 
     grantAccountXP(baseAmount, enemyPoints = 0) {
-        let multiplier = 1;
-        if (enemyPoints > this.player.points) { 
-            multiplier = enemyPoints / Math.max(1, this.player.points); 
-        }
-        multiplier = Math.min(multiplier, 5);
-        
+        let multiplier = Math.min(enemyPoints > this.player.points ? enemyPoints / Math.max(1, this.player.points) : 1, 5);
         let bonusFromScore = Math.floor(enemyPoints / 100); 
         const finalXP = Math.floor(baseAmount * multiplier) + bonusFromScore;
         window.globalAccountXP += finalXP;
@@ -364,18 +314,21 @@ export class GameEngine {
         }
         
         if (leveledUp && !this.isDemo) {
-            const notif = document.getElementById('account-level-notif');
-            if (notif) {
-                sounds.play('levelUp', 0.8);
-                document.getElementById('account-notif-level-num').innerText = window.globalAccountLevel;
-                notif.classList.add('show');
-                if (this.accountLevelUpTimeout) clearTimeout(this.accountLevelUpTimeout);
-                this.accountLevelUpTimeout = setTimeout(() => notif.classList.remove('show'), 4000);
+            if (window.gameSettings && window.gameSettings.showNotifs !== false) {
+                const notif = document.getElementById('account-level-notif');
+                if (notif) {
+                    sounds.play('levelUp', 0.8 * this.getVol());
+                    document.getElementById('account-notif-level-num').innerText = window.globalAccountLevel;
+                    notif.classList.add('show');
+                    if (this.accountLevelUpTimeout) clearTimeout(this.accountLevelUpTimeout);
+                    this.accountLevelUpTimeout = setTimeout(() => notif.classList.remove('show'), 4000);
+                }
             }
         }
     }
 
     stopLoop() {
+        this.isRunning = false;
         if (this.animationId) {
             cancelAnimationFrame(this.animationId);
             this.animationId = null;
@@ -385,34 +338,20 @@ export class GameEngine {
     startDemo() {
         this.stopLoop();
         
-        const mobileControls = document.getElementById('mobile-controls');
-        if (mobileControls) mobileControls.classList.add('hidden');
-        
-        const brUi = document.getElementById('br-ui');
-        if (brUi) brUi.classList.add('hidden');
-        
-        const badgeUI = document.getElementById('upgrade-badges');
-        if (badgeUI) badgeUI.innerHTML = '';
+        const mc = document.getElementById('mobile-controls'); if (mc) mc.classList.add('hidden');
+        const brUi = document.getElementById('br-ui'); if (brUi) brUi.classList.add('hidden');
+        const badgeUI = document.getElementById('upgrade-badges'); if (badgeUI) badgeUI.innerHTML = '';
 
-        this.worldSize = 4000;
-        this.stormActive = false;
-        this.isDemo = true; 
-        this.isGameOver = false; 
-        this.spectateTarget = null;
-        this.bots = []; 
-        this.orbs = []; 
-        this.projectiles = []; 
-        this.particles = [];
-        this.teammates = []; 
-        this.safeZones = []; 
-        this.isCinematicIntro = false;
+        this.worldSize = 4000; this.stormActive = false; this.isDemo = true; 
+        this.isGameOver = false; this.spectateTarget = null;
+        this.bots = []; this.orbs = []; this.projectiles = []; this.particles = [];
+        this.teammates = []; this.safeZones = []; this.isCinematicIntro = false;
         
         this.player = new Player(-10000, -10000, 'circle', ""); 
         this.player.health = 999999; 
 
         for(let i = 0; i < 40; i++) {
-            const types = ['triangle', 'square', 'circle'];
-            this.bots.push(new Bot(Math.random() * this.worldSize, Math.random() * this.worldSize, types[Math.floor(Math.random()*3)], Math.random() * 5000));
+            this.bots.push(new Bot(Math.random() * this.worldSize, Math.random() * this.worldSize, ['triangle', 'square', 'circle'][Math.floor(Math.random()*3)], Math.random() * 5000));
         }
         for(let i = 0; i < 400; i++) {
             this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
@@ -424,129 +363,82 @@ export class GameEngine {
         this.camera.y = this.demoTargetY;
         this.cameraZoom = 1.0;
         
-        this.accumulator = 0;
         this.lastTime = performance.now(); 
-        this.loop();
+        this.isRunning = true;
+        this.animationId = requestAnimationFrame((t) => this.loop(t));
     }
 
     start(playerClass) {
         this.stopLoop();
         
-        const mobileControls = document.getElementById('mobile-controls');
-        if (mobileControls && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
-            mobileControls.classList.remove('hidden');
-        } else if (mobileControls) {
-            mobileControls.classList.add('hidden');
+        const mc = document.getElementById('mobile-controls');
+        if (mc) {
+            if ('ontouchstart' in window || navigator.maxTouchPoints > 0) mc.classList.remove('hidden');
+            else mc.classList.add('hidden');
         }
         
-        const brUi = document.getElementById('br-ui');
-        if (brUi) brUi.classList.add('hidden');
+        const brUi = document.getElementById('br-ui'); if (brUi) brUi.classList.add('hidden');
         
-        this.worldSize = 6000; 
-        this.stormActive = false; 
-
-        this.isDemo = false; 
-        this.isGameOver = false; 
-        this.spectateTarget = null;
-        this.bots = []; 
-        this.orbs = []; 
-        this.projectiles = []; 
-        this.particles = []; 
-        this.teammates = [];
-        this.screenShake = 0;
+        this.worldSize = 6000; this.stormActive = false; this.isDemo = false; 
+        this.isGameOver = false; this.spectateTarget = null;
+        this.bots = []; this.orbs = []; this.projectiles = []; this.particles = [];
+        this.teammates = []; this.screenShake = 0;
         
-        this.safeZones = [];
-        this.safeZoneSpawnTimer = 0;
+        this.safeZones = []; this.safeZoneSpawnTimer = 0;
         for(let i = 0; i < 2; i++) {
             let pos = this.getSafeSpawnPosition();
             this.safeZones.push(new SafeZone(pos.x, pos.y));
         }
         
         this.player = new Player(this.worldSize / 2, this.worldSize / 2, playerClass, "");
-
-        this.camera.x = this.player.x; 
-        this.camera.y = this.player.y;
-        this.cameraZoom = 1.0; 
-        this.isCinematicIntro = false;
+        this.camera.x = this.player.x; this.camera.y = this.player.y;
+        this.cameraZoom = 1.0; this.isCinematicIntro = false;
         
-        this.pointsToNextUpgrade = 10; 
-        this.matchStartTime = Date.now(); 
-        this.matchXPEarned = 0; 
-        this.distanceTraveled = 0; 
-        this.lastPlayerPos = { x: this.player.x, y: this.player.y };
-        this.pendingUpgrades = 0; 
-        this.isChoosingUpgrade = false;
+        this.pointsToNextUpgrade = 10; this.matchStartTime = Date.now(); this.matchXPEarned = 0; 
+        this.distanceTraveled = 0; this.lastPlayerPos = { x: this.player.x, y: this.player.y };
+        this.pendingUpgrades = 0; this.isChoosingUpgrade = false;
         
         document.getElementById('upgrade-ui').classList.add('hidden');
         document.getElementById('xp-bar').style.width = '0%';
         document.getElementById('level-display').innerText = '0 PTS';
-        const badgeUI = document.getElementById('upgrade-badges');
-        if (badgeUI) badgeUI.innerHTML = '';
+        const badgeUI = document.getElementById('upgrade-badges'); if (badgeUI) badgeUI.innerHTML = '';
         
         let matchSeed = Math.random();
-        
         for(let i = 0; i < 49; i++) {
-            const types = ['triangle', 'square', 'circle']; 
-            const type = types[Math.floor(Math.random()*3)]; 
-            const spawn = this.getSafeSpawnPosition();
-            
-            let startingPts = 0;
-            if (matchSeed > 0.9) { 
-                startingPts = Math.random() < 0.2 ? Math.random() * 25000 : Math.random() * 1500; 
-            } 
-            else if (matchSeed < 0.4) { 
-                startingPts = Math.random() * 80; 
-            } 
-            else { 
-                startingPts = Math.random() < 0.1 ? Math.random() * 3000 : Math.random() * 300; 
-            }
-            this.bots.push(new Bot(spawn.x, spawn.y, type, startingPts));
+            let pts = matchSeed > 0.9 ? (Math.random() < 0.2 ? Math.random() * 25000 : Math.random() * 1500) : (matchSeed < 0.4 ? Math.random() * 80 : (Math.random() < 0.1 ? Math.random() * 3000 : Math.random() * 300));
+            let spawn = this.getSafeSpawnPosition();
+            this.bots.push(new Bot(spawn.x, spawn.y, ['triangle', 'square', 'circle'][Math.floor(Math.random()*3)], pts));
         }
         
-        for(let i = 0; i < 300; i++) {
-            this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
-        }
-        for(let i = 0; i < 30; i++) { 
-            let pos = this.getSafeOrbPosition(500); 
-            this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0)); 
-        }
+        for(let i = 0; i < 300; i++) this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
+        for(let i = 0; i < 30; i++) { let pos = this.getSafeOrbPosition(500); this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0)); }
 
         this.totalMatchPlayers = this.bots.length + 1; 
         
-        this.accumulator = 0;
         this.lastTime = performance.now(); 
-        this.loop();
+        this.isRunning = true;
+        this.animationId = requestAnimationFrame((t) => this.loop(t));
     }
 
     startMultiplayer(players, lobbyCode, isHost) {
         this.stopLoop();
         
-        const mobileControls = document.getElementById('mobile-controls');
-        if (mobileControls && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
-            mobileControls.classList.remove('hidden');
-        } else if (mobileControls) {
-            mobileControls.classList.add('hidden');
+        const mc = document.getElementById('mobile-controls');
+        if (mc) {
+            if ('ontouchstart' in window || navigator.maxTouchPoints > 0) mc.classList.remove('hidden');
+            else mc.classList.add('hidden');
         }
         
-        this.lobbyCode = lobbyCode; 
-        this.isHost = isHost || false;
-        this.worldSize = 10000; 
-        this.stormActive = true; 
+        this.lobbyCode = lobbyCode; this.isHost = isHost || false;
+        this.worldSize = 10000; this.stormActive = true; 
         this.stormCenter = { x: this.worldSize / 2, y: this.worldSize / 2 };
         this.stormRadius = 7500; 
 
-        this.isDemo = false; 
-        this.isGameOver = false; 
-        this.spectateTarget = null;
-        this.bots = []; 
-        this.orbs = []; 
-        this.projectiles = []; 
-        this.particles = [];
-        this.teammates = [];
-        this.screenShake = 0;
+        this.isDemo = false; this.isGameOver = false; this.spectateTarget = null;
+        this.bots = []; this.orbs = []; this.projectiles = []; this.particles = [];
+        this.teammates = []; this.screenShake = 0;
         
-        this.safeZones = [];
-        this.safeZoneSpawnTimer = 0;
+        this.safeZones = []; this.safeZoneSpawnTimer = 0;
         for(let i = 0; i < 2; i++) {
             let pos = this.getSafeSpawnPosition();
             this.safeZones.push(new SafeZone(pos.x, pos.y));
@@ -554,16 +446,12 @@ export class GameEngine {
 
         document.getElementById('game-ui').classList.remove('hidden');
         document.querySelector('.hud').classList.remove('hidden');
-        const badgeUI = document.getElementById('upgrade-badges');
-        if (badgeUI) badgeUI.innerHTML = '';
+        const badgeUI = document.getElementById('upgrade-badges'); if (badgeUI) badgeUI.innerHTML = '';
         
-        const brUi = document.getElementById('br-ui');
-        if (brUi) brUi.classList.remove('hidden'); 
+        const brUi = document.getElementById('br-ui'); if (brUi) brUi.classList.remove('hidden'); 
 
-        let spawnX = this.worldSize / 2;
-        let spawnY = this.worldSize / 2;
-        let spacing = 150;
-        let totalWidth = (players.length - 1) * spacing;
+        let spawnX = this.worldSize / 2; let spawnY = this.worldSize / 2;
+        let spacing = 150; let totalWidth = (players.length - 1) * spacing;
         let startX = spawnX - totalWidth / 2;
 
         for (let i = 0; i < players.length; i++) {
@@ -580,25 +468,17 @@ export class GameEngine {
                 this.introTargetY = py;
             } else {
                 let bot = new Bot(px, py, pData.classType || 'square', 0);
-                bot.name = pData.name;
-                bot.color = pData.color;
-                bot.isTeammate = true; 
-                bot.isRemotePlayer = true; 
-                bot.remoteId = pData.id; 
-                
-                this.bots.push(bot);
-                this.teammates.push(bot);
+                bot.name = pData.name; bot.color = pData.color;
+                bot.isTeammate = true; bot.isRemotePlayer = true; bot.remoteId = pData.id; 
+                this.bots.push(bot); this.teammates.push(bot);
             }
         }
 
         if (this.isHost) {
             let botsToSpawn = 50 - players.length;
-            
             for(let i = 0; i < botsToSpawn; i++) {
-                const types = ['triangle', 'square', 'circle']; 
-                const type = types[Math.floor(Math.random()*3)]; 
                 const spawn = this.getSafeSpawnPosition();
-                let b = new Bot(spawn.x, spawn.y, type, 0);
+                let b = new Bot(spawn.x, spawn.y, ['triangle', 'square', 'circle'][Math.floor(Math.random()*3)], 0);
                 b.id = 'b' + i; 
                 this.bots.push(b);
             }
@@ -608,14 +488,8 @@ export class GameEngine {
                     window.gameSocket.emit('hostInit', {
                         code: this.lobbyCode,
                         bots: this.bots.filter(b => !b.isRemotePlayer).map(b => ({ 
-                            id: b.id, 
-                            x: Math.round(b.x), 
-                            y: Math.round(b.y), 
-                            type: b.type, 
-                            pts: Math.round(b.points),
-                            c: b.color, 
-                            u: b.upgrades || {}, 
-                            n: b.name
+                            id: b.id, x: Math.round(b.x), y: Math.round(b.y), 
+                            type: b.type, pts: Math.round(b.points), c: b.color, u: b.upgrades || {}, n: b.name
                         }))
                     });
                 }
@@ -624,14 +498,8 @@ export class GameEngine {
             this.bots = [...this.teammates]; 
         }
 
-        for(let i = 0; i < 1500; i++) {
-            this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
-        }
-        
-        for(let i = 0; i < 100; i++) { 
-            let pos = this.getSafeOrbPosition(500); 
-            this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0));
-        }
+        for(let i = 0; i < 1500; i++) this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
+        for(let i = 0; i < 100; i++) { let pos = this.getSafeOrbPosition(500); this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0)); }
 
         if (window.gameSocket) {
             window.gameSocket.removeAllListeners('hostInit');
@@ -643,23 +511,14 @@ export class GameEngine {
             window.gameSocket.on('hostInit', (data) => {
                 if (this.isHost) return;
                 this.bots = [...this.teammates]; 
-                
                 data.bots.forEach(b => {
                     let bot = new Bot(b.x, b.y, b.type, 0);
-                    bot.id = b.id;
-                    bot.points = b.pts; 
-                    bot.name = b.n || bot.name; 
-                    if (b.c) bot.color = b.c;
-                    
+                    bot.id = b.id; bot.points = b.pts; bot.name = b.n || bot.name; if (b.c) bot.color = b.c;
                     if (b.u && typeof bot.applyUpgrade === 'function') {
                         if (!bot.upgrades) bot.upgrades = {};
-                        for (let key in b.u) {
-                            let hostTier = b.u[key];
-                            for(let i=0; i<hostTier; i++) bot.applyUpgrade(key);
-                        }
+                        for (let key in b.u) { for(let i=0; i<b.u[key]; i++) bot.applyUpgrade(key); }
                     }
-                    bot.upgradeProgress = -999999; 
-                    this.bots.push(bot);
+                    bot.upgradeProgress = -999999; this.bots.push(bot);
                 });
             });
 
@@ -668,43 +527,25 @@ export class GameEngine {
                 data.bots.forEach(bd => {
                     let bot = this.bots.find(b => b.id === bd.id);
                     if (bot) {
-                        bot.x += (bd.x - bot.x) * 0.5; 
-                        bot.y += (bd.y - bot.y) * 0.5;
-                        bot.health = bd.h;
-                        bot.points = bd.pts; 
-                        bot.name = bd.n || bot.name; 
-                        if (bd.c) bot.color = bd.c;
+                        bot.x += (bd.x - bot.x) * 0.5; bot.y += (bd.y - bot.y) * 0.5;
+                        bot.health = bd.h; bot.points = bd.pts; bot.name = bd.n || bot.name; if (bd.c) bot.color = bd.c;
                         
                         if (bd.u && typeof bot.applyUpgrade === 'function') {
                             if (!bot.upgrades) bot.upgrades = {};
                             for (let key in bd.u) {
-                                let hostTier = bd.u[key];
                                 let localTier = bot.upgrades[key] || 0;
-                                while (localTier < hostTier) {
-                                    bot.applyUpgrade(key);
-                                    localTier++;
-                                }
+                                while (localTier < bd.u[key]) { bot.applyUpgrade(key); localTier++; }
                             }
                         }
-                        
                         bot.upgradeProgress = -999999; 
                         if (bd.d && !bot.isDead) this.processDeath(bot, null); 
                     } else if (!bd.d) {
                         let newBot = new Bot(bd.x, bd.y, bd.type, 0);
-                        newBot.id = bd.id;
-                        newBot.health = bd.h;
-                        newBot.points = bd.pts;
-                        newBot.name = bd.n || newBot.name; 
-                        if (bd.c) newBot.color = bd.c;
-                        
+                        newBot.id = bd.id; newBot.health = bd.h; newBot.points = bd.pts; newBot.name = bd.n || newBot.name; if (bd.c) newBot.color = bd.c;
                         if (bd.u && typeof newBot.applyUpgrade === 'function') {
-                            for (let key in bd.u) {
-                                let hostTier = bd.u[key];
-                                for(let i=0; i<hostTier; i++) newBot.applyUpgrade(key);
-                            }
+                            for (let key in bd.u) { for(let i=0; i<bd.u[key]; i++) newBot.applyUpgrade(key); }
                         }
-                        newBot.upgradeProgress = -999999; 
-                        this.bots.push(newBot);
+                        newBot.upgradeProgress = -999999; this.bots.push(newBot);
                     }
                 });
             });
@@ -712,9 +553,7 @@ export class GameEngine {
             window.gameSocket.on('teammateMoved', (data) => {
                 let tm = this.teammates.find(t => t.remoteId === data.id);
                 if (tm) {
-                    tm.x = data.x; 
-                    tm.y = data.y; 
-                    tm.angle = data.angle;
+                    tm.x = data.x; tm.y = data.y; tm.angle = data.angle;
                     if (data.health) tm.health = data.health;
                     if (data.maxHealth) tm.maxHealth = data.maxHealth;
                     if (data.points !== undefined) tm.points = data.points; 
@@ -724,8 +563,7 @@ export class GameEngine {
             window.gameSocket.on('teammateShoot', (data) => {
                 let tm = this.teammates.find(t => t.remoteId === data.id);
                 if (tm) {
-                    const totalShots = (data.multiShot || 0) + 1;
-                    const spreadAngle = 0.2; 
+                    const totalShots = (data.multiShot || 0) + 1; const spreadAngle = 0.2; 
                     const startAngle = data.angle - (spreadAngle * (totalShots - 1)) / 2;
                     for (let s = 0; s < totalShots; s++) {
                         let finalAngle = startAngle + (s * spreadAngle);
@@ -737,30 +575,17 @@ export class GameEngine {
 
             window.gameSocket.on('teammateDied', (data) => {
                 let tm = this.teammates.find(t => t.remoteId === data.id);
-                if (tm && !tm.isDead) {
-                    this.processDeath(tm, null); 
-                }
+                if (tm && !tm.isDead) { this.processDeath(tm, null); }
             });
         }
 
-        this.isCinematicIntro = true;
-        this.introTimer = 0;
-        this.camera.x = spawnX;
-        this.camera.y = spawnY;
-        
-        if (players.length <= 2) this.introStartZoom = 0.8;
-        else if (players.length === 3) this.introStartZoom = 0.65;
-        else this.introStartZoom = 0.5;
+        this.isCinematicIntro = true; this.introTimer = 0; this.camera.x = spawnX; this.camera.y = spawnY;
+        if (players.length <= 2) this.introStartZoom = 0.8; else if (players.length === 3) this.introStartZoom = 0.65; else this.introStartZoom = 0.5;
         
         this.cameraZoom = this.introStartZoom;
-
-        this.pointsToNextUpgrade = 10; 
-        this.matchStartTime = Date.now(); 
-        this.matchXPEarned = 0; 
-        this.distanceTraveled = 0; 
-        this.lastPlayerPos = { x: this.player.x, y: this.player.y };
-        this.pendingUpgrades = 0; 
-        this.isChoosingUpgrade = false;
+        this.pointsToNextUpgrade = 10; this.matchStartTime = Date.now(); this.matchXPEarned = 0; 
+        this.distanceTraveled = 0; this.lastPlayerPos = { x: this.player.x, y: this.player.y };
+        this.pendingUpgrades = 0; this.isChoosingUpgrade = false;
 
         document.getElementById('upgrade-ui').classList.add('hidden');
         document.getElementById('xp-bar').style.width = '0%';
@@ -768,13 +593,19 @@ export class GameEngine {
 
         this.totalMatchPlayers = 50; 
         
-        this.accumulator = 0;
         this.lastTime = performance.now(); 
-        
-        this.loop();
+        this.isRunning = true;
+        this.animationId = requestAnimationFrame((t) => this.loop(t));
     }
 
     updateLeaderboard() {
+        const container = document.getElementById('leaderboard-container');
+        if (window.gameSettings && window.gameSettings.showLeaderboard === false) {
+            if (container) container.classList.add('hidden');
+            return;
+        }
+        if (container) container.classList.remove('hidden');
+
         const allPlayers = (this.isDemo || this.isGameOver) ? [...this.bots] : [this.player, ...this.bots];
         allPlayers.sort((a, b) => b.points - a.points); 
         if (this.isDemo) return; 
@@ -795,6 +626,12 @@ export class GameEngine {
     updateUpgradeBadges() {
         const container = document.getElementById('upgrade-badges');
         if (!container) return;
+        
+        if (window.gameSettings && window.gameSettings.showBadges === false) {
+            container.innerHTML = '';
+            return;
+        }
+
         container.innerHTML = '';
         
         if (this.player.activeAbility) {
@@ -889,12 +726,14 @@ export class GameEngine {
     triggerUpgradeReady() {
         if (this.isDemo || this.isGameOver) return;
         
-        const notif = document.getElementById('level-up-notif');
-        if (notif) {
-            sounds.play('upgradeReady', 0.6); 
-            notif.classList.add('show');
-            if (this.levelUpTimeout) clearTimeout(this.levelUpTimeout);
-            this.levelUpTimeout = setTimeout(() => notif.classList.remove('show'), 3000);
+        if (window.gameSettings && window.gameSettings.showNotifs !== false) {
+            const notif = document.getElementById('level-up-notif');
+            if (notif) {
+                sounds.play('upgradeReady', 0.6 * this.getVol()); 
+                notif.classList.add('show');
+                if (this.levelUpTimeout) clearTimeout(this.levelUpTimeout);
+                this.levelUpTimeout = setTimeout(() => notif.classList.remove('show'), 3000);
+            }
         }
         
         this.pendingUpgrades++; 
@@ -1118,7 +957,7 @@ export class GameEngine {
                     let preDashPts = this.player.points;
                     this.player.dash(dx, dy);
                     if (preDashPts > this.player.points) { 
-                        sounds.play('dash', 0.4);
+                        sounds.play('dash', 0.4 * this.getVol());
                         this.spawnParticles(this.player.x, this.player.y, '#ffffff', 8);
                         this.screenShake = Math.max(this.screenShake, 5); 
                     }
@@ -1543,7 +1382,7 @@ export class GameEngine {
             }
 
             if (collectedBy) {
-                if (collectedBy === this.player) sounds.play('collect', 0.4); 
+                if (collectedBy === this.player) sounds.play('collect', 0.4 * this.getVol()); 
                 
                 if (orb.type === 'health') {
                     if (collectedBy.health < collectedBy.maxHealth) {
@@ -1821,40 +1660,35 @@ export class GameEngine {
         pointersContainer.innerHTML = html;
     }
 
-    loop() {
-        this.animationId = requestAnimationFrame(() => this.loop());
+    loop(timestamp) {
+        if (!this.isRunning) return;
+        
+        this.animationId = requestAnimationFrame((t) => this.loop(t));
 
-        const current = performance.now();
-        let dt = current - this.lastTime;
-        this.lastTime = current;
+        if (!timestamp) timestamp = performance.now();
+        let dt = timestamp - this.lastTime;
         
-        if (dt > 250) {
-            dt = 16.666; 
+        if (dt < this.fpsInterval) return;
+
+        if (dt > 100) {
+            this.lastTime = timestamp - this.fpsInterval;
+        } else {
+            this.lastTime = timestamp - (dt % this.fpsInterval);
         }
-        if (dt < 0) {
-            dt = 0; 
-        }
-        
-        this.accumulator += dt;
+
+        this.update();
+        this.draw();
 
         if (window.gameSettings.showFps) {
             this.framesThisSecond++;
-            if (current - this.lastFpsTime >= 1000) {
+            if (timestamp - this.lastFpsTime >= 1000) {
                 const fpsDisplay = document.getElementById('fps-display');
                 if (fpsDisplay) {
                     fpsDisplay.innerText = `${this.framesThisSecond} FPS`;
                 }
                 this.framesThisSecond = 0;
-                this.lastFpsTime = current;
+                this.lastFpsTime = timestamp;
             }
         }
-
-        // UNBREAKABLE 60 FPS LOCK
-        while (this.accumulator >= this.fpsInterval) {
-            this.update();
-            this.accumulator -= this.fpsInterval;
-        }
-        
-        this.draw();
     }
 }
