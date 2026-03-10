@@ -95,7 +95,6 @@ export class Entity {
         if (upgradeId === 'spikes' && !this.frontVisual) this.frontVisual = 'spikes';
         if ((upgradeId === 'fireRate' || upgradeId === 'multiShot' || upgradeId === 'damage') && !this.frontVisual) this.frontVisual = 'gun';
         
-        // Catches multiple potential defensive upgrade names to apply the physical armor
         const armorUpgrades = ['maxHealth', 'health', 'plating', 'armor', 'defense', 'shield'];
         if (armorUpgrades.includes(upgradeId) && !this.bodyVisual) this.bodyVisual = 'armor';
         
@@ -202,29 +201,10 @@ export class Entity {
             ctx.restore();
         }
 
-        if (this.rearVisual === 'thrusters') {
-            ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
-            let tTier = Math.max(this.upgrades['speed'] || 0, this.upgrades['dash'] || 0);
-            let tSize = 6 + tTier * 2;
-            let tLen = 8 + tTier * 2;
-            
-            let backOffset = this.type === 'circle' ? -this.size : -this.size / 2;
-            let vSpread = this.type === 'square' ? this.size * 0.3 : this.size * 0.4;
-            
-            ctx.fillStyle = '#444';
-            ctx.fillRect(backOffset - tLen, -vSpread - tSize/2, tLen, tSize);
-            ctx.fillRect(backOffset - tLen, vSpread - tSize/2, tLen, tSize);
-            
-            if (this.dashTimer > 0 || Math.hypot(this.vx, this.vy) > 1.0) {
-                ctx.fillStyle = '#00ffcc';
-                ctx.fillRect(backOffset - tLen - 4, -vSpread - tSize/4, 4, tSize/2);
-                ctx.fillRect(backOffset - tLen - 4, vSpread - tSize/4, 4, tSize/2);
-            }
-            ctx.restore();
-        }
-
-        // HEAVIER VISUAL ARMOR BODY PLATING
+        // Draw Armor first so it sits cleanly under the weapons and thrusters
+        let armorOffset = 0;
         if (this.bodyVisual === 'armor') {
+            armorOffset = 7;
             ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
             ctx.strokeStyle = '#9ca3af'; ctx.lineWidth = 5; 
             ctx.beginPath();
@@ -237,6 +217,30 @@ export class Entity {
             ctx.stroke(); ctx.restore();
         }
 
+        if (this.rearVisual === 'thrusters') {
+            ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
+            let tTier = Math.max(this.upgrades['speed'] || 0, this.upgrades['dash'] || 0);
+            let tSize = 6 + tTier * 2;
+            let tLen = 8 + tTier * 2;
+            
+            let backOffset = this.type === 'circle' ? -this.size : -this.size / 2;
+            if (this.bodyVisual === 'armor') backOffset -= 4; // Push back behind armor
+            
+            let vSpread = this.type === 'square' ? this.size * 0.3 : this.size * 0.4;
+            
+            ctx.fillStyle = '#444';
+            ctx.fillRect(backOffset - tLen + 2, -vSpread - tSize/2, tLen, tSize);
+            ctx.fillRect(backOffset - tLen + 2, vSpread - tSize/2, tLen, tSize);
+            
+            if (this.dashTimer > 0 || Math.hypot(this.vx, this.vy) > 1.0) {
+                ctx.fillStyle = '#00ffcc';
+                ctx.fillRect(backOffset - tLen - 2, -vSpread - tSize/4, 4, tSize/2);
+                ctx.fillRect(backOffset - tLen - 2, vSpread - tSize/4, 4, tSize/2);
+            }
+            ctx.restore();
+        }
+
+        // PERFECT ROTATING GUN BARRELS
         if (this.frontVisual === 'gun') {
             ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
             
@@ -245,48 +249,53 @@ export class Entity {
             let gunLen = 12 + (gunTier * 3); 
             let gunThickness = 6 + (gunTier * 1.5); 
             
-            let offsetDist = (this.type === 'square' ? this.size / 2 : this.size) - 2;
-            let spread = this.type === 'square' ? this.size * 0.35 : this.size * 0.4;
+            let spreadAngle = 0.2; 
+            let startAngle = -(spreadAngle * (gunCount - 1)) / 2;
 
-            ctx.fillStyle = '#555';
-            if (gunCount === 1) {
-                ctx.fillRect(offsetDist, -gunThickness/2, gunLen, gunThickness);
-                ctx.fillStyle = '#222'; ctx.fillRect(offsetDist + gunLen - 4, -gunThickness/2 + 1, 4, gunThickness - 2);
-            } else if (gunCount === 2) {
-                ctx.fillRect(offsetDist, -gunThickness/2 - spread, gunLen, gunThickness);
-                ctx.fillRect(offsetDist, -gunThickness/2 + spread, gunLen, gunThickness);
+            for (let s = 0; s < gunCount; s++) {
+                let gAngle = startAngle + (s * spreadAngle);
+                ctx.save();
+                ctx.rotate(gAngle);
+
+                let baseRadius = this.type === 'square' ? this.size / 2 : this.size;
+                if (this.type === 'triangle') baseRadius = this.size * 0.8;
+                baseRadius += armorOffset;
+                
+                let offsetDist = baseRadius - 6; // Deeply embed into the shape so they stay connected
+
+                ctx.translate(offsetDist, 0);
+
+                ctx.fillStyle = '#555';
+                ctx.fillRect(0, -gunThickness/2, gunLen, gunThickness);
                 ctx.fillStyle = '#222';
-                ctx.fillRect(offsetDist + gunLen - 4, -gunThickness/2 - spread + 1, 4, gunThickness - 2);
-                ctx.fillRect(offsetDist + gunLen - 4, -gunThickness/2 + spread + 1, 4, gunThickness - 2);
-            } else {
-                let outerSpread = spread * 1.2;
-                ctx.fillRect(offsetDist, -gunThickness/2, gunLen + 4, gunThickness); 
-                ctx.fillRect(offsetDist - 4, -gunThickness/2 - outerSpread, gunLen, gunThickness);
-                ctx.fillRect(offsetDist - 4, -gunThickness/2 + outerSpread, gunLen, gunThickness);
-                ctx.fillStyle = '#222';
-                ctx.fillRect(offsetDist + gunLen, -gunThickness/2 + 1, 4, gunThickness - 2);
-                ctx.fillRect(offsetDist + gunLen - 8, -gunThickness/2 - outerSpread + 1, 4, gunThickness - 2);
-                ctx.fillRect(offsetDist + gunLen - 8, -gunThickness/2 + outerSpread + 1, 4, gunThickness - 2);
+                ctx.fillRect(gunLen - 4, -gunThickness/2 + 1, 4, gunThickness - 2);
+
+                ctx.restore();
             }
             ctx.restore();
         }
 
+        // SPIKES ON THE OUTSIDE OF ARMOR
         if (this.spikes > 0 && (this.type === 'circle' || this.type === 'square')) {
             ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle); ctx.fillStyle = '#ff4444';
             if (this.type === 'circle') {
                 let spikeCount = 3 * this.spikes; let spikeLen = 8 + (this.spikes * 2); let spikeBase = 4 + this.spikes;
+                let r = this.size + armorOffset - 2; 
                 for (let i = 0; i < spikeCount; i++) {
-                    let angle = (i / spikeCount) * Math.PI * 2; let px = Math.cos(angle) * this.size; let py = Math.sin(angle) * this.size;
+                    let angle = (i / spikeCount) * Math.PI * 2; let px = Math.cos(angle) * r; let py = Math.sin(angle) * r;
                     ctx.save(); ctx.translate(px, py); ctx.rotate(angle); ctx.beginPath();
                     ctx.moveTo(-1.5, spikeBase); ctx.lineTo(-1.5, -spikeBase); ctx.lineTo(spikeLen, 0); ctx.fill(); ctx.restore();
                 }
             } else if (this.type === 'square') {
-                let spikesPerSide = 3; let spikeLen = 6 + (this.spikes * 2); let spikeBase = (this.size / spikesPerSide) * 0.5; let s2 = this.size / 2;
+                let spikesPerSide = 3; let spikeLen = 6 + (this.spikes * 2); let spikeBase = (this.size / spikesPerSide) * 0.5; 
+                let s2 = this.size / 2 + armorOffset - 2;
                 for (let side = 0; side < 4; side++) {
                     for (let i = 0; i < spikesPerSide; i++) {
                         let f = (i + 0.5) / spikesPerSide; let px, py, normalAngle;
-                        if (side === 0) { px = s2; py = -s2 + f * this.size; normalAngle = 0; } else if (side === 1) { px = s2 - f * this.size; py = s2; normalAngle = Math.PI / 2; } 
-                        else if (side === 2) { px = -s2; py = s2 - f * this.size; normalAngle = Math.PI; } else { px = -s2 + f * this.size; py = -s2; normalAngle = 3 * Math.PI / 2; }
+                        if (side === 0) { px = s2; py = -this.size/2 + f * this.size; normalAngle = 0; } 
+                        else if (side === 1) { px = this.size/2 - f * this.size; py = s2; normalAngle = Math.PI / 2; } 
+                        else if (side === 2) { px = -s2; py = this.size/2 - f * this.size; normalAngle = Math.PI; } 
+                        else { px = -this.size/2 + f * this.size; py = -s2; normalAngle = 3 * Math.PI / 2; }
                         ctx.save(); ctx.translate(px, py); ctx.rotate(normalAngle); ctx.beginPath();
                         ctx.moveTo(-1.5, spikeBase / 2); ctx.lineTo(-1.5, -spikeBase / 2); ctx.lineTo(spikeLen, 0); ctx.fill(); ctx.restore();
                     }
@@ -296,7 +305,8 @@ export class Entity {
         }
         if (this.type === 'triangle' && this.frontVisual === 'spikes') {
             ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle); ctx.fillStyle = '#ff4444'; ctx.beginPath();
-            let S = this.size; ctx.moveTo(S + 4 + (this.spikes * 4), 0); ctx.lineTo(S * 0.3, -S * 0.4); ctx.lineTo(S * 0.3, S * 0.4); ctx.fill(); ctx.restore();
+            let S = this.size + armorOffset; 
+            ctx.moveTo(S + 4 + (this.spikes * 4), 0); ctx.lineTo(S * 0.3, -this.size * 0.4); ctx.lineTo(S * 0.3, this.size * 0.4); ctx.fill(); ctx.restore();
         }
 
         ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
@@ -332,7 +342,7 @@ export class Entity {
             ctx.rotate(this.angle);
             ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
             ctx.beginPath();
-            let arrowOffset = (this.type === 'square' ? this.size / 2 : this.size) + 4;
+            let arrowOffset = (this.type === 'square' ? this.size / 2 : this.size) + armorOffset + 4;
             ctx.moveTo(arrowOffset, -4);
             ctx.lineTo(arrowOffset + 8, 0);
             ctx.lineTo(arrowOffset, 4);
@@ -357,8 +367,6 @@ export class Entity {
             }
             ctx.shadowBlur = 0; 
         }
-        
-        // NAMES DRAWING LOGIC
         if (window.gameSettings.showNames && this.name !== "") {
             ctx.fillStyle = 'white'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
             if (window.gameSettings.highQuality) { ctx.shadowBlur = 2; ctx.shadowColor = 'black'; }
@@ -367,16 +375,13 @@ export class Entity {
             ctx.fillText(displayName, this.x, this.y - this.size - 20); ctx.shadowBlur = 0; 
         }
         
-        // HEALTH AND DASH BAR LOGIC (Only ignores pure UI menu dummies)
         let isMenuDummy = (!this.isPlayer && this.name === "");
         if (!isMenuDummy) {
-            // Draw health bar if damaged, OR if you are the player (always show your own HP)
             if (this.health < this.maxHealth || this.isPlayer) {
                 ctx.fillStyle = 'rgba(255, 0, 0, 0.7)'; ctx.fillRect(this.x - 20, this.y + this.size + 15, 40, 5);
                 ctx.fillStyle = '#00ffcc'; ctx.fillRect(this.x - 20, this.y + this.size + 15, 40 * (this.health / this.maxHealth), 5);
             }
             
-            // Dash bar
             ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'; ctx.fillRect(this.x - 20, this.y + this.size + 22, 40, 3);
             let dashCost = Math.max(0, 2 - this.efficiency); 
             if (this.dashCooldown <= 0) {
