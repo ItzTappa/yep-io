@@ -1877,10 +1877,8 @@ export class GameEngine {
             this.ctx.shadowBlur = 20;
             this.ctx.shadowColor = '#00ffff';
         }
-        // Outer glowing line
         this.ctx.strokeRect(0, 0, this.worldSize, this.worldSize);
 
-        // Animated dashed inner line for a sci-fi energy feel
         this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
         this.ctx.lineWidth = 2;
         this.ctx.setLineDash([30, 30]);
@@ -1888,12 +1886,11 @@ export class GameEngine {
         this.ctx.strokeRect(0, 0, this.worldSize, this.worldSize);
         this.ctx.restore();
 
-        // Darken everything outside the map boundaries so players can't easily see out there
         this.ctx.fillStyle = 'rgba(0, 20, 30, 0.6)';
-        this.ctx.fillRect(-10000, -10000, this.worldSize + 20000, 10000); // Top
-        this.ctx.fillRect(-10000, this.worldSize, this.worldSize + 20000, 10000); // Bottom
-        this.ctx.fillRect(-10000, 0, 10000, this.worldSize); // Left
-        this.ctx.fillRect(this.worldSize, 0, 10000, this.worldSize); // Right
+        this.ctx.fillRect(-10000, -10000, this.worldSize + 20000, 10000); 
+        this.ctx.fillRect(-10000, this.worldSize, this.worldSize + 20000, 10000); 
+        this.ctx.fillRect(-10000, 0, 10000, this.worldSize); 
+        this.ctx.fillRect(this.worldSize, 0, 10000, this.worldSize); 
         // ==========================================
 
         if (this.stormActive) {
