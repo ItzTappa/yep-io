@@ -7,6 +7,7 @@ export class GameEngine {
     constructor(canvas) {
         this.canvas = canvas; 
         this.ctx = canvas.getContext('2d');
+        
         this.width = window.innerWidth; 
         this.height = window.innerHeight;
         
@@ -15,6 +16,7 @@ export class GameEngine {
         this.canvas.height = this.height * dpr;
         this.canvas.style.width = `${this.width}px`; 
         this.canvas.style.height = `${this.height}px`;
+        
         this.ctx.scale(dpr, dpr);
 
         this.worldSize = 4000;
@@ -101,11 +103,13 @@ export class GameEngine {
         window.addEventListener('resize', () => {
             this.width = window.innerWidth; 
             this.height = window.innerHeight;
+            
             const dpr = window.devicePixelRatio || 1;
             this.canvas.width = this.width * dpr; 
             this.canvas.height = this.height * dpr;
             this.canvas.style.width = `${this.width}px`; 
             this.canvas.style.height = `${this.height}px`;
+            
             this.ctx.scale(dpr, dpr);
         });
         
@@ -122,6 +126,7 @@ export class GameEngine {
         
         window.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'INPUT') return;
+            
             const key = e.key.toLowerCase();
             
             if (Object.values(window.gameSettings.keybinds).includes(key)) { 
@@ -131,9 +136,15 @@ export class GameEngine {
             this.keys[key] = true;
             
             if (this.isChoosingUpgrade && !this.isDemo && !this.isGameOver) {
-                if (key === '1' && this.currentUpgradeChoices[0]) this.selectUpgrade(0);
-                if (key === '2' && this.currentUpgradeChoices[1]) this.selectUpgrade(1);
-                if (key === '3' && this.currentUpgradeChoices[2]) this.selectUpgrade(2);
+                if (key === '1' && this.currentUpgradeChoices[0]) {
+                    this.selectUpgrade(0);
+                }
+                if (key === '2' && this.currentUpgradeChoices[1]) {
+                    this.selectUpgrade(1);
+                }
+                if (key === '3' && this.currentUpgradeChoices[2]) {
+                    this.selectUpgrade(2);
+                }
             }
         });
         
@@ -164,6 +175,7 @@ export class GameEngine {
             leftZone.addEventListener('touchstart', (e) => {
                 if (this.isDemo || this.isGameOver) return; 
                 e.preventDefault();
+                
                 for (let i = 0; i < e.changedTouches.length; i++) {
                     const t = e.changedTouches[i];
                     if (!this.leftTouch.active) {
@@ -187,6 +199,7 @@ export class GameEngine {
             leftZone.addEventListener('touchmove', (e) => {
                 if (this.isDemo || this.isGameOver) return; 
                 e.preventDefault();
+                
                 for (let i = 0; i < e.changedTouches.length; i++) {
                     const t = e.changedTouches[i];
                     if (this.leftTouch.active && t.identifier === this.leftTouch.id) {
@@ -251,9 +264,11 @@ export class GameEngine {
                 if (t.identifier === this.aimTouchId) {
                     let dx = t.clientX - this.aimOriginX;
                     let dy = t.clientY - this.aimOriginY;
+                    
                     if (!this.isAimDragging && Math.hypot(dx, dy) > 10) { 
                         this.isAimDragging = true;
                     }
+
                     if (this.isAimDragging) {
                         this.player.angle = Math.atan2(dy, dx);
                     }
@@ -310,9 +325,11 @@ export class GameEngine {
 
     getSafeSpawnPosition() {
         let x, y, isSafe = false;
+        
         while (!isSafe) {
             x = Math.random() * this.worldSize; 
             y = Math.random() * this.worldSize;
+            
             if (!this.player || distance(x, y, this.player.x, this.player.y) > 1000) {
                 isSafe = true;
             }
@@ -329,6 +346,7 @@ export class GameEngine {
             x = Math.random() * this.worldSize; 
             y = Math.random() * this.worldSize; 
             isSafe = true;
+            
             for (let orb of this.orbs) {
                 if (orb.type === 'health' && distance(x, y, orb.x, orb.y) < minDist) { 
                     isSafe = false; 
@@ -342,6 +360,7 @@ export class GameEngine {
 
     spawnParticles(x, y, color, amount) {
         if (window.gameSettings && window.gameSettings.particles === false) return;
+        
         for (let i = 0; i < amount; i++) {
             this.particles.push(new Particle(x, y, color));
         }
@@ -349,6 +368,7 @@ export class GameEngine {
 
     grantAccountXP(baseAmount, enemyPoints = 0) {
         let multiplier = 1;
+        
         if (enemyPoints > this.player.points) { 
             multiplier = enemyPoints / Math.max(1, this.player.points); 
         }
@@ -359,6 +379,7 @@ export class GameEngine {
         
         window.globalAccountXP += finalXP;
         this.matchXPEarned += finalXP;
+        
         this.checkAccountLevelUp();
     }
 
@@ -376,6 +397,7 @@ export class GameEngine {
         if (leveledUp && !this.isDemo) {
             if (!window.gameSettings || window.gameSettings.showNotifs !== false) {
                 const notif = document.getElementById('account-level-notif');
+                
                 if (notif) {
                     sounds.play('levelUp', 0.8 * this.getVol());
                     document.getElementById('account-notif-level-num').innerText = window.globalAccountLevel;
@@ -385,6 +407,7 @@ export class GameEngine {
                     if (this.accountLevelUpTimeout) {
                         clearTimeout(this.accountLevelUpTimeout);
                     }
+                    
                     this.accountLevelUpTimeout = setTimeout(() => {
                         notif.classList.remove('show');
                     }, 4000);
@@ -405,22 +428,17 @@ export class GameEngine {
         this.stopLoop();
         
         const mobileControls = document.getElementById('mobile-controls');
-        if (mobileControls) mobileControls.classList.add('hidden');
+        if (mobileControls) {
+            mobileControls.classList.add('hidden');
+        }
         
-        const brUi = document.getElementById('br-ui');
-        if (brUi) brUi.classList.add('hidden');
+        const gameUi = document.getElementById('game-ui');
+        if (gameUi) gameUi.classList.add('hidden');
         
-        // Force hide HUD elements in demo mode
-        const xpBar = document.querySelector('.xp-bar-container');
-        if (xpBar) xpBar.classList.add('hidden');
-        
-        const lb = document.getElementById('leaderboard-container');
-        if (lb) lb.classList.add('hidden');
-        
-        const badgeUI = document.getElementById('upgrade-badges');
-        if (badgeUI) {
-            badgeUI.innerHTML = '';
-            badgeUI.classList.add('hidden');
+        const hudEl = document.querySelector('.hud');
+        if (hudEl) {
+            hudEl.classList.add('hidden');
+            hudEl.style.display = 'none';
         }
 
         this.worldSize = 4000;
@@ -496,6 +514,7 @@ export class GameEngine {
         }
         
         this.player = new Player(this.worldSize / 2, this.worldSize / 2, playerClass, "");
+
         this.camera.x = this.player.x; 
         this.camera.y = this.player.y;
         this.cameraZoom = 1.0; 
@@ -512,14 +531,30 @@ export class GameEngine {
         const upgradeUi = document.getElementById('upgrade-ui');
         if (upgradeUi) upgradeUi.classList.add('hidden');
         
-        // FORCE HUD ELEMENTS TO DISPLAY!
+        // ===============================================
+        // BRUTE FORCE UI VISIBILITY - GUARANTEED FIX!
+        // ===============================================
+        const gameUi = document.getElementById('game-ui');
+        if (gameUi) {
+            gameUi.classList.remove('hidden');
+            gameUi.style.display = 'block';
+        }
+
         const hudEl = document.querySelector('.hud');
-        if (hudEl) hudEl.classList.remove('hidden');
+        if (hudEl) {
+            hudEl.classList.remove('hidden');
+            hudEl.style.display = 'block';
+            hudEl.style.visibility = 'visible';
+            hudEl.style.opacity = '1';
+            hudEl.style.pointerEvents = 'none';
+        }
 
         const xpBarContainer = document.querySelector('.xp-bar-container');
         if (xpBarContainer) {
             xpBarContainer.classList.remove('hidden');
             xpBarContainer.style.display = 'block';
+            xpBarContainer.style.visibility = 'visible';
+            xpBarContainer.style.opacity = '1';
         }
         
         const xpBar = document.getElementById('xp-bar');
@@ -528,12 +563,31 @@ export class GameEngine {
         const levelDisplay = document.getElementById('level-display');
         if (levelDisplay) levelDisplay.innerText = '0 PTS';
         
+        const lb = document.getElementById('leaderboard-container') || document.querySelector('.leaderboard');
+        if (lb) {
+            lb.classList.remove('hidden');
+            if (window.gameSettings && window.gameSettings.showLeaderboard === false) {
+                lb.style.display = 'none';
+            } else {
+                lb.style.display = 'block';
+                lb.style.visibility = 'visible';
+                lb.style.opacity = '1';
+            }
+        }
+        
         const badgeUI = document.getElementById('upgrade-badges');
         if (badgeUI) {
             badgeUI.classList.remove('hidden');
-            badgeUI.style.display = 'flex';
             badgeUI.innerHTML = '';
+            if (window.gameSettings && window.gameSettings.showBadges === false) {
+                badgeUI.style.display = 'none';
+            } else {
+                badgeUI.style.display = 'flex';
+                badgeUI.style.visibility = 'visible';
+                badgeUI.style.opacity = '1';
+            }
         }
+        // ===============================================
         
         let matchSeed = Math.random();
         
@@ -551,7 +605,9 @@ export class GameEngine {
         }
         
         for(let i = 0; i < 300; i++) {
-            this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
+            const x = Math.random() * this.worldSize;
+            const y = Math.random() * this.worldSize;
+            this.orbs.push(new Orb(x, y, 'xp', 1, null, 0));
         }
         
         for(let i = 0; i < 30; i++) { 
@@ -604,28 +660,60 @@ export class GameEngine {
             this.safeZones.push(new SafeZone(pos.x, pos.y));
         }
 
+        // ===============================================
+        // BRUTE FORCE UI VISIBILITY - GUARANTEED FIX!
+        // ===============================================
         const gameUi = document.getElementById('game-ui');
-        if (gameUi) gameUi.classList.remove('hidden');
-        
-        const hud = document.querySelector('.hud');
-        if (hud) hud.classList.remove('hidden');
-        
-        // FORCE HUD ELEMENTS TO DISPLAY!
+        if (gameUi) {
+            gameUi.classList.remove('hidden');
+            gameUi.style.display = 'block';
+        }
+
+        const hudEl = document.querySelector('.hud');
+        if (hudEl) {
+            hudEl.classList.remove('hidden');
+            hudEl.style.display = 'block';
+            hudEl.style.visibility = 'visible';
+            hudEl.style.opacity = '1';
+            hudEl.style.pointerEvents = 'none';
+        }
+
         const xpBarContainer = document.querySelector('.xp-bar-container');
         if (xpBarContainer) {
             xpBarContainer.classList.remove('hidden');
             xpBarContainer.style.display = 'block';
+            xpBarContainer.style.visibility = 'visible';
+            xpBarContainer.style.opacity = '1';
         }
-
+        
+        const lb = document.getElementById('leaderboard-container') || document.querySelector('.leaderboard');
+        if (lb) {
+            lb.classList.remove('hidden');
+            if (window.gameSettings && window.gameSettings.showLeaderboard === false) {
+                lb.style.display = 'none';
+            } else {
+                lb.style.display = 'block';
+                lb.style.visibility = 'visible';
+                lb.style.opacity = '1';
+            }
+        }
+        
         const badgeUI = document.getElementById('upgrade-badges');
         if (badgeUI) {
             badgeUI.classList.remove('hidden');
-            badgeUI.style.display = 'flex';
             badgeUI.innerHTML = '';
+            if (window.gameSettings && window.gameSettings.showBadges === false) {
+                badgeUI.style.display = 'none';
+            } else {
+                badgeUI.style.display = 'flex';
+                badgeUI.style.visibility = 'visible';
+                badgeUI.style.opacity = '1';
+            }
         }
         
         const brUi = document.getElementById('br-ui');
         if (brUi) brUi.classList.remove('hidden'); 
+        // ===============================================
 
         let spawnX = this.worldSize / 2;
         let spawnY = this.worldSize / 2;
@@ -694,7 +782,9 @@ export class GameEngine {
         }
 
         for(let i = 0; i < 1500; i++) {
-            this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
+            const x = Math.random() * this.worldSize;
+            const y = Math.random() * this.worldSize;
+            this.orbs.push(new Orb(x, y, 'xp', 1, null, 0));
         }
         
         for(let i = 0; i < 100; i++) { 
@@ -865,12 +955,13 @@ export class GameEngine {
         const container = document.getElementById('leaderboard-container') || document.querySelector('.leaderboard');
         
         if (window.gameSettings && window.gameSettings.showLeaderboard === false) {
-            if (container) container.style.display = 'none';
+            if (container) {
+                container.style.display = 'none';
+            }
             return;
         }
         
         if (container) {
-            container.classList.remove('hidden');
             container.style.display = 'block';
         }
 
@@ -904,7 +995,6 @@ export class GameEngine {
             return;
         }
 
-        container.classList.remove('hidden');
         container.style.display = 'flex';
         container.innerHTML = '';
         
@@ -1249,13 +1339,6 @@ export class GameEngine {
             let dx = 0; 
             let dy = 0;
             const binds = window.gameSettings.keybinds;
-
-            // FIX: Ensure the UI is un-hidden dynamically just in case CSS glitched it!
-            const xpBarContainer = document.querySelector('.xp-bar-container');
-            if (xpBarContainer) {
-                xpBarContainer.classList.remove('hidden');
-                xpBarContainer.style.display = 'block';
-            }
 
             if (!this.isCinematicIntro) {
                 if (this.keys[binds.up]) dy -= 1; 
