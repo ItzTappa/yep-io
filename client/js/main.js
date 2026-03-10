@@ -10,8 +10,17 @@ let selectedClass = null;
 window.globalAccountXP = 0;
 window.globalAccountLevel = 1;
 
+// Initialize all default settings including the new Minimap toggle
 window.gameSettings = { 
-    highQuality: true, particles: true, showNames: true, showFps: false,
+    highQuality: true, 
+    particles: true, 
+    showNames: true, 
+    showFps: false,
+    volume: 1.0, 
+    showLeaderboard: true, 
+    showBadges: true, 
+    showNotifs: true, 
+    showMinimap: true,
     keybinds: { up: 'w', down: 's', left: 'a', right: 'd', dash: ' ', ability: 'e' }
 };
 
@@ -39,8 +48,12 @@ function generateShop() {
         const variance = base * 0.2; 
         let req = Math.floor(base + (Math.random() * variance * 2) - variance);
         
-        if (stat.type === 'distance' || stat.type === 'points') req = Math.ceil(req / 100) * 100;
-        if (stat.type === 'time') req = Math.ceil(req / 10) * 10;
+        if (stat.type === 'distance' || stat.type === 'points') {
+            req = Math.ceil(req / 100) * 100;
+        }
+        if (stat.type === 'time') {
+            req = Math.ceil(req / 10) * 10;
+        }
         
         return { id: item.id, type: stat.type, req: req, label: stat.label };
     });
@@ -52,10 +65,14 @@ function generateShop() {
 function getShop() {
     const saved = localStorage.getItem('yep_shop');
     const currentHour = new Date().getHours();
+    
     if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.hour === currentHour) return parsed.items; 
+        if (parsed.hour === currentHour) {
+            return parsed.items; 
+        }
     }
+    
     window.hourlyStats = { kills: 0, time: 0, points: 0, distance: 0 }; 
     return generateShop();
 }
@@ -83,6 +100,7 @@ try {
 // ==========================================
 // GLOBAL UI HANDLER
 // ==========================================
+
 let currentLockerCategory = null;
 window.activePreviewItem = null;
 
@@ -90,7 +108,7 @@ document.addEventListener('click', (e) => {
     const target = e.target;
 
     if (target.tagName === 'BUTTON' || target.closest('button')) {
-        sounds.play('click', 0.4);
+        sounds.play('click', 0.4 * (window.gameSettings.volume || 1.0));
     }
 
     if (target.id === 'close-preview-btn' || target.closest('#close-preview-btn')) {
@@ -149,12 +167,14 @@ document.addEventListener('click', (e) => {
 
     if (target.classList.contains('tab-btn')) {
         const targetTab = target.dataset.target;
+        
         if (targetTab === 'multiplayer' && !selectedClass) {
             const info = document.getElementById('class-info');
             if (info) {
                 info.innerText = "PLEASE SELECT A CLASS FIRST!";
                 info.style.color = "red";
                 info.classList.remove('fade-out', 'hidden');
+                
                 if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
                 window.classInfoTimeout = setTimeout(() => info.classList.add('fade-out'), 2000);
             }
@@ -163,6 +183,7 @@ document.addEventListener('click', (e) => {
 
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        
         target.classList.add('active');
         document.getElementById(targetTab).classList.add('active');
         
@@ -170,9 +191,13 @@ document.addEventListener('click', (e) => {
 
         const seasonLevelUI = document.querySelector('.player-level-ui');
         if (seasonLevelUI) {
-            if (targetTab === 'locker') seasonLevelUI.classList.add('hidden');
-            else seasonLevelUI.classList.remove('hidden');
+            if (targetTab === 'locker') {
+                seasonLevelUI.classList.add('hidden');
+            } else {
+                seasonLevelUI.classList.remove('hidden');
+            }
         }
+        
         if (targetTab === 'season') renderSeasonStore();
         if (targetTab === 'store') renderMainStore();
         if (targetTab === 'locker') renderLocker();
@@ -191,18 +216,21 @@ const startClaim = (e) => {
     btn.classList.add('holding');
     
     const storeItem = btn.closest('.store-item');
-    if (storeItem) storeItem.classList.add('shaking');
+    if (storeItem) {
+        storeItem.classList.add('shaking');
+    }
 
     btn.claimTimeout = setTimeout(() => {
         const itemId = btn.dataset.id;
         window.claimedItems[itemId] = true;
-        sounds.play('levelUp', 0.6); 
+        sounds.play('levelUp', 0.6 * (window.gameSettings.volume || 1.0)); 
         
         btn.classList.remove('holding');
         if (storeItem) {
             storeItem.classList.remove('shaking');
             storeItem.classList.add('claimed-pop');
         }
+        
         setTimeout(() => {
             renderSeasonStore();
             renderMainStore();
@@ -216,7 +244,9 @@ const stopClaim = (e) => {
         clearTimeout(btn.claimTimeout);
         btn.classList.remove('holding');
         const storeItem = btn.closest('.store-item');
-        if (storeItem) storeItem.classList.remove('shaking');
+        if (storeItem) {
+            storeItem.classList.remove('shaking');
+        }
     });
 };
 
@@ -225,6 +255,7 @@ document.addEventListener('touchstart', startClaim, {passive: false});
 document.addEventListener('mouseup', stopClaim);
 document.addEventListener('mouseleave', stopClaim);
 document.addEventListener('touchend', stopClaim);
+
 
 // ==========================================
 // PREVIEW CANVASES & FIXED TIMESTEP LOOP
@@ -235,12 +266,15 @@ const fsCanvas = document.getElementById('fullscreenPreviewCanvas');
 const fsCtx = fsCanvas?.getContext('2d');
 
 const dpr = window.devicePixelRatio || 1;
+
 if (lockerCanvas) {
-    lockerCanvas.width = 300 * dpr; lockerCanvas.height = 300 * dpr; 
+    lockerCanvas.width = 300 * dpr; 
+    lockerCanvas.height = 300 * dpr; 
     lockerCtx.scale(dpr, dpr);
 }
 if (fsCanvas) {
-    fsCanvas.width = 350 * dpr; fsCanvas.height = 350 * dpr; 
+    fsCanvas.width = 350 * dpr; 
+    fsCanvas.height = 350 * dpr; 
     fsCtx.scale(dpr, dpr);
 }
 
@@ -248,7 +282,10 @@ let previewAngle = 0;
 let previewDummy = new Player(0, 0, 'triangle', "");
 previewDummy.isPlayer = false; 
 
-if (window.previewAnimationId) cancelAnimationFrame(window.previewAnimationId);
+if (window.previewAnimationId) {
+    cancelAnimationFrame(window.previewAnimationId);
+}
+
 let previewLastTime = performance.now();
 let previewAccumulator = 0;
 
@@ -259,7 +296,7 @@ function renderPreview() {
     let dt = current - previewLastTime;
     previewLastTime = current;
     
-    if (dt > 250) dt = 16.666; // Ignore massive lag spikes from tab switches
+    if (dt > 250) dt = 16.666; 
     if (dt < 0) dt = 0; 
     
     previewAccumulator += dt;
@@ -268,15 +305,22 @@ function renderPreview() {
         previewAngle += 0.015;
         let needsTrail = false;
         
-        if (document.getElementById('locker').classList.contains('active') && currentLockerCategory === 'Trail') needsTrail = true;
-        if (!document.getElementById('item-preview-screen').classList.contains('hidden') && window.activePreviewItem && ITEMS_DB[window.activePreviewItem] && ITEMS_DB[window.activePreviewItem].category === 'Trail') needsTrail = true;
+        if (document.getElementById('locker').classList.contains('active') && currentLockerCategory === 'Trail') {
+            needsTrail = true;
+        }
+        if (!document.getElementById('item-preview-screen').classList.contains('hidden') && window.activePreviewItem && ITEMS_DB[window.activePreviewItem] && ITEMS_DB[window.activePreviewItem].category === 'Trail') {
+            needsTrail = true;
+        }
         
         if (needsTrail) {
             previewDummy.vx = Math.cos(previewAngle) * 4;
             previewDummy.vy = Math.sin(previewAngle) * 4;
         } else {
-            previewDummy.vx = 0; previewDummy.vy = 0; previewDummy.trail = [];
+            previewDummy.vx = 0; 
+            previewDummy.vy = 0; 
+            previewDummy.trail = [];
         }
+        
         previewDummy.update();
         previewAccumulator -= 16.666;
     }
@@ -285,16 +329,21 @@ function renderPreview() {
         lockerCtx.clearRect(0, 0, 300, 300);
         previewDummy.type = selectedClass || 'triangle';
         previewDummy.equipped = { ...window.equippedItems };
+        
         if (previewDummy.equipped.Color && ITEMS_DB[previewDummy.equipped.Color]) {
             const dbColor = ITEMS_DB[previewDummy.equipped.Color].value;
             previewDummy.color = dbColor === 'gold' ? '#ffe600' : dbColor; 
-        } else { previewDummy.color = '#d3d3d3'; }
+        } else { 
+            previewDummy.color = '#d3d3d3'; 
+        }
         
         previewDummy.angle = previewAngle; 
         previewDummy.size = 60; 
         previewDummy.x = 150; 
         previewDummy.y = 150;
-        let tmp = window.gameSettings.showNames; window.gameSettings.showNames = false;
+        
+        let tmp = window.gameSettings.showNames; 
+        window.gameSettings.showNames = false;
         previewDummy.draw(lockerCtx);
         window.gameSettings.showNames = tmp;
     }
@@ -303,20 +352,27 @@ function renderPreview() {
         fsCtx.clearRect(0, 0, 350, 350);
         previewDummy.type = selectedClass || 'triangle';
         let equipState = { ...window.equippedItems };
+        
         if (window.activePreviewItem && ITEMS_DB[window.activePreviewItem]) {
             equipState[ITEMS_DB[window.activePreviewItem].category] = window.activePreviewItem;
         }
+        
         previewDummy.equipped = equipState;
+        
         if (previewDummy.equipped.Color && ITEMS_DB[previewDummy.equipped.Color]) {
             const dbColor = ITEMS_DB[previewDummy.equipped.Color].value;
             previewDummy.color = dbColor === 'gold' ? '#ffe600' : dbColor; 
-        } else { previewDummy.color = '#d3d3d3'; }
+        } else { 
+            previewDummy.color = '#d3d3d3'; 
+        }
         
         previewDummy.angle = previewAngle; 
         previewDummy.size = 70; 
         previewDummy.x = 175; 
         previewDummy.y = 175;
-        let tmp = window.gameSettings.showNames; window.gameSettings.showNames = false;
+        
+        let tmp = window.gameSettings.showNames; 
+        window.gameSettings.showNames = false;
         previewDummy.draw(fsCtx);
         window.gameSettings.showNames = tmp;
     }
@@ -335,30 +391,55 @@ document.querySelectorAll('.class-btn').forEach(btn => {
             if (selectedClass === 'triangle') info.innerText = "JET: Fast & agile. Lower health. Good for hit-and-run.";
             if (selectedClass === 'square') info.innerText = "TANK: High health, slow speed. Excels in close-quarters brawls.";
             if (selectedClass === 'circle') info.innerText = "SOLDIER: Balanced speed and health. The perfect all-rounder.";
+            
             info.style.color = "var(--accent)";
             info.classList.remove('hidden', 'fade-out');
+            
             if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
-            window.classInfoTimeout = setTimeout(() => { info.classList.add('fade-out'); }, 4000);
+            window.classInfoTimeout = setTimeout(() => { 
+                info.classList.add('fade-out'); 
+            }, 4000);
         }
     });
 });
 
-document.getElementById('settings-btn').addEventListener('click', () => { document.getElementById('settings-modal').classList.remove('hidden'); });
+document.getElementById('settings-btn').addEventListener('click', () => { 
+    document.getElementById('settings-modal').classList.remove('hidden'); 
+});
+
+// Saves all settings correctly!
 document.getElementById('close-settings-btn').addEventListener('click', () => {
     window.gameSettings.highQuality = document.getElementById('set-hq').checked;
     window.gameSettings.particles = document.getElementById('set-particles').checked;
     window.gameSettings.showNames = document.getElementById('set-names').checked;
     window.gameSettings.showFps = document.getElementById('set-fps').checked;
+    
+    window.gameSettings.volume = parseInt(document.getElementById('set-volume').value) / 100;
+    window.gameSettings.showLeaderboard = document.getElementById('set-leaderboard').checked;
+    window.gameSettings.showBadges = document.getElementById('set-badges').checked;
+    window.gameSettings.showNotifs = document.getElementById('set-notifs').checked;
+    window.gameSettings.showMinimap = document.getElementById('set-minimap').checked; 
+
     const fpsDisplay = document.getElementById('fps-display');
     if (fpsDisplay) {
-        if (window.gameSettings.showFps) fpsDisplay.classList.remove('hidden');
-        else fpsDisplay.classList.add('hidden');
+        if (window.gameSettings.showFps) {
+            fpsDisplay.classList.remove('hidden');
+        } else {
+            fpsDisplay.classList.add('hidden');
+        }
     }
+    
+    if (window.game) {
+        window.game.updateLeaderboard();
+        window.game.updateUpgradeBadges();
+    }
+    
     document.getElementById('settings-modal').classList.add('hidden');
 });
 
 let listeningAction = null;
 const formatKeyName = (key) => key === ' ' ? 'SPACE' : key.toUpperCase();
+
 document.querySelectorAll('.keybind-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
         document.querySelectorAll('.keybind-btn').forEach(b => b.classList.remove('listening'));
@@ -373,8 +454,12 @@ document.addEventListener('keydown', (e) => {
         e.preventDefault(); 
         const key = e.key.toLowerCase();
         window.gameSettings.keybinds[listeningAction] = key;
+        
         const btn = document.querySelector(`.keybind-btn[data-action="${listeningAction}"]`);
-        if (btn) { btn.innerText = formatKeyName(key); btn.classList.remove('listening'); }
+        if (btn) { 
+            btn.innerText = formatKeyName(key); 
+            btn.classList.remove('listening'); 
+        }
         listeningAction = null;
     }
 });
@@ -382,12 +467,17 @@ document.addEventListener('keydown', (e) => {
 function updateMenuXPBar() {
     const xpRequired = window.globalAccountLevel * 1000;
     const progressPercent = Math.min(100, (window.globalAccountXP / xpRequired) * 100);
+    
     const bar = document.getElementById('menu-xp-bar');
     const lvl = document.getElementById('menu-level');
+    
     if (bar) bar.style.width = `${progressPercent}%`;
     if (lvl) lvl.innerText = window.globalAccountLevel;
+    
     const sBar = document.getElementById('season-progress-bar');
-    if (sBar) sBar.style.width = `${Math.min(100, (window.globalAccountLevel / 50) * 100)}%`;
+    if (sBar) {
+        sBar.style.width = `${Math.min(100, (window.globalAccountLevel / 50) * 100)}%`;
+    }
 }
 
 document.getElementById('play-btn').addEventListener('click', () => {
@@ -397,15 +487,19 @@ document.getElementById('play-btn').addEventListener('click', () => {
             info.innerText = "PLEASE SELECT A CLASS FIRST!";
             info.style.color = "red";
             info.classList.remove('fade-out', 'hidden');
+            
             if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
             window.classInfoTimeout = setTimeout(() => info.classList.add('fade-out'), 2000);
         }
         return;
     }
+    
     document.getElementById('main-menu').classList.add('hidden');
     document.getElementById('game-ui').classList.remove('hidden');
+    
     const hud = document.querySelector('.hud');
     if(hud) hud.classList.remove('hidden');
+    
     game.start(selectedClass);
 });
 
@@ -413,6 +507,7 @@ document.getElementById('return-lobby-btn').addEventListener('click', () => {
     document.getElementById('game-over-screen').classList.add('hidden');
     document.getElementById('game-ui').classList.add('hidden');
     document.getElementById('main-menu').classList.remove('hidden');
+    
     if (window.lastMatchStats) {
         window.hourlyStats.kills += window.lastMatchStats.kills || 0;
         window.hourlyStats.time += window.lastMatchStats.time || 0;
@@ -426,9 +521,12 @@ document.getElementById('return-lobby-btn').addEventListener('click', () => {
         window.lifetimeStats.distance += window.lastMatchStats.distance || 0;
         
         window.matchHistory.unshift(window.lastMatchStats);
-        if (window.matchHistory.length > 20) window.matchHistory.pop();
+        if (window.matchHistory.length > 20) {
+            window.matchHistory.pop();
+        }
         window.lastMatchStats = null; 
     }
+    
     updateMenuXPBar(); 
     game.startDemo();
 });
@@ -440,26 +538,38 @@ function renderLocker() {
     if (!slotsView || !itemsView) return;
     
     if (currentLockerCategory === null) {
-        slotsView.classList.remove('hidden'); itemsView.classList.add('hidden');
+        slotsView.classList.remove('hidden'); 
+        itemsView.classList.add('hidden');
         slotsView.innerHTML = '';
+        
         ['Skin', 'Trail', 'Banner', 'Color'].forEach(cat => {
             const item = window.equippedItems[cat] ? ITEMS_DB[window.equippedItems[cat]] : null;
             let color = item ? (item.color || RARITY_COLORS[item.rarity]) : '#888';
-            slotsView.innerHTML += `<div class="locker-slot" data-category="${cat}" style="--slot-color: ${color};">
-                <div class="slot-header">${cat}</div><div class="slot-icon">${item?.icon || '✖'}</div><div class="slot-name">${item?.name || 'Default'}</div>
-            </div>`;
+            
+            slotsView.innerHTML += `
+                <div class="locker-slot" data-category="${cat}" style="--slot-color: ${color};">
+                    <div class="slot-header">${cat}</div>
+                    <div class="slot-icon">${item?.icon || '✖'}</div>
+                    <div class="slot-name">${item?.name || 'Default'}</div>
+                </div>`;
         });
     } else {
-        slotsView.classList.add('hidden'); itemsView.classList.remove('hidden');
+        slotsView.classList.add('hidden'); 
+        itemsView.classList.remove('hidden');
         document.getElementById('locker-category-title').innerText = `CHOOSE ${currentLockerCategory}`;
-        const grid = document.getElementById('locker-item-grid'); grid.innerHTML = '';
+        
+        const grid = document.getElementById('locker-item-grid'); 
+        grid.innerHTML = '';
+        
         const isDefault = !window.equippedItems[currentLockerCategory];
         
-        grid.innerHTML += `<div class="store-item unlocked" style="--rarity-color: #888;">
-            <div class="item-icon" style="cursor: pointer;">✖</div>
-            <div style="font-size: 0.8rem; color: #888; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px;">DEFAULT</div>
-            <div class="item-name">None</div>
-            <button class="btn-equip ${isDefault ? 'equipped' : ''}" data-id="">${isDefault ? '✓ EQUIPPED' : 'EQUIP'}</button></div>`;
+        grid.innerHTML += `
+            <div class="store-item unlocked" style="--rarity-color: #888;">
+                <div class="item-icon" style="cursor: pointer;">✖</div>
+                <div style="font-size: 0.8rem; color: #888; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px;">DEFAULT</div>
+                <div class="item-name">None</div>
+                <button class="btn-equip ${isDefault ? 'equipped' : ''}" data-id="">${isDefault ? '✓ EQUIPPED' : 'EQUIP'}</button>
+            </div>`;
         
         if (ITEMS_DB) {
             const sortedItems = Object.keys(window.claimedItems)
@@ -469,11 +579,14 @@ function renderLocker() {
             sortedItems.forEach(item => {
                 let color = item.color || RARITY_COLORS[item.rarity];
                 const isEquipped = window.equippedItems[item.category] === item.id;
-                grid.innerHTML += `<div class="store-item unlocked" style="--rarity-color: ${color};">
-                    <div class="item-icon" data-id="${item.id}" style="cursor: pointer;" title="Click to Preview">${item.icon}</div>
-                    <div style="font-size: 0.8rem; color: ${color}; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px;">${item.category}</div>
-                    <div class="item-name">${item.name}</div>
-                    <button class="btn-equip ${isEquipped ? 'equipped' : ''}" data-id="${item.id}">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button></div>`;
+                
+                grid.innerHTML += `
+                    <div class="store-item unlocked" style="--rarity-color: ${color};">
+                        <div class="item-icon" data-id="${item.id}" style="cursor: pointer;" title="Click to Preview">${item.icon}</div>
+                        <div style="font-size: 0.8rem; color: ${color}; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px;">${item.category}</div>
+                        <div class="item-name">${item.name}</div>
+                        <button class="btn-equip ${isEquipped ? 'equipped' : ''}" data-id="${item.id}">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button>
+                    </div>`;
             });
         }
     }
@@ -495,10 +608,13 @@ function renderStats() {
     }
     
     historyList.innerHTML = '';
+    
     window.matchHistory.forEach(match => {
         let rankColor = '#a0a0a0'; 
         let rank = match.rank ? match.rank : '?';
-        if (rank === 1) rankColor = '#ffe600'; else if (rank !== '?' && rank <= 5) rankColor = '#00ffcc'; 
+        
+        if (rank === 1) rankColor = '#ffe600'; 
+        else if (rank !== '?' && rank <= 5) rankColor = '#00ffcc'; 
         
         let suffix = "th";
         if (rank !== '?') {
@@ -507,6 +623,7 @@ function renderStats() {
             else if (r % 10 === 2 && r % 100 !== 12) suffix = "nd";
             else if (r % 10 === 3 && r % 100 !== 13) suffix = "rd";
         }
+        
         let displayRank = rank === '?' ? '?' : `${rank}${suffix}`;
         let pClass = match.playerClass ? match.playerClass.charAt(0).toUpperCase() + match.playerClass.slice(1) : 'Unknown';
 
@@ -518,7 +635,11 @@ function renderStats() {
                     let tClass = tier === 1 ? 'badge-t1' : tier === 2 ? 'badge-t2' : tier === 3 ? 'badge-t3' : tier === 4 ? 'badge-t4' : 'badge-t5';
                     let def = UPGRADE_POOL.find(u => u && u.id === key);
                     let title = def ? def.title.toUpperCase() : key.toUpperCase();
-                    upgradesHtml += `<div class="upgrade-badge ${tClass}" style="position: relative; top: auto; left: auto; display: flex; height: 24px; box-shadow: none;"><div class="badge-name" style="font-size: 0.65rem; padding: 0 8px;">${title}</div><div class="badge-tier" style="font-size: 0.75rem; padding: 0 6px;">T${tier}</div></div>`;
+                    upgradesHtml += `
+                        <div class="upgrade-badge ${tClass}" style="position: relative; top: auto; left: auto; display: flex; height: 24px; box-shadow: none;">
+                            <div class="badge-name" style="font-size: 0.65rem; padding: 0 8px;">${title}</div>
+                            <div class="badge-tier" style="font-size: 0.75rem; padding: 0 6px;">T${tier}</div>
+                        </div>`;
                 }
             }
         }
@@ -526,11 +647,26 @@ function renderStats() {
         historyList.innerHTML += `
             <div class="match-card" onclick="this.classList.toggle('expanded')" style="border-left-color: ${rankColor};">
                 <div class="match-card-main">
-                    <div class="match-detail-item"><span class="match-detail-label">RANK</span><div class="match-rank" style="color: ${rankColor};">${displayRank}</div></div>
-                    <div class="match-detail-item"><span class="match-detail-label">CLASS</span><span class="match-detail-val" style="color: #bbb;">${pClass}</span></div>
-                    <div class="match-detail-item"><span class="match-detail-label">KILLS</span><span class="match-detail-val">${match.kills || 0}</span></div>
-                    <div class="match-detail-item"><span class="match-detail-label">POINTS</span><span class="match-detail-val">${Math.floor(match.points || 0)}</span></div>
-                    <div class="match-detail-item"><span class="match-detail-label">TIME ALIVE</span><span class="match-detail-val">${formatTime(match.time || 0)}</span></div>
+                    <div class="match-detail-item">
+                        <span class="match-detail-label">RANK</span>
+                        <div class="match-rank" style="color: ${rankColor};">${displayRank}</div>
+                    </div>
+                    <div class="match-detail-item">
+                        <span class="match-detail-label">CLASS</span>
+                        <span class="match-detail-val" style="color: #bbb;">${pClass}</span>
+                    </div>
+                    <div class="match-detail-item">
+                        <span class="match-detail-label">KILLS</span>
+                        <span class="match-detail-val">${match.kills || 0}</span>
+                    </div>
+                    <div class="match-detail-item">
+                        <span class="match-detail-label">POINTS</span>
+                        <span class="match-detail-val">${Math.floor(match.points || 0)}</span>
+                    </div>
+                    <div class="match-detail-item">
+                        <span class="match-detail-label">TIME ALIVE</span>
+                        <span class="match-detail-val">${formatTime(match.time || 0)}</span>
+                    </div>
                 </div>
                 <div class="match-upgrades" style="grid-column: span 5; display:none; flex-wrap:wrap; justify-content:center; gap:5px; padding-top:15px; border-top:1px solid #333; margin-top:5px;">
                     ${upgradesHtml || '<span style="color:#666; font-size:0.8rem; font-style:italic;">No upgrades acquired.</span>'}
@@ -550,6 +686,7 @@ function renderSeasonStore() {
     sItems.forEach(id => {
         const item = ITEMS_DB[id];
         if (!item) return;
+        
         const isUnlocked = window.globalAccountLevel >= item.req;
         const isClaimed = window.claimedItems[item.id];
         const isEquipped = window.equippedItems[item.category] === item.id;
@@ -601,7 +738,10 @@ function renderMainStore() {
         } else if (isClaimed) {
             buttonHtml = `<button class="btn-equip ${isEquipped ? 'equipped' : ''}" data-id="${item.id}">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button>`;
         } else {
-            buttonHtml = `<div class="item-progress-bg"><div class="item-progress-fill" style="width: ${progressPercent}%; background: ${color}; box-shadow: 0 0 10px ${color};"></div></div>`;
+            buttonHtml = `
+                <div class="item-progress-bg">
+                    <div class="item-progress-fill" style="width: ${progressPercent}%; background: ${color}; box-shadow: 0 0 10px ${color};"></div>
+                </div>`;
         }
         
         let isPreviewable = item.category !== 'Banner';
@@ -623,14 +763,20 @@ setInterval(() => {
     const now = new Date();
     const minutes = 59 - now.getMinutes();
     const seconds = 59 - now.getSeconds();
+    
     const shopTimer = document.getElementById('shop-timer');
-    if (shopTimer) shopTimer.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    if (shopTimer) {
+        shopTimer.innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
 
     if (now.getHours() !== window.currentShopHour) {
         window.currentShopHour = now.getHours();
         window.hourlyStats = { kills: 0, time: 0, points: 0, distance: 0 };
         window.currentShopItems = getShop(); 
-        if (document.getElementById('store').classList.contains('active')) renderMainStore();
+        
+        if (document.getElementById('store').classList.contains('active')) {
+            renderMainStore();
+        }
     }
 }, 1000);
 
@@ -639,7 +785,7 @@ renderMainStore();
 updateMenuXPBar(); 
 
 // ==========================================
-// FIX: PERFECT DEV CONSOLE LOGIC
+// DEV CONSOLE LOGIC
 // ==========================================
 const devConsole = document.getElementById('dev-console');
 const devInput = document.getElementById('dev-input');
@@ -657,8 +803,10 @@ document.addEventListener('keydown', (e) => {
         if (devConsole && devInput) {
             devConsole.classList.remove('hidden');
             devInput.focus();
-            // Force the input to start with a slash immediately after opening
-            setTimeout(() => { devInput.value = '/'; }, 10); 
+            // Perfectly types the slash into the box
+            setTimeout(() => { 
+                devInput.value = '/'; 
+            }, 10); 
         }
     } else if (e.key === 'Escape') {
         if (devConsole && !devConsole.classList.contains('hidden')) {
@@ -686,101 +834,200 @@ if (devInput) {
             const player = (window.game && !window.game.isDemo && !window.game.isGameOver) ? window.game.player : null;
 
             if (cmd === '/level' && !isNaN(arg)) {
-                window.globalAccountLevel = arg; window.globalAccountXP = 0; updateMenuXPBar();
-                renderSeasonStore(); if (document.getElementById('stats').classList.contains('active')) renderStats();
+                window.globalAccountLevel = arg; 
+                window.globalAccountXP = 0; 
+                updateMenuXPBar();
+                renderSeasonStore(); 
+                
+                if (document.getElementById('stats').classList.contains('active')) {
+                    renderStats();
+                }
                 logDev(`[SUCCESS] Account Level set to ${arg}.`);
             }
             else if (cmd === '/god' || cmd === '/unkillable') {
-                if(player) { player.maxHealth = 9999999; player.health = 9999999; player.regen = 9999; logDev('[SUCCESS] God mode enabled.'); }
-                else logDev('[ERROR] Must be in a match.');
+                if (player) { 
+                    player.maxHealth = 9999999; 
+                    player.health = 9999999; 
+                    player.regen = 9999; 
+                    logDev('[SUCCESS] God mode enabled.'); 
+                } else {
+                    logDev('[ERROR] Must be in a match.');
+                }
             }
             else if (cmd === '/score' && !isNaN(arg)) {
-                if(player) { player.points += arg; player.upgradeProgress += arg; logDev(`[SUCCESS] Added ${arg} score.`); }
+                if(player) { 
+                    player.points += arg; 
+                    player.upgradeProgress += arg; 
+                    logDev(`[SUCCESS] Added ${arg} score.`); 
+                }
             }
             else if (cmd === '/speed' && !isNaN(arg)) {
-                if(player) { player.speed = arg; logDev(`[SUCCESS] Speed set to ${arg}.`); }
+                if(player) { 
+                    player.speed = arg; 
+                    logDev(`[SUCCESS] Speed set to ${arg}.`); 
+                }
             }
             else if (cmd === '/damage' && !isNaN(arg)) {
-                if(player) { player.baseDamage = arg; logDev(`[SUCCESS] Damage set to ${arg}.`); }
+                if(player) { 
+                    player.baseDamage = arg; 
+                    logDev(`[SUCCESS] Damage set to ${arg}.`); 
+                }
             }
             else if (cmd === '/firerate' && !isNaN(arg)) {
-                if(player) { player.fireRate = arg; logDev(`[SUCCESS] Fire rate set to ${arg}.`); }
+                if(player) { 
+                    player.fireRate = arg; 
+                    logDev(`[SUCCESS] Fire rate set to ${arg}.`); 
+                }
             }
             else if (cmd === '/multishot' && !isNaN(arg)) {
-                if(player) { player.multiShot = arg; logDev(`[SUCCESS] Multishot set to ${arg}.`); }
+                if(player) { 
+                    player.multiShot = arg; 
+                    logDev(`[SUCCESS] Multishot set to ${arg}.`); 
+                }
             }
             else if (cmd === '/spikes' && !isNaN(arg)) {
-                if(player) { player.spikes = arg; player.frontVisual = 'spikes'; logDev(`[SUCCESS] Spikes set to ${arg}.`); }
+                if(player) { 
+                    player.spikes = arg; 
+                    player.frontVisual = 'spikes'; 
+                    logDev(`[SUCCESS] Spikes set to ${arg}.`); 
+                }
             }
             else if (cmd === '/orbiters' && !isNaN(arg)) {
-                if(player) { player.orbiters = arg; logDev(`[SUCCESS] Orbiters set to ${arg}.`); }
+                if(player) { 
+                    player.orbiters = arg; 
+                    logDev(`[SUCCESS] Orbiters set to ${arg}.`); 
+                }
             }
             else if (cmd === '/missiles' && !isNaN(arg)) {
-                if(player) { player.missiles = arg; logDev(`[SUCCESS] Missiles set to ${arg}.`); }
+                if(player) { 
+                    player.missiles = arg; 
+                    logDev(`[SUCCESS] Missiles set to ${arg}.`); 
+                }
             }
             else if (cmd === '/size' && !isNaN(arg)) {
-                if(player) { player.size = arg; logDev(`[SUCCESS] Size set to ${arg}.`); }
+                if(player) { 
+                    player.size = arg; 
+                    logDev(`[SUCCESS] Size set to ${arg}.`); 
+                }
             }
             else if (cmd === '/heal') {
-                if(player) { player.health = player.maxHealth; logDev('[SUCCESS] Health restored.'); }
+                if(player) { 
+                    player.health = player.maxHealth; 
+                    logDev('[SUCCESS] Health restored.'); 
+                }
             }
             else if (cmd === '/nuke') {
-                if(window.game && window.game.bots) { window.game.bots.forEach(b => b.health = 0); logDev('[SUCCESS] Destroyed all enemies.'); }
+                if(window.game && window.game.bots) { 
+                    window.game.bots.forEach(b => b.health = 0); 
+                    logDev('[SUCCESS] Destroyed all enemies.'); 
+                }
             }
             else if (cmd === '/shake' && !isNaN(arg)) {
-                if(window.game) { window.game.screenShake = arg; logDev(`[SUCCESS] Screen shake = ${arg}.`); }
+                if(window.game) { 
+                    window.game.screenShake = arg; 
+                    logDev(`[SUCCESS] Screen shake = ${arg}.`); 
+                }
             }
             else if (cmd === '/storm') {
-                if(window.game) { window.game.stormActive = true; window.game.stormRadius = arg || 1000; logDev(`[SUCCESS] Storm triggered.`); }
+                if(window.game) { 
+                    window.game.stormActive = true; 
+                    window.game.stormRadius = arg || 1000; 
+                    logDev(`[SUCCESS] Storm triggered.`); 
+                }
             }
             else if (cmd === '/ability') {
-                if(player) { player.activeAbility = parts[1]; window.game.updateUpgradeBadges(); logDev(`[SUCCESS] Ability set to ${parts[1]}.`); }
+                if(player) { 
+                    player.activeAbility = parts[1]; 
+                    window.game.updateUpgradeBadges(); 
+                    logDev(`[SUCCESS] Ability set to ${parts[1]}.`); 
+                }
             }
             else if (cmd === '/cooldown') {
-                if(player) { player.abilityMaxCooldown = arg || 0; player.dashMaxCooldown = arg || 0; logDev('[SUCCESS] Cooldowns modified.'); }
+                if(player) { 
+                    player.abilityMaxCooldown = arg || 0; 
+                    player.dashMaxCooldown = arg || 0; 
+                    logDev('[SUCCESS] Cooldowns modified.'); 
+                }
             }
             else if (cmd === '/maxupgrades') {
                 if(player && UPGRADE_POOL) {
-                    UPGRADE_POOL.forEach(u => { while(player.upgrades[u.id] < 5) { player.applyUpgrade(u.id); } });
-                    window.game.updateUpgradeBadges(); logDev('[SUCCESS] ALL UPGRADES MAXED!');
+                    UPGRADE_POOL.forEach(u => { 
+                        while(player.upgrades[u.id] < 5) { 
+                            player.applyUpgrade(u.id); 
+                        } 
+                    });
+                    window.game.updateUpgradeBadges(); 
+                    logDev('[SUCCESS] ALL UPGRADES MAXED!');
                 }
             }
             else if (cmd === '/suicide') {
-                if(player) { player.health = 0; logDev('[SUCCESS] Goodbye cruel world.'); }
+                if(player) { 
+                    player.health = 0; 
+                    logDev('[SUCCESS] Goodbye cruel world.'); 
+                }
             }
             else if (cmd === '/tiny') {
-                if(player) { player.size = 5; logDev('[SUCCESS] You are now tiny.'); }
+                if(player) { 
+                    player.size = 5; 
+                    logDev('[SUCCESS] You are now tiny.'); 
+                }
             }
             else if (cmd === '/giant') {
-                if(player) { player.size = 150; player.maxHealth += 5000; player.health += 5000; logDev('[SUCCESS] You are now a giant boss.'); }
+                if(player) { 
+                    player.size = 150; 
+                    player.maxHealth += 5000; 
+                    player.health += 5000; 
+                    logDev('[SUCCESS] You are now a giant boss.'); 
+                }
             }
             else if (cmd === '/freeze') {
-                if(window.game) { window.game.bots.forEach(b => b.speed = 0); logDev('[SUCCESS] Enemies frozen.'); }
+                if(window.game) { 
+                    window.game.bots.forEach(b => b.speed = 0); 
+                    logDev('[SUCCESS] Enemies frozen.'); 
+                }
             }
             else if (cmd === '/unfreeze') {
-                if(window.game) { window.game.bots.forEach(b => b.speed = 4.2); logDev('[SUCCESS] Enemies unfrozen.'); }
+                if(window.game) { 
+                    window.game.bots.forEach(b => b.speed = 4.2); 
+                    logDev('[SUCCESS] Enemies unfrozen.'); 
+                }
             }
             else if (cmd === '/statpoints' && !isNaN(arg)) {
-                window.hourlyStats.points = arg; renderMainStore(); logDev(`[SUCCESS] Hourly points set to ${arg}.`);
+                window.hourlyStats.points = arg; 
+                renderMainStore(); 
+                logDev(`[SUCCESS] Hourly points set to ${arg}.`);
             }
             else if (cmd === '/kills' && !isNaN(arg)) {
-                window.hourlyStats.kills = arg; renderMainStore(); logDev(`[SUCCESS] Hourly kills set to ${arg}.`);
+                window.hourlyStats.kills = arg; 
+                renderMainStore(); 
+                logDev(`[SUCCESS] Hourly kills set to ${arg}.`);
             }
             else if (cmd === '/dist' && !isNaN(arg)) {
-                window.hourlyStats.distance = arg; renderMainStore(); logDev(`[SUCCESS] Hourly distance set to ${arg}.`);
+                window.hourlyStats.distance = arg; 
+                renderMainStore(); 
+                logDev(`[SUCCESS] Hourly distance set to ${arg}.`);
             }
             else if (cmd === '/time' && !isNaN(arg)) {
-                window.hourlyStats.time = arg; renderMainStore(); logDev(`[SUCCESS] Hourly time set to ${arg}.`);
+                window.hourlyStats.time = arg; 
+                renderMainStore(); 
+                logDev(`[SUCCESS] Hourly time set to ${arg}.`);
             }
             else if (cmd === '/claimall') { 
                 Object.keys(ITEMS_DB).forEach(k => window.claimedItems[k] = true);
-                renderLocker(); renderSeasonStore(); renderMainStore(); logDev(`[SUCCESS] Unlocked all cosmetics!`);
+                renderLocker(); 
+                renderSeasonStore(); 
+                renderMainStore(); 
+                logDev(`[SUCCESS] Unlocked all cosmetics!`);
             }
             else if (cmd === '/reroll') {
-                localStorage.removeItem('yep_shop'); window.currentShopItems = getShop(); renderMainStore(); logDev(`[SUCCESS] Shop rerolled.`);
+                localStorage.removeItem('yep_shop'); 
+                window.currentShopItems = getShop(); 
+                renderMainStore(); 
+                logDev(`[SUCCESS] Shop rerolled.`);
             }
             else if (cmd === '/close' || cmd === '/exit') {
-                devConsole.classList.add('hidden'); devInput.blur();
+                devConsole.classList.add('hidden'); 
+                devInput.blur();
             }
             else if (cmd === '/help') {
                 logDev('Commands: /level, /kills, /dist, /time, /statpoints, /claimall, /reroll, /close, /god, /score, /speed, /damage, /firerate, /multishot, /spikes, /orbiters, /missiles, /size, /heal, /nuke, /shake, /storm, /ability [shield/overdrive], /cooldown, /maxupgrades, /suicide, /tiny, /giant, /freeze, /unfreeze');

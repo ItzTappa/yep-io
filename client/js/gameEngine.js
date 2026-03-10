@@ -53,8 +53,7 @@ export class GameEngine {
         this.accountLevelUpTimeout = null; 
         this.animationId = null; 
         
-        // FIX: Added 'isRunning' flag to prevent multiple game loops from stacking
-        this.isRunning = false;
+        this.isRunning = false; 
         
         this.fpsInterval = 1000 / 60; 
         this.lastTime = performance.now();
@@ -328,7 +327,6 @@ export class GameEngine {
             x = Math.random() * this.worldSize; 
             y = Math.random() * this.worldSize; 
             isSafe = true;
-            
             for (let orb of this.orbs) {
                 if (orb.type === 'health' && distance(x, y, orb.x, orb.y) < minDist) { 
                     isSafe = false; 
@@ -405,11 +403,17 @@ export class GameEngine {
         const mobileControls = document.getElementById('mobile-controls');
         if (mobileControls) mobileControls.classList.add('hidden');
         
+        const gameUi = document.getElementById('game-ui');
+        if (gameUi) gameUi.classList.add('hidden');
+        
+        const hudEl = document.querySelector('.hud');
+        if (hudEl) {
+            hudEl.classList.add('hidden');
+            hudEl.style.display = 'none';
+        }
+        
         const brUi = document.getElementById('br-ui');
         if (brUi) brUi.classList.add('hidden');
-        
-        const badgeUI = document.getElementById('upgrade-badges');
-        if (badgeUI) badgeUI.innerHTML = '';
 
         this.worldSize = 4000;
         this.stormActive = false;
@@ -459,8 +463,9 @@ export class GameEngine {
             else mobileControls.classList.add('hidden');
         }
         
+        // FIX: Remove 'hidden' so the minimap is allowed to show in singleplayer!
         const brUi = document.getElementById('br-ui');
-        if (brUi) brUi.classList.add('hidden');
+        if (brUi) brUi.classList.remove('hidden');
         
         this.worldSize = 6000; 
         this.stormActive = false; 
@@ -501,14 +506,60 @@ export class GameEngine {
         const upgradeUi = document.getElementById('upgrade-ui');
         if (upgradeUi) upgradeUi.classList.add('hidden');
         
+        // FORCE UI ELEMENTS TO DISPLAY
+        const gameUi = document.getElementById('game-ui');
+        if (gameUi) {
+            gameUi.classList.remove('hidden');
+            gameUi.style.display = 'block';
+        }
+
+        const hudEl = document.querySelector('.hud');
+        if (hudEl) {
+            hudEl.classList.remove('hidden');
+            hudEl.style.display = 'block';
+            hudEl.style.visibility = 'visible';
+            hudEl.style.opacity = '1';
+            hudEl.style.pointerEvents = 'none';
+        }
+
+        const xpBarContainer = document.querySelector('.xp-bar-container');
+        if (xpBarContainer) {
+            xpBarContainer.classList.remove('hidden');
+            xpBarContainer.style.display = 'block';
+            xpBarContainer.style.visibility = 'visible';
+            xpBarContainer.style.opacity = '1';
+        }
+        
         const xpBar = document.getElementById('xp-bar');
         if (xpBar) xpBar.style.width = '0%';
         
         const levelDisplay = document.getElementById('level-display');
         if (levelDisplay) levelDisplay.innerText = '0 PTS';
         
+        const lb = document.getElementById('leaderboard-container') || document.querySelector('.leaderboard');
+        if (lb) {
+            lb.classList.remove('hidden');
+            if (window.gameSettings && window.gameSettings.showLeaderboard === false) {
+                lb.style.display = 'none';
+            } else {
+                lb.style.display = 'block';
+                lb.style.visibility = 'visible';
+                lb.style.opacity = '1';
+            }
+        }
+        
         const badgeUI = document.getElementById('upgrade-badges');
-        if (badgeUI) badgeUI.innerHTML = '';
+        if (badgeUI) {
+            badgeUI.classList.remove('hidden');
+            badgeUI.innerHTML = '';
+            if (window.gameSettings && window.gameSettings.showBadges === false) {
+                badgeUI.style.display = 'none';
+            } else {
+                badgeUI.style.display = 'flex';
+                badgeUI.style.visibility = 'visible';
+                badgeUI.style.opacity = '1';
+            }
+        }
         
         let matchSeed = Math.random();
         
@@ -526,7 +577,9 @@ export class GameEngine {
         }
         
         for(let i = 0; i < 300; i++) {
-            this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
+            const x = Math.random() * this.worldSize;
+            const y = Math.random() * this.worldSize;
+            this.orbs.push(new Orb(x, y, 'xp', 1, null, 0));
         }
         
         for(let i = 0; i < 30; i++) { 
@@ -580,13 +633,52 @@ export class GameEngine {
         }
 
         const gameUi = document.getElementById('game-ui');
-        if (gameUi) gameUi.classList.remove('hidden');
-        
-        const hudEl = document.querySelector('.hud');
-        if (hudEl) hudEl.classList.remove('hidden');
+        if (gameUi) {
+            gameUi.classList.remove('hidden');
+            gameUi.style.display = 'block';
+        }
 
+        const hudEl = document.querySelector('.hud');
+        if (hudEl) {
+            hudEl.classList.remove('hidden');
+            hudEl.style.display = 'block';
+            hudEl.style.visibility = 'visible';
+            hudEl.style.opacity = '1';
+            hudEl.style.pointerEvents = 'none';
+        }
+
+        const xpBarContainer = document.querySelector('.xp-bar-container');
+        if (xpBarContainer) {
+            xpBarContainer.classList.remove('hidden');
+            xpBarContainer.style.display = 'block';
+            xpBarContainer.style.visibility = 'visible';
+            xpBarContainer.style.opacity = '1';
+        }
+        
+        const lb = document.getElementById('leaderboard-container') || document.querySelector('.leaderboard');
+        if (lb) {
+            lb.classList.remove('hidden');
+            if (window.gameSettings && window.gameSettings.showLeaderboard === false) {
+                lb.style.display = 'none';
+            } else {
+                lb.style.display = 'block';
+                lb.style.visibility = 'visible';
+                lb.style.opacity = '1';
+            }
+        }
+        
         const badgeUI = document.getElementById('upgrade-badges');
-        if (badgeUI) badgeUI.innerHTML = '';
+        if (badgeUI) {
+            badgeUI.classList.remove('hidden');
+            badgeUI.innerHTML = '';
+            if (window.gameSettings && window.gameSettings.showBadges === false) {
+                badgeUI.style.display = 'none';
+            } else {
+                badgeUI.style.display = 'flex';
+                badgeUI.style.visibility = 'visible';
+                badgeUI.style.opacity = '1';
+            }
+        }
         
         const brUi = document.getElementById('br-ui');
         if (brUi) brUi.classList.remove('hidden'); 
@@ -826,15 +918,17 @@ export class GameEngine {
     }
 
     updateLeaderboard() {
-        const container = document.getElementById('leaderboard-container');
+        const container = document.getElementById('leaderboard-container') || document.querySelector('.leaderboard');
         
         if (window.gameSettings && window.gameSettings.showLeaderboard === false) {
-            if (container) container.classList.add('hidden');
+            if (container) {
+                container.style.display = 'none';
+            }
             return;
         }
         
         if (container) {
-            container.classList.remove('hidden');
+            container.style.display = 'block';
         }
 
         const allPlayers = (this.isDemo || this.isGameOver) ? [...this.bots] : [this.player, ...this.bots];
@@ -863,11 +957,11 @@ export class GameEngine {
         if (!container) return;
         
         if (window.gameSettings && window.gameSettings.showBadges === false) {
-            container.classList.add('hidden');
+            container.style.display = 'none';
             return;
         }
 
-        container.classList.remove('hidden');
+        container.style.display = 'flex';
         container.innerHTML = '';
         
         if (this.player.activeAbility) {
@@ -1824,9 +1918,18 @@ export class GameEngine {
 
         this.ctx.restore();
 
+        // FIX: Display the minimap based on the new settings toggle!
         const brUi = document.getElementById('br-ui');
         if (brUi && !brUi.classList.contains('hidden')) {
-            this.drawMinimap();
+            const minimapContainer = document.getElementById('minimap-container');
+            if (minimapContainer) {
+                if (window.gameSettings && window.gameSettings.showMinimap === false) {
+                    minimapContainer.style.display = 'none';
+                } else {
+                    minimapContainer.style.display = 'block';
+                    this.drawMinimap();
+                }
+            }
             this.drawTeammatePointers();
         }
     }
@@ -1893,9 +1996,16 @@ export class GameEngine {
             ctx.strokeRect(cx, cy, viewW, viewH);
         }
 
+        // FIX: The "ALIVE: #" count only shows if you are playing multiplayer!
         const countDisplay = document.getElementById('player-count-display');
         if (countDisplay) {
-            countDisplay.innerText = `ALIVE: ${aliveCount}`;
+            let isMultiplayer = this.lobbyCode || this.isHost;
+            if (isMultiplayer) {
+                countDisplay.style.display = 'block';
+                countDisplay.innerText = `ALIVE: ${aliveCount}`;
+            } else {
+                countDisplay.style.display = 'none';
+            }
         }
     }
 
