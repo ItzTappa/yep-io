@@ -20,7 +20,7 @@ export const ITEMS_DB = {
     's_skin2':  { id: 's_skin2',  name: 'Dark Matter',  category: 'Skin', icon: '🌌', rarity: 5, color: RARITY_COLORS[5], req: 50, value: 'dark' },
 
     // ==========================================
-    // ROTATING SHOP ITEMS (115 ITEMS TOTAL)
+    // ROTATING SHOP ITEMS
     // ==========================================
 
     // --- SKINS (25) ---
@@ -114,17 +114,16 @@ export const ITEMS_DB = {
     'r_trl_29': { id: 'r_trl_29', name: 'Shadow',     category: 'Trail',  icon: '🌘', rarity: 3, value: '#1f2937', isRotating: true },
     'r_trl_30': { id: 'r_trl_30', name: 'Nebula',     category: 'Trail',  icon: '🌌', rarity: 4, value: '#c084fc', isRotating: true },
 
-    // --- COLORS (30) ---
-    'r_col_1':  { id: 'r_col_1',  name: 'Basic Red',   category: 'Color',  icon: '🔴', rarity: 1, value: '#ff0000', isRotating: true },
-    'r_col_2':  { id: 'r_col_2',  name: 'Basic Blue',  category: 'Color',  icon: '🔵', rarity: 1, value: '#0000ff', isRotating: true },
-    'r_col_3':  { id: 'r_col_3',  name: 'Basic Green', category: 'Color',  icon: '🟢', rarity: 1, value: '#00ff00', isRotating: true },
-    'r_col_4':  { id: 'r_col_4',  name: 'Basic Yellow',category: 'Color',  icon: '🟡', rarity: 1, value: '#ffff00', isRotating: true },
-    'r_col_5':  { id: 'r_col_5',  name: 'Basic Orange',category: 'Color',  icon: '🟠', rarity: 1, value: '#ffa500', isRotating: true },
-    'r_col_6':  { id: 'r_col_6',  name: 'Basic Purple',category: 'Color',  icon: '🟣', rarity: 1, value: '#800080', isRotating: true },
-    'r_col_7':  { id: 'r_col_7',  name: 'Basic Pink',  category: 'Color',  icon: '🌸', rarity: 1, value: '#ffc0cb', isRotating: true },
-    'r_col_8':  { id: 'r_col_8',  name: 'Basic Brown', category: 'Color',  icon: '🟤', rarity: 1, value: '#a52a2a', isRotating: true },
-    'r_col_9':  { id: 'r_col_9',  name: 'Basic White', category: 'Color',  icon: '⚪', rarity: 1, value: '#ffffff', isRotating: true },
-    'r_col_10': { id: 'r_col_10', name: 'Basic Black', category: 'Color',  icon: '⚫', rarity: 1, value: '#000000', isRotating: true },
+    // --- COLORS (29) ---
+    'r_col_1':  { id: 'r_col_1',  name: 'Red',        category: 'Color',  icon: '🔴', rarity: 1, value: '#ff0000', isRotating: true },
+    'r_col_2':  { id: 'r_col_2',  name: 'Blue',       category: 'Color',  icon: '🔵', rarity: 1, value: '#0000ff', isRotating: true },
+    'r_col_3':  { id: 'r_col_3',  name: 'Green',      category: 'Color',  icon: '🟢', rarity: 1, value: '#00ff00', isRotating: true },
+    'r_col_4':  { id: 'r_col_4',  name: 'Yellow',     category: 'Color',  icon: '🟡', rarity: 1, value: '#ffff00', isRotating: true },
+    'r_col_5':  { id: 'r_col_5',  name: 'Orange',     category: 'Color',  icon: '🟠', rarity: 1, value: '#ffa500', isRotating: true },
+    'r_col_6':  { id: 'r_col_6',  name: 'Purple',     category: 'Color',  icon: '🟣', rarity: 1, value: '#800080', isRotating: true },
+    'r_col_7':  { id: 'r_col_7',  name: 'Pink',       category: 'Color',  icon: '🌸', rarity: 1, value: '#ffc0cb', isRotating: true },
+    'r_col_8':  { id: 'r_col_8',  name: 'Brown',      category: 'Color',  icon: '🟤', rarity: 1, value: '#654321', isRotating: true },
+    'r_col_9':  { id: 'r_col_9',  name: 'Radiance',   category: 'Color',  icon: '✨', rarity: 5, value: '#ffffff', isRotating: true },
 
     'r_col_11': { id: 'r_col_11', name: 'Slate Gray', category: 'Color',  icon: '🪨', rarity: 2, value: '#64748b', isRotating: true },
     'r_col_12': { id: 'r_col_12', name: 'Olive',      category: 'Color',  icon: '🫒', rarity: 2, value: '#4d7c0f', isRotating: true },
