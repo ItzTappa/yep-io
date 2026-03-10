@@ -466,7 +466,10 @@ export class GameEngine {
             else mobileControls.classList.add('hidden');
         }
         
-        this.worldSize = 15000; // Increased map size to 15k for classic .io pacing!
+        const brUi = document.getElementById('br-ui');
+        if (brUi) brUi.classList.remove('hidden');
+        
+        this.worldSize = 15000; 
         this.stormActive = false; 
 
         this.isDemo = false; 
@@ -494,7 +497,7 @@ export class GameEngine {
         this.cameraZoom = 1.0; 
         this.isCinematicIntro = false;
         
-        this.pointsToNextUpgrade = 20; // Starts at 20 based on smooth leveling math
+        this.pointsToNextUpgrade = 20; 
         this.matchStartTime = Date.now(); 
         this.matchXPEarned = 0; 
         this.distanceTraveled = 0; 
@@ -550,12 +553,8 @@ export class GameEngine {
             }
         }
         
-        const brUi = document.getElementById('br-ui');
-        if (brUi) brUi.classList.remove('hidden'); 
-        
         let matchSeed = Math.random();
         
-        // Spawn 80 bots for standard game pacing!
         for(let i = 0; i < 80; i++) {
             const types = ['triangle', 'square', 'circle']; 
             const type = types[Math.floor(Math.random() * 3)]; 
@@ -569,7 +568,6 @@ export class GameEngine {
             this.bots.push(new Bot(spawn.x, spawn.y, type, startingPts));
         }
         
-        // Huge amount of orbs mapped to the 15k world size!
         for(let i = 0; i < 2000; i++) {
             const x = Math.random() * this.worldSize;
             const y = Math.random() * this.worldSize;
@@ -906,11 +904,15 @@ export class GameEngine {
         const container = document.getElementById('leaderboard-container') || document.querySelector('.leaderboard');
         
         if (window.gameSettings && window.gameSettings.showLeaderboard === false) {
-            if (container) container.style.display = 'none';
+            if (container) {
+                container.style.display = 'none';
+            }
             return;
         }
         
-        if (container) container.style.display = 'block';
+        if (container) {
+            container.style.display = 'block';
+        }
 
         const allPlayers = (this.isDemo || this.isGameOver) ? [...this.bots] : [this.player, ...this.bots];
         allPlayers.sort((a, b) => b.points - a.points); 
@@ -925,7 +927,6 @@ export class GameEngine {
         
         allPlayers.slice(0, displayLimit).forEach((p, index) => {
             const li = document.createElement('li'); 
-            // SMOOTHED OUT NUMBERS FOR STABILITY
             let displayPts = p.points >= 1000 ? (p.points / 1000).toFixed(1) + 'k' : Math.floor(p.points);
             li.innerText = `#${index + 1} ${p.isPlayer ? "YOU" : p.name} - ${displayPts} Pts`;
             if (p === this.player) {
@@ -1099,8 +1100,6 @@ export class GameEngine {
         }
 
         let totalTargetPoints = victim.points || 0;
-        
-        // BALANCED DEATH DROP: 35%
         let orbReward = Math.floor(totalTargetPoints * 0.35); 
         
         if (killer) {
@@ -1114,7 +1113,6 @@ export class GameEngine {
             }
         }
 
-        // BALANCED ORB SPREAD: Piñata style explosion!
         let orbsToSpawn = Math.min(orbReward, 100); 
         if (orbsToSpawn > 0) {
             let valuePerOrb = Math.max(1, Math.floor(orbReward / orbsToSpawn));
@@ -1237,7 +1235,6 @@ export class GameEngine {
     update() {
         this.frameCount++;
         
-        // Throttled leaderboard updating (60 times a sec -> roughly twice a sec visually via formatting)
         if (this.frameCount % 30 === 0) {
             this.updateLeaderboard(); 
         }
@@ -1265,23 +1262,24 @@ export class GameEngine {
             }
         }
 
-        const allPlayers = (this.isDemo || this.isGameOver) ? [...this.bots] : [this.player, ...this.bots];
+        const allPlayers = (this.isDemo || this.isGameOver) ? [...this.bots] : (this.player ? [this.player, ...this.bots] : [...this.bots]);
 
         if (this.stormActive && !this.isCinematicIntro) {
             this.stormRadius = Math.max(0, this.stormRadius - 0.4); 
 
             if (this.frameCount % 30 === 0) {
                 allPlayers.forEach(p => {
-                    if (p.isDead) return;
-                    if (distance(p.x, p.y, this.stormCenter.x, this.stormCenter.y) > this.stormRadius) {
-                        p.health -= (p.maxHealth * 0.05); 
-                        this.spawnParticles(p.x, p.y, '#8a2be2', 3); 
-                        
-                        if (p.health <= 0) {
-                            this.processDeath(p, { 
-                                name: "THE STORM", x: this.stormCenter.x, y: this.stormCenter.y, 
-                                vampirism: 0, medicDrop: 0, isDead: false 
-                            }); 
+                    if (p && !p.isDead) {
+                        if (distance(p.x, p.y, this.stormCenter.x, this.stormCenter.y) > this.stormRadius) {
+                            p.health -= (p.maxHealth * 0.05); 
+                            this.spawnParticles(p.x, p.y, '#8a2be2', 3); 
+                            
+                            if (p.health <= 0) {
+                                this.processDeath(p, { 
+                                    name: "THE STORM", x: this.stormCenter.x, y: this.stormCenter.y, 
+                                    vampirism: 0, medicDrop: 0, isDead: false 
+                                }); 
+                            }
                         }
                     }
                 });
@@ -1291,7 +1289,6 @@ export class GameEngine {
         if (!this.isDemo && !this.isGameOver && this.player) {
             let dx = 0; 
             let dy = 0;
-            
             let binds = { up: 'w', down: 's', left: 'a', right: 'd', dash: ' ', ability: 'e' };
             if (window.gameSettings && window.gameSettings.keybinds) {
                 binds = window.gameSettings.keybinds;
@@ -1763,7 +1760,6 @@ export class GameEngine {
             }
         }
 
-        // SMOOTHED POLYNOMIAL LEVELING CURVE
         if (pointsGainedThisFrame > 0 && !this.isDemo && !this.isGameOver && this.player) {
             while (this.player.upgradeProgress >= this.pointsToNextUpgrade) {
                 this.player.upgradeProgress -= this.pointsToNextUpgrade;
@@ -1777,14 +1773,14 @@ export class GameEngine {
         }
 
         if (!this.isDemo && !this.isGameOver && this.player) {
-            let lvlDisplay = document.getElementById('level-display');
-            let xpBar = document.getElementById('xp-bar');
+            let displayEl = document.getElementById('level-display');
+            let barEl = document.getElementById('xp-bar');
             
-            if (lvlDisplay) {
-                lvlDisplay.innerText = `${Math.floor(this.player.points)} PTS`;
+            if (displayEl) {
+                displayEl.innerText = `${Math.floor(this.player.points)} PTS`;
             }
-            if (xpBar) {
-                xpBar.style.width = Math.min(100, (this.player.upgradeProgress / this.pointsToNextUpgrade) * 100) + '%';
+            if (barEl) {
+                barEl.style.width = Math.min(100, (this.player.upgradeProgress / this.pointsToNextUpgrade) * 100) + '%';
             }
         }
 
@@ -1878,10 +1874,8 @@ export class GameEngine {
             this.ctx.shadowColor = '#00ffff';
         }
         
-        // Outer glowing line
         this.ctx.strokeRect(0, 0, this.worldSize, this.worldSize);
 
-        // Animated dashed inner line for a sci-fi energy feel
         this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
         this.ctx.lineWidth = 2;
         this.ctx.setLineDash([30, 30]);
@@ -1889,12 +1883,11 @@ export class GameEngine {
         this.ctx.strokeRect(0, 0, this.worldSize, this.worldSize);
         this.ctx.restore();
 
-        // Darken everything outside the map boundaries
         this.ctx.fillStyle = 'rgba(0, 20, 30, 0.6)';
-        this.ctx.fillRect(-10000, -10000, this.worldSize + 20000, 10000); // Top
-        this.ctx.fillRect(-10000, this.worldSize, this.worldSize + 20000, 10000); // Bottom
-        this.ctx.fillRect(-10000, 0, 10000, this.worldSize); // Left
-        this.ctx.fillRect(this.worldSize, 0, 10000, this.worldSize); // Right
+        this.ctx.fillRect(-10000, -10000, this.worldSize + 20000, 10000); 
+        this.ctx.fillRect(-10000, this.worldSize, this.worldSize + 20000, 10000); 
+        this.ctx.fillRect(-10000, 0, 10000, this.worldSize); 
+        this.ctx.fillRect(this.worldSize, 0, 10000, this.worldSize); 
         // ==========================================
 
         if (this.stormActive) {
