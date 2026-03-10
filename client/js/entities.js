@@ -87,6 +87,12 @@ export class Entity {
         this.bodyVisual = null;
         this.rearVisual = null;
         this.auraVisual = null;
+        
+        // NEW: Active Ability properties
+        this.activeAbility = null;
+        this.abilityCooldown = 0;
+        this.abilityTimer = 0;
+        this.abilityMaxCooldown = 450; // 7.5 Seconds between ability uses
     }
 
     applyUpgrade(upgradeId) {
@@ -105,6 +111,13 @@ export class Entity {
         if (upgradeDef && upgradeDef.apply) {
             upgradeDef.apply(this); 
             this.upgrades[upgradeId]++;
+        }
+    }
+
+    useAbility() {
+        if (this.abilityCooldown <= 0 && this.activeAbility) {
+            this.abilityCooldown = this.abilityMaxCooldown;
+            this.abilityTimer = 180; // 3 seconds of active duration
         }
     }
 
@@ -129,10 +142,18 @@ export class Entity {
     update() {
         this.x += this.vx; this.y += this.vy;
         this.vx *= 0.85; this.vy *= 0.85; 
-        if (this.fireCooldown > 0) this.fireCooldown--;
+        
+        // NEW: If Overdrive is active, double the cooldown recovery rate to shoot faster
+        if (this.fireCooldown > 0) this.fireCooldown -= (this.abilityTimer > 0 && this.activeAbility === 'overdrive' ? 2 : 1);
+        
         if (this.dashCooldown > 0) this.dashCooldown--;
         if (this.spikeCooldown > 0) this.spikeCooldown--;
         if (this.dashTimer > 0) this.dashTimer--;
+        
+        // NEW: Tick ability timers
+        if (this.abilityCooldown > 0) this.abilityCooldown--;
+        if (this.abilityTimer > 0) this.abilityTimer--;
+
         if (this.regen > 0 && Math.random() < 0.05) { 
             this.health = Math.min(this.maxHealth, this.health + this.regen); 
         }
@@ -232,6 +253,30 @@ export class Entity {
                 ctx.restore();
             }
         });
+
+        // SHIELD ABILITY GLOW
+        if (this.abilityTimer > 0 && this.activeAbility === 'shield') {
+            ctx.save(); ctx.translate(this.x, this.y);
+            ctx.beginPath(); ctx.arc(0, 0, this.size + 15, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0, 150, 255, 0.3)';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(0, 200, 255, 0.8)';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // OVERDRIVE ABILITY LIGHTNING
+        if (this.abilityTimer > 0 && this.activeAbility === 'overdrive') {
+            ctx.save(); ctx.translate(this.x, this.y);
+            ctx.beginPath(); ctx.arc(0, 0, this.size + 8, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255, 50, 0, 0.8)';
+            ctx.lineWidth = 4;
+            ctx.setLineDash([10, 10]);
+            ctx.lineDashOffset = Date.now() / 20;
+            ctx.stroke();
+            ctx.restore();
+        }
 
         if (this.auraVisual === 'regen') {
             ctx.save(); ctx.translate(this.x, this.y);
@@ -375,7 +420,6 @@ export class Entity {
             ctx.restore();
         }
         
-        // DRAW ARROW IF IT IS A REAL PLAYER (IN A MATCH, NOT MENU) AND DOESNT HAVE GUN/SPIKES
         let hideArrow = (this.frontVisual !== null);
         if (this.isPlayer && !hideArrow) {
             ctx.save(); 
@@ -409,6 +453,14 @@ export class Entity {
             ctx.shadowBlur = 0; 
         }
         
+        if (window.gameSettings.showNames && this.name !== "") {
+            ctx.fillStyle = 'white'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+            if (window.gameSettings.highQuality) { ctx.shadowBlur = 2; ctx.shadowColor = 'black'; }
+            let displayName = this.name;
+            if (this.equipped.Banner && ITEMS_DB) displayName = `${ITEMS_DB[this.equipped.Banner].value} ${this.name}`;
+            ctx.fillText(displayName, this.x, this.y - this.size - 20); ctx.shadowBlur = 0; 
+        }
+        
         let isMenuDummy = (!this.isPlayer && this.name === "");
         if (!isMenuDummy) {
             if (this.health < this.maxHealth || this.isPlayer) {
@@ -426,6 +478,18 @@ export class Entity {
                 const pct = Math.max(0, 1 - (this.dashCooldown / this.dashMaxCooldown));
                 const visualWidth = Math.min(40 * pct, 38);
                 ctx.fillRect(this.x - 20, this.y + this.size + 22, visualWidth, 3);
+            }
+
+            // NEW: Ability Cooldown Bar (Pink)
+            if (this.activeAbility) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'; ctx.fillRect(this.x - 20, this.y + this.size + 28, 40, 3);
+                if (this.abilityCooldown <= 0) {
+                    ctx.fillStyle = '#ff00ff'; ctx.fillRect(this.x - 20, this.y + this.size + 28, 40, 3); 
+                } else {
+                    ctx.fillStyle = '#ffffff'; 
+                    const aPct = Math.max(0, 1 - (this.abilityCooldown / this.abilityMaxCooldown));
+                    ctx.fillRect(this.x - 20, this.y + this.size + 28, Math.min(40 * aPct, 38), 3);
+                }
             }
         }
     }
@@ -454,7 +518,6 @@ export class Bot extends Entity {
         this.points = startingPoints; 
         this.upgradeProgress = startingPoints; 
         
-        // NEW: Bots get a much flatter upgrade curve so they can actually reach high tiers!
         this.botPointsToNextUpgrade = 10;
         this.dashTendency = Math.random();
         this.strafeDir = Math.random() > 0.5 ? 1 : -1; 
@@ -487,7 +550,6 @@ export class Bot extends Entity {
 
         this.changeTargetTimer--; let nearestEnemy = null; let minDist = 800;
         
-        // NEW: Dynamic scaling! Find the highest point player so bots can catch up
         let highestScore = 0;
 
         allPlayers.forEach(p => { 
@@ -502,7 +564,6 @@ export class Bot extends Entity {
             if (randomizedDist < minDist) { minDist = randomizedDist; nearestEnemy = p; } 
         });
 
-        // NEW: If a bot is far behind the leader, they artificially gain points rapidly to mutate
         let catchUpGain = (highestScore > this.points) ? (highestScore - this.points) * 0.002 : 0;
         let passiveGain = 0.5 + catchUpGain; 
         
@@ -523,8 +584,10 @@ export class Bot extends Entity {
                 if (distToPlayer > 200) {
                     this.angle = Math.atan2(player.y - this.y, player.x - this.x);
                     const dx = player.x - this.x; const dy = player.y - this.y;
-                    this.vx += (dx / distToPlayer) * (this.speed * 0.12);
-                    this.vy += (dy / distToPlayer) * (this.speed * 0.12);
+                    
+                    let currentSpeed = this.speed * (this.abilityTimer > 0 && this.activeAbility === 'overdrive' ? 1.8 : 1.0);
+                    this.vx += (dx / distToPlayer) * (currentSpeed * 0.12);
+                    this.vy += (dy / distToPlayer) * (currentSpeed * 0.12);
                 } else {
                     this.vx *= 0.9; this.vy *= 0.9;
                 }
@@ -534,12 +597,20 @@ export class Bot extends Entity {
             const dx = nearestEnemy.x - this.x; 
             const dy = nearestEnemy.y - this.y;
             
+            let currentSpeed = this.speed * (this.abilityTimer > 0 && this.activeAbility === 'overdrive' ? 1.8 : 1.0);
             let fleeThreshold = 0.15 + (this.personality * 0.25); 
+            
+            // Bot AI using its ability to survive/engage
+            if (this.activeAbility && this.abilityCooldown <= 0) {
+                if (this.health < this.maxHealth * 0.3 || (this.activeAbility === 'overdrive' && trueDist < 300)) {
+                    this.useAbility();
+                }
+            }
 
             if (this.health < this.maxHealth * fleeThreshold) {
                 this.angle = Math.atan2(-dy, -dx);
-                this.vx += Math.cos(this.angle) * (this.speed * 0.14);
-                this.vy += Math.sin(this.angle) * (this.speed * 0.14);
+                this.vx += Math.cos(this.angle) * (currentSpeed * 0.14);
+                this.vy += Math.sin(this.angle) * (currentSpeed * 0.14);
                 
                 if (this.dashCooldown <= 0 && Math.random() < 0.03) {
                     this.dash(-dx, -dy);
@@ -553,14 +624,14 @@ export class Bot extends Entity {
                 if (Math.random() < 0.01) this.strafeDir *= -1; 
                 
                 if (trueDist > optimalDist + 50) { 
-                    this.vx += (dx / trueDist) * (this.speed * 0.12); 
-                    this.vy += (dy / trueDist) * (this.speed * 0.12); 
+                    this.vx += (dx / trueDist) * (currentSpeed * 0.12); 
+                    this.vy += (dy / trueDist) * (currentSpeed * 0.12); 
                 } else if (trueDist < optimalDist - 50) { 
-                    this.vx -= (dx / trueDist) * (this.speed * 0.12); 
-                    this.vy -= (dy / trueDist) * (this.speed * 0.12); 
+                    this.vx -= (dx / trueDist) * (currentSpeed * 0.12); 
+                    this.vy -= (dy / trueDist) * (currentSpeed * 0.12); 
                 } else {
-                    this.vx += (-dy / trueDist) * (this.speed * 0.08) * this.strafeDir;
-                    this.vy += (dx / trueDist) * (this.speed * 0.08) * this.strafeDir;
+                    this.vx += (-dy / trueDist) * (currentSpeed * 0.08) * this.strafeDir;
+                    this.vy += (dx / trueDist) * (currentSpeed * 0.08) * this.strafeDir;
                 }
             }
         } else {
@@ -569,7 +640,9 @@ export class Bot extends Entity {
             }
             this.angle = Math.atan2(this.targetY - this.y, this.targetX - this.x);
             const dx = this.targetX - this.x; const dy = this.targetY - this.y; const dist = Math.hypot(dx, dy);
-            if (dist > 10) { this.vx += (dx / dist) * (this.speed * 0.10); this.vy += (dy / dist) * (this.speed * 0.10); }
+            let currentSpeed = this.speed * (this.abilityTimer > 0 && this.activeAbility === 'overdrive' ? 1.8 : 1.0);
+            
+            if (dist > 10) { this.vx += (dx / dist) * (currentSpeed * 0.10); this.vy += (dy / dist) * (currentSpeed * 0.10); }
         }
         super.update();
     }

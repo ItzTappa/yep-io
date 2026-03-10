@@ -68,6 +68,9 @@ export class GameEngine {
         this.isAimDragging = false; 
         
         this.isTouchDevice = false; 
+        
+        // NEW: Base Screen Shake factor
+        this.screenShake = 0;
 
         this.initInput();
     }
@@ -126,6 +129,7 @@ export class GameEngine {
         const leftBase = document.getElementById('base-left');
         const leftStick = document.getElementById('stick-left');
         const dashBtn = document.getElementById('mobile-dash-btn');
+        const abilityBtn = document.getElementById('mobile-ability-btn');
 
         if (leftZone) {
             leftZone.addEventListener('touchstart', (e) => {
@@ -195,6 +199,7 @@ export class GameEngine {
                 const t = e.changedTouches[i];
                 if ((!this.leftTouch.active || t.identifier !== this.leftTouch.id) && 
                     e.target.id !== 'mobile-dash-btn' && 
+                    e.target.id !== 'mobile-ability-btn' && 
                     !e.target.closest('#joystick-left') &&
                     !e.target.closest('.card')) { 
                     
@@ -244,6 +249,19 @@ export class GameEngine {
                 if (this.isDemo || this.isGameOver) return;
                 e.preventDefault();
                 this.keys[window.gameSettings.keybinds.dash] = false;
+            });
+        }
+        
+        if (abilityBtn) {
+            abilityBtn.addEventListener('touchstart', (e) => {
+                if (this.isDemo || this.isGameOver) return;
+                e.preventDefault();
+                this.keys[window.gameSettings.keybinds.ability] = true;
+            });
+            abilityBtn.addEventListener('touchend', (e) => {
+                if (this.isDemo || this.isGameOver) return;
+                e.preventDefault();
+                this.keys[window.gameSettings.keybinds.ability] = false;
             });
         }
     }
@@ -363,6 +381,7 @@ export class GameEngine {
 
         this.isDemo = false; this.isGameOver = false; this.spectateTarget = null;
         this.bots = []; this.orbs = []; this.projectiles = []; this.particles = []; this.teammates = [];
+        this.screenShake = 0;
         
         this.player = new Player(this.worldSize / 2, this.worldSize / 2, playerClass, "");
 
@@ -422,6 +441,7 @@ export class GameEngine {
         this.projectiles = []; 
         this.particles = [];
         this.teammates = [];
+        this.screenShake = 0;
 
         document.getElementById('game-ui').classList.remove('hidden');
         document.querySelector('.hud').classList.remove('hidden');
@@ -642,7 +662,6 @@ export class GameEngine {
         this.loop(this.lastTime);
     }
 
-    // NEW: "YOU" shows up on the leaderboard now!
     updateLeaderboard() {
         const allPlayers = (this.isDemo || this.isGameOver) ? [...this.bots] : [this.player, ...this.bots];
         allPlayers.sort((a, b) => b.points - a.points); 
@@ -761,6 +780,11 @@ export class GameEngine {
         this.playSoundAt('explosion', victim.x, victim.y, 0.7);
         this.spawnParticles(victim.x, victim.y, victim.color, 30); 
         
+        // Massive explosion shake if it happens near you
+        if (!this.isDemo && this.player && distance(this.player.x, this.player.y, victim.x, victim.y) < 500) {
+            this.screenShake = Math.max(this.screenShake, 15);
+        }
+        
         if (victim === this.player && window.gameSocket && this.lobbyCode) {
             window.gameSocket.emit('playerDied', { code: this.lobbyCode });
         }
@@ -798,6 +822,7 @@ export class GameEngine {
         }
         
         if (victim === this.player) {
+            this.screenShake = 25; // Huge death shake
             this.handleGameOver(killer);
         } else {
             const botIndex = this.bots.indexOf(victim);
@@ -818,7 +843,6 @@ export class GameEngine {
                     if (this.isGameOver) return;
                     const safePos = this.getSafeSpawnPosition();
                     
-                    // NEW: Late-game bots spawn with a huge chunk of your points so they are instantly a threat!
                     let startPts = this.player ? this.player.points * (0.5 + Math.random() * 0.3) : 0;
                     
                     let newBot = new Bot(safePos.x, safePos.y, ['triangle', 'square', 'circle'][Math.floor(Math.random()*3)], startPts);
@@ -890,6 +914,11 @@ export class GameEngine {
 
         let pointsGainedThisFrame = 0;
 
+        if (this.screenShake > 0) {
+            this.screenShake *= 0.9;
+            if (this.screenShake < 0.5) this.screenShake = 0;
+        }
+
         if (this.isGameOver && this.spectateTarget) {
             if (this.spectateTarget.isDead || !this.bots.includes(this.spectateTarget)) {
                 if (this.bots.length > 0) {
@@ -952,14 +981,26 @@ export class GameEngine {
                     if (preDashPts > this.player.points) { 
                         sounds.play('dash', 0.4);
                         this.spawnParticles(this.player.x, this.player.y, '#ffffff', 8);
+                        this.screenShake = Math.max(this.screenShake, 5); 
                     }
                     this.keys[binds.dash] = false; 
                 }
 
+                // NEW: Use Ability Input Logic
+                if (this.keys[binds.ability]) {
+                    if (this.player.activeAbility && this.player.abilityCooldown <= 0) {
+                        this.player.useAbility();
+                        this.screenShake = Math.max(this.screenShake, 8); 
+                    }
+                    this.keys[binds.ability] = false; 
+                }
+
                 if (dx !== 0 || dy !== 0) {
                     const length = Math.hypot(dx, dy);
-                    this.player.vx += (dx / length) * (this.player.speed * 0.2);
-                    this.player.vy += (dy / length) * (this.player.speed * 0.2);
+                    
+                    let currentSpeed = this.player.speed * (this.player.abilityTimer > 0 && this.player.activeAbility === 'overdrive' ? 1.8 : 1.0);
+                    this.player.vx += (dx / length) * (currentSpeed * 0.2);
+                    this.player.vy += (dy / length) * (currentSpeed * 0.2);
                 }
 
                 if (!this.isTouchDevice) {
@@ -1000,12 +1041,15 @@ export class GameEngine {
                     this.player.wantsShockwave = false;
                     this.playSoundAt('explosion', this.player.x, this.player.y, 0.4); 
                     this.spawnParticles(this.player.x, this.player.y, '#ffcc00', 20); 
+                    this.screenShake = Math.max(this.screenShake, 10);
                     
                     allPlayers.forEach(p => {
                         if (p === this.player || p.isDead) return;
                         if (p.isTeammate) return;
                         if (distance(this.player.x, this.player.y, p.x, p.y) < 250) { 
-                            p.health -= this.player.shockwave * 25; 
+                            if (!(p.abilityTimer > 0 && p.activeAbility === 'shield')) {
+                                p.health -= this.player.shockwave * 25; 
+                            }
                             p.vx += (p.x - this.player.x) * 0.05; 
                             p.vy += (p.y - this.player.y) * 0.05;
                             if (p.health <= 0) {
@@ -1090,11 +1134,17 @@ export class GameEngine {
                 this.playSoundAt('explosion', bot.x, bot.y, 0.4); 
                 this.spawnParticles(bot.x, bot.y, '#ffcc00', 20); 
                 
+                if (!this.isDemo && this.player && distance(this.player.x, this.player.y, bot.x, bot.y) < 500) {
+                    this.screenShake = Math.max(this.screenShake, 10);
+                }
+                
                 allPlayers.forEach(p => {
                     if (p === bot || p.isDead) return;
                     if (bot.isTeammate && (p.isPlayer || p.isTeammate)) return;
                     if (distance(bot.x, bot.y, p.x, p.y) < 250) {
-                        p.health -= bot.shockwave * 25; 
+                        if (!(p.abilityTimer > 0 && p.activeAbility === 'shield')) {
+                            p.health -= bot.shockwave * 25; 
+                        }
                         p.vx += (p.x - bot.x) * 0.05; 
                         p.vy += (p.y - bot.y) * 0.05;
                         if (p.health <= 0) {
@@ -1174,22 +1224,24 @@ export class GameEngine {
 
                     if (p1.spikes > 0 && p1.spikeCooldown <= 0) {
                         let dmg = p1.type === 'square' ? p1.spikes * 2.5 : p1.spikes * 5;
-                        p2.health -= Math.max(1, dmg - (p2.plating * 2)); 
-                        p1.spikeCooldown = 30; 
-                        this.spawnParticles(p2.x, p2.y, '#ff4444', 5);
-                        if (p2.health <= 0) {
-                            this.processDeath(p2, p1);
+                        if (!(p2.abilityTimer > 0 && p2.activeAbility === 'shield')) {
+                            p2.health -= Math.max(1, dmg - (p2.plating * 2)); 
+                            this.spawnParticles(p2.x, p2.y, '#ff4444', 5);
+                            if (p2 === this.player) this.screenShake = Math.max(this.screenShake, 8);
                         }
+                        p1.spikeCooldown = 30; 
+                        if (p2.health <= 0) this.processDeath(p2, p1);
                     }
                     
                     if (p2.spikes > 0 && p2.spikeCooldown <= 0 && !p1.isDead) {
                         let dmg = p2.type === 'square' ? p2.spikes * 2.5 : p2.spikes * 5;
-                        p1.health -= Math.max(1, dmg - (p1.plating * 2)); 
-                        p2.spikeCooldown = 30;
-                        this.spawnParticles(p1.x, p1.y, '#ff4444', 5);
-                        if (p1.health <= 0) {
-                            this.processDeath(p1, p2);
+                        if (!(p1.abilityTimer > 0 && p1.activeAbility === 'shield')) {
+                            p1.health -= Math.max(1, dmg - (p1.plating * 2)); 
+                            this.spawnParticles(p1.x, p1.y, '#ff4444', 5);
+                            if (p1 === this.player) this.screenShake = Math.max(this.screenShake, 8);
                         }
+                        p2.spikeCooldown = 30;
+                        if (p1.health <= 0) this.processDeath(p1, p2);
                     }
                 }
             }
@@ -1214,18 +1266,19 @@ export class GameEngine {
                     
                     proj.hitTargets.push(target);
                     
-                    let dmg = proj.damage;
-                    if (target.health < target.maxHealth * 0.5) {
-                        dmg *= (1 + proj.owner.executioner);
-                    }
-                    
-                    target.health -= Math.max(1, dmg - (target.plating * 2));
-                    
-                    this.playSoundAt('hit', target.x, target.y, 0.4);
-                    this.spawnParticles(proj.x, proj.y, proj.color, 4);
-
-                    if (target.health <= 0) {
-                        this.processDeath(target, proj.owner);
+                    if (!(target.abilityTimer > 0 && target.activeAbility === 'shield')) {
+                        let dmg = proj.damage;
+                        if (target.health < target.maxHealth * 0.5) dmg *= (1 + proj.owner.executioner);
+                        target.health -= Math.max(1, dmg - (target.plating * 2));
+                        
+                        this.playSoundAt('hit', target.x, target.y, 0.4);
+                        this.spawnParticles(proj.x, proj.y, proj.color, 4);
+                        if (target === this.player) this.screenShake = Math.max(this.screenShake, 8);
+                        
+                        if (target.health <= 0) this.processDeath(target, proj.owner);
+                    } else {
+                        this.spawnParticles(proj.x, proj.y, '#0096ff', 3);
+                        this.playSoundAt('hit', target.x, target.y, 0.1);
                     }
                     
                     if (proj.pierce > 0) { 
@@ -1302,7 +1355,6 @@ export class GameEngine {
             }
         }
 
-        // NEW: FLatter upgrade scaling so late-game upgrades actually happen!
         if (pointsGainedThisFrame > 0 && !this.isDemo && !this.isGameOver) {
             while (this.player.upgradeProgress >= this.pointsToNextUpgrade) {
                 this.player.upgradeProgress -= this.pointsToNextUpgrade;
@@ -1387,6 +1439,12 @@ export class GameEngine {
 
         let camX = this.width / 2 - this.camera.x * this.cameraZoom;
         let camY = this.height / 2 - this.camera.y * this.cameraZoom;
+        
+        // NEW: Screen Shake Applied Directly to the Camera Offset!
+        if (this.screenShake > 0) {
+            camX += (Math.random() - 0.5) * this.screenShake;
+            camY += (Math.random() - 0.5) * this.screenShake;
+        }
         
         this.ctx.translate(camX, camY);
         this.ctx.scale(this.cameraZoom, this.cameraZoom);

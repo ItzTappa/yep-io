@@ -12,7 +12,7 @@ window.globalAccountLevel = 1;
 
 window.gameSettings = { 
     highQuality: true, particles: true, showNames: true, showFps: false,
-    keybinds: { up: 'w', down: 's', left: 'a', right: 'd', dash: ' ' }
+    keybinds: { up: 'w', down: 's', left: 'a', right: 'd', dash: ' ', ability: 'e' }
 };
 
 window.hourlyStats = { kills: 0, time: 0, points: 0, distance: 0 };
