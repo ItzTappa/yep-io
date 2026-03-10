@@ -463,6 +463,9 @@ export class GameEngine {
             else mobileControls.classList.add('hidden');
         }
         
+        const brUi = document.getElementById('br-ui');
+        if (brUi) brUi.classList.remove('hidden');
+        
         this.worldSize = 6000; 
         this.stormActive = false; 
 
@@ -555,10 +558,6 @@ export class GameEngine {
                 badgeUI.style.opacity = '1';
             }
         }
-        
-        // ALLOW MINIMAP TO SHOW IN SINGLEPLAYER based on settings!
-        const brUi = document.getElementById('br-ui');
-        if (brUi) brUi.classList.remove('hidden'); 
         
         let matchSeed = Math.random();
         
@@ -943,7 +942,6 @@ export class GameEngine {
         
         allPlayers.slice(0, displayLimit).forEach((p, index) => {
             const li = document.createElement('li'); 
-            // SMOOTH LEADERBOARD NUMBERS: 15400 becomes 15.4k!
             let displayPts = p.points >= 1000 ? (p.points / 1000).toFixed(1) + 'k' : Math.floor(p.points);
             li.innerText = `#${index + 1} ${p.isPlayer ? "YOU" : p.name} - ${displayPts} Pts`;
             if (p === this.player) {
@@ -1117,8 +1115,6 @@ export class GameEngine {
         }
 
         let totalTargetPoints = victim.points || 0;
-        
-        // BALANCING FIX: Only drop 35% of the score when dying to prevent massive instant level ups!
         let orbReward = Math.floor(totalTargetPoints * 0.35); 
         
         if (killer) {
@@ -1132,7 +1128,6 @@ export class GameEngine {
             }
         }
 
-        // BALANCING FIX: Dead players explode into up to 100 tiny orbs like a piñata instead of a few massive ones!
         let orbsToSpawn = Math.min(orbReward, 100); 
         if (orbsToSpawn > 0) {
             let valuePerOrb = Math.max(1, Math.floor(orbReward / orbsToSpawn));
@@ -1768,7 +1763,6 @@ export class GameEngine {
                 } else {
                     let finalVal = orb.value * collectedBy.scavenger;
                     collectedBy.points += finalVal;
-                    // FIX: Replaced exponential XP scaling with smooth scaling!
                     collectedBy.upgradeProgress += finalVal;
                     if (collectedBy === this.player) pointsGainedThisFrame += finalVal;
                 }
@@ -1777,7 +1771,6 @@ export class GameEngine {
             }
         }
 
-        // FIX: The new smooth mathematical upgrade curve!
         if (pointsGainedThisFrame > 0 && !this.isDemo && !this.isGameOver) {
             while (this.player.upgradeProgress >= this.pointsToNextUpgrade) {
                 this.player.upgradeProgress -= this.pointsToNextUpgrade;
@@ -1874,6 +1867,35 @@ export class GameEngine {
         this.ctx.translate(camX, camY);
         this.ctx.scale(this.cameraZoom, this.cameraZoom);
         
+        // ==========================================
+        // MAP BORDER FORCEFIELD
+        // ==========================================
+        this.ctx.save();
+        this.ctx.strokeStyle = '#00ffff'; 
+        this.ctx.lineWidth = 8;
+        if (window.gameSettings && window.gameSettings.highQuality) {
+            this.ctx.shadowBlur = 20;
+            this.ctx.shadowColor = '#00ffff';
+        }
+        // Outer glowing line
+        this.ctx.strokeRect(0, 0, this.worldSize, this.worldSize);
+
+        // Animated dashed inner line for a sci-fi energy feel
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([30, 30]);
+        this.ctx.lineDashOffset = -(Date.now() / 20) % 60;
+        this.ctx.strokeRect(0, 0, this.worldSize, this.worldSize);
+        this.ctx.restore();
+
+        // Darken everything outside the map boundaries so players can't easily see out there
+        this.ctx.fillStyle = 'rgba(0, 20, 30, 0.6)';
+        this.ctx.fillRect(-10000, -10000, this.worldSize + 20000, 10000); // Top
+        this.ctx.fillRect(-10000, this.worldSize, this.worldSize + 20000, 10000); // Bottom
+        this.ctx.fillRect(-10000, 0, 10000, this.worldSize); // Left
+        this.ctx.fillRect(this.worldSize, 0, 10000, this.worldSize); // Right
+        // ==========================================
+
         if (this.stormActive) {
             this.ctx.save();
             this.ctx.fillStyle = 'rgba(138, 43, 226, 0.25)'; 
@@ -2004,7 +2026,6 @@ export class GameEngine {
             ctx.strokeRect(cx, cy, viewW, viewH);
         }
 
-        // FIX: The "ALIVE: #" count ONLY shows if you are playing multiplayer!
         const countDisplay = document.getElementById('player-count-display');
         if (countDisplay) {
             let isMultiplayer = this.lobbyCode || this.isHost;
