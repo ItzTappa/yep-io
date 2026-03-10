@@ -394,7 +394,6 @@ export class Entity {
         ctx.fillStyle = this.color; 
         if (window.gameSettings.highQuality) { ctx.shadowBlur = 15; ctx.shadowColor = this.color; } else { ctx.shadowBlur = 0; }
         
-        // NEW: Vanta Black Special Glow Effect so it's not invisible
         if (this.color === '#111111' || this.color === '#000000') {
             ctx.shadowBlur = 15;
             ctx.shadowColor = '#ffffff';
@@ -454,7 +453,11 @@ export class Entity {
                 ctx.beginPath(); ctx.moveTo(-this.size*0.5, -this.size*0.8); ctx.lineTo(this.size*0.5, 0); ctx.lineTo(-this.size*0.5, this.size*0.8); ctx.stroke();
             }
             else if (skinType === 'luminescent') {
-                ctx.fillStyle = '#ffffff'; ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 20;
+                const hue = (Date.now() / 15) % 360;
+                const rainbowColor = `hsl(${hue}, 100%, 50%)`;
+                ctx.fillStyle = rainbowColor; 
+                ctx.shadowColor = rainbowColor; 
+                ctx.shadowBlur = 25;
                 ctx.beginPath(); ctx.arc(0, 0, this.size*0.5, 0, Math.PI*2); ctx.fill();
             }
             else if (skinType === 'ninja') {
@@ -466,8 +469,17 @@ export class Entity {
                 ctx.beginPath(); ctx.moveTo(0, -this.size*0.6); ctx.lineTo(this.size*0.2, -this.size*0.2); ctx.lineTo(this.size*0.6, 0); ctx.lineTo(this.size*0.2, this.size*0.2); ctx.lineTo(0, this.size*0.6); ctx.lineTo(-this.size*0.2, this.size*0.2); ctx.lineTo(-this.size*0.6, 0); ctx.lineTo(-this.size*0.2, -this.size*0.2); ctx.closePath(); ctx.fill();
             }
             else if (skinType === 'cyborg') {
-                ctx.fillStyle = '#9ca3af'; ctx.beginPath(); ctx.fillRect(-this.size, -this.size, this.size*2, this.size);
-                ctx.fillStyle = '#ff0000'; ctx.shadowColor = '#ff0000'; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(this.size*0.4, -this.size*0.4, 4, 0, Math.PI*2); ctx.fill();
+                ctx.save();
+                ctx.beginPath();
+                if (this.type === 'circle') ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                else if (this.type === 'square') ctx.rect(-this.size/2, -this.size/2, this.size, this.size);
+                else { ctx.moveTo(this.size, 0); ctx.lineTo(-this.size / 2, -this.size * 0.866); ctx.lineTo(-this.size / 2, this.size * 0.866); ctx.closePath(); }
+                ctx.clip();
+                ctx.fillStyle = '#9ca3af'; 
+                ctx.fillRect(-this.size, -this.size, this.size*2, this.size);
+                ctx.fillStyle = '#ff0000'; ctx.shadowColor = '#ff0000'; ctx.shadowBlur = 10; 
+                ctx.beginPath(); ctx.arc(this.size*0.4, -this.size*0.4, 5, 0, Math.PI*2); ctx.fill();
+                ctx.restore();
             }
             else if (skinType === 'voidwalker') {
                 ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(0, 0, this.size*0.5, 0, Math.PI*2); ctx.fill(); 
@@ -495,6 +507,130 @@ export class Entity {
                 ctx.beginPath(); ctx.arc(0, 0, this.size*0.8, 0, Math.PI*2); ctx.stroke();
                 ctx.beginPath(); ctx.arc(0, 0, this.size*0.4, 0, Math.PI*2); ctx.stroke();
             }
+            else if (skinType === 'target') {
+                ctx.save();
+                ctx.beginPath();
+                if (this.type === 'circle') ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                else if (this.type === 'square') ctx.rect(-this.size/2, -this.size/2, this.size, this.size);
+                else { ctx.moveTo(this.size, 0); ctx.lineTo(-this.size / 2, -this.size * 0.866); ctx.lineTo(-this.size / 2, this.size * 0.866); ctx.closePath(); }
+                ctx.clip();
+                ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 4;
+                ctx.beginPath(); ctx.arc(0, 0, this.size*0.6, 0, Math.PI*2); ctx.stroke();
+                ctx.beginPath(); ctx.arc(0, 0, this.size*0.2, 0, Math.PI*2); ctx.stroke();
+                ctx.restore();
+            }
+            else if (skinType === 'stripes') {
+                ctx.save();
+                ctx.beginPath();
+                if (this.type === 'circle') ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                else if (this.type === 'square') ctx.rect(-this.size/2, -this.size/2, this.size, this.size);
+                else { ctx.moveTo(this.size, 0); ctx.lineTo(-this.size / 2, -this.size * 0.866); ctx.lineTo(-this.size / 2, this.size * 0.866); ctx.closePath(); }
+                ctx.clip();
+                ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                for(let i = -this.size; i < this.size; i += 10) { ctx.fillRect(i, -this.size, 5, this.size*2); }
+                ctx.restore();
+            }
+            else if (skinType === 'checker') {
+                ctx.save();
+                ctx.beginPath();
+                if (this.type === 'circle') ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                else if (this.type === 'square') ctx.rect(-this.size/2, -this.size/2, this.size, this.size);
+                else { ctx.moveTo(this.size, 0); ctx.lineTo(-this.size / 2, -this.size * 0.866); ctx.lineTo(-this.size / 2, this.size * 0.866); ctx.closePath(); }
+                ctx.clip();
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                let sq = this.size * 0.5;
+                for(let x = -this.size; x < this.size; x += sq) {
+                    for(let y = -this.size; y < this.size; y += sq) {
+                        if (Math.abs((x/sq + y/sq)) % 2 === 0) ctx.fillRect(x, y, sq, sq);
+                    }
+                }
+                ctx.restore();
+            }
+            else if (skinType === 'zebra') {
+                ctx.save();
+                ctx.beginPath();
+                if (this.type === 'circle') ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                else if (this.type === 'square') ctx.rect(-this.size/2, -this.size/2, this.size, this.size);
+                else { ctx.moveTo(this.size, 0); ctx.lineTo(-this.size / 2, -this.size * 0.866); ctx.lineTo(-this.size / 2, this.size * 0.866); ctx.closePath(); }
+                ctx.clip();
+                ctx.fillStyle = '#111';
+                for(let i = -this.size; i < this.size; i += 15) {
+                    ctx.beginPath(); ctx.moveTo(i, -this.size); ctx.lineTo(i + 5, 0); ctx.lineTo(i - 2, this.size); ctx.lineTo(i + 4, this.size); ctx.lineTo(i + 12, 0); ctx.lineTo(i + 8, -this.size); ctx.fill();
+                }
+                ctx.restore();
+            }
+            else if (skinType === 'camo') {
+                ctx.save();
+                ctx.beginPath();
+                if (this.type === 'circle') ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                else if (this.type === 'square') ctx.rect(-this.size/2, -this.size/2, this.size, this.size);
+                else { ctx.moveTo(this.size, 0); ctx.lineTo(-this.size / 2, -this.size * 0.866); ctx.lineTo(-this.size / 2, this.size * 0.866); ctx.closePath(); }
+                ctx.clip();
+                ctx.fillStyle = '#14532d'; 
+                ctx.beginPath(); ctx.arc(-this.size*0.3, -this.size*0.2, this.size*0.4, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(this.size*0.4, this.size*0.4, this.size*0.5, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#78350f'; 
+                ctx.beginPath(); ctx.arc(this.size*0.2, -this.size*0.5, this.size*0.4, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(-this.size*0.4, this.size*0.3, this.size*0.3, 0, Math.PI*2); ctx.fill();
+                ctx.restore();
+            }
+            else if (skinType === 'demon') {
+                ctx.fillStyle = '#111';
+                ctx.beginPath(); ctx.moveTo(-this.size*0.2, -this.size*0.5); ctx.lineTo(-this.size*0.5, -this.size*0.8); ctx.lineTo(0, -this.size*0.6); ctx.fill(); 
+                ctx.beginPath(); ctx.moveTo(-this.size*0.2, this.size*0.5); ctx.lineTo(-this.size*0.5, this.size*0.8); ctx.lineTo(0, this.size*0.6); ctx.fill(); 
+                ctx.fillStyle = '#ff0000'; ctx.shadowColor = '#ff0000'; ctx.shadowBlur = 10;
+                ctx.beginPath(); ctx.moveTo(this.size*0.3, -this.size*0.3); ctx.lineTo(this.size*0.6, -this.size*0.1); ctx.lineTo(this.size*0.3, -this.size*0.1); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(this.size*0.3, this.size*0.3); ctx.lineTo(this.size*0.6, this.size*0.1); ctx.lineTo(this.size*0.3, this.size*0.1); ctx.fill();
+            }
+            else if (skinType === 'angel') {
+                ctx.strokeStyle = '#ffe600'; ctx.lineWidth = 3; ctx.shadowColor = '#ffe600'; ctx.shadowBlur = 10;
+                ctx.beginPath(); ctx.ellipse(-this.size*0.2, 0, this.size*0.2, this.size*0.6, 0, 0, Math.PI*2); ctx.stroke();
+            }
+            else if (skinType === 'pirate') {
+                ctx.save();
+                ctx.beginPath();
+                if (this.type === 'circle') ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                else if (this.type === 'square') ctx.rect(-this.size/2, -this.size/2, this.size, this.size);
+                else { ctx.moveTo(this.size, 0); ctx.lineTo(-this.size / 2, -this.size * 0.866); ctx.lineTo(-this.size / 2, this.size * 0.866); ctx.closePath(); }
+                ctx.clip();
+                ctx.strokeStyle = '#111'; ctx.lineWidth = 4;
+                ctx.beginPath(); ctx.moveTo(-this.size, -this.size); ctx.lineTo(this.size, this.size); ctx.stroke(); 
+                ctx.fillStyle = '#111';
+                ctx.beginPath(); ctx.arc(this.size*0.2, this.size*0.2, this.size*0.3, 0, Math.PI*2); ctx.fill(); 
+                ctx.restore();
+            }
+            else if (skinType === 'bandit') {
+                ctx.save();
+                ctx.beginPath();
+                if (this.type === 'circle') ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                else if (this.type === 'square') ctx.rect(-this.size/2, -this.size/2, this.size, this.size);
+                else { ctx.moveTo(this.size, 0); ctx.lineTo(-this.size / 2, -this.size * 0.866); ctx.lineTo(-this.size / 2, this.size * 0.866); ctx.closePath(); }
+                ctx.clip();
+                ctx.fillStyle = '#111'; ctx.fillRect(0, -this.size, this.size*0.6, this.size*2); 
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(this.size*0.2, -this.size*0.4, this.size*0.2, this.size*0.2); 
+                ctx.fillRect(this.size*0.2, this.size*0.2, this.size*0.2, this.size*0.2); 
+                ctx.restore();
+            }
+            else if (skinType === 'mecha') {
+                ctx.save();
+                ctx.beginPath();
+                if (this.type === 'circle') ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                else if (this.type === 'square') ctx.rect(-this.size/2, -this.size/2, this.size, this.size);
+                else { ctx.moveTo(this.size, 0); ctx.lineTo(-this.size / 2, -this.size * 0.866); ctx.lineTo(-this.size / 2, this.size * 0.866); ctx.closePath(); }
+                ctx.clip();
+                ctx.strokeStyle = '#00ffcc'; ctx.lineWidth = 2; ctx.shadowColor = '#00ffcc'; ctx.shadowBlur = 5;
+                ctx.beginPath();
+                ctx.moveTo(-this.size*0.8, -this.size*0.2); ctx.lineTo(0, -this.size*0.2); ctx.lineTo(this.size*0.2, -this.size*0.6);
+                ctx.moveTo(-this.size*0.8, this.size*0.2); ctx.lineTo(0, this.size*0.2); ctx.lineTo(this.size*0.2, this.size*0.6);
+                ctx.moveTo(this.size*0.4, -this.size*0.8); ctx.lineTo(this.size*0.4, this.size*0.8);
+                ctx.stroke();
+                ctx.fillStyle = '#fff';
+                ctx.beginPath(); ctx.arc(0, -this.size*0.2, 3, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(0, this.size*0.2, 3, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(this.size*0.4, 0, 3, 0, Math.PI*2); ctx.fill();
+                ctx.restore();
+            }
             else {
                 ctx.beginPath();
                 const innerSize = this.size * 0.5;
@@ -511,7 +647,7 @@ export class Entity {
         }
         
         let hideArrow = (this.frontVisual !== null);
-        if (this.isPlayer && !hideArrow) {
+        if (this.isPlayer && !hideArrow && this.name !== "") {
             ctx.save(); 
             ctx.translate(this.x, this.y); 
             ctx.rotate(this.angle);
