@@ -144,8 +144,12 @@ export class Entity {
             let sAlpha = isDashing ? 0.7 : 0.5;
             let movementAngle = Math.atan2(this.vy, this.vx);
             let backAngle = movementAngle + Math.PI;
-            let spawnX = this.x + Math.cos(backAngle) * (this.size * 0.8);
-            let spawnY = this.y + Math.sin(backAngle) * (this.size * 0.8);
+            
+            // Adjust spawn for square vs circle/triangle
+            let spawnRadius = this.type === 'square' ? this.size / 2 : this.size * 0.8;
+            let spawnX = this.x + Math.cos(backAngle) * spawnRadius;
+            let spawnY = this.y + Math.sin(backAngle) * spawnRadius;
+            
             let exhaustAngle = backAngle + (Math.random() - 0.5) * 1.2;
             let exhaustSpeed = Math.random() * 2 + (isDashing ? 3 : 1);
             this.trail.push({
@@ -187,7 +191,7 @@ export class Entity {
         // VISUAL REGEN AURA
         if (this.auraVisual === 'regen') {
             ctx.save(); ctx.translate(this.x, this.y);
-            ctx.beginPath(); ctx.arc(0, 0, this.size + 15, 0, Math.PI * 2);
+            ctx.beginPath(); ctx.arc(0, 0, (this.type === 'square' ? this.size / 1.5 : this.size) + 15, 0, Math.PI * 2);
             ctx.strokeStyle = 'rgba(0, 255, 100, 0.4)';
             ctx.lineWidth = 3;
             ctx.setLineDash([15, 15]);
@@ -202,11 +206,21 @@ export class Entity {
             let tTier = Math.max(this.upgrades['speed'] || 0, this.upgrades['dash'] || 0);
             let tSize = 6 + tTier * 2;
             let tLen = 8 + tTier * 2;
+            
+            // True back edge depending on class
+            let backOffset = this.type === 'circle' ? -this.size : -this.size / 2;
+            let vSpread = this.type === 'square' ? this.size * 0.3 : this.size * 0.4;
+            
             ctx.fillStyle = '#444';
-            let backOffset = -this.size - 2;
-            if (this.type === 'triangle') backOffset = -this.size / 2 - 2;
-            ctx.fillRect(backOffset - tLen, -this.size*0.4 - tSize/2, tLen, tSize);
-            ctx.fillRect(backOffset - tLen, this.size*0.4 - tSize/2, tLen, tSize);
+            ctx.fillRect(backOffset - tLen, -vSpread - tSize/2, tLen, tSize);
+            ctx.fillRect(backOffset - tLen, vSpread - tSize/2, tLen, tSize);
+            
+            // Add a tiny active flame if moving or dashing
+            if (this.dashTimer > 0 || Math.hypot(this.vx, this.vy) > 1.0) {
+                ctx.fillStyle = '#00ffcc';
+                ctx.fillRect(backOffset - tLen - 4, -vSpread - tSize/4, 4, tSize/2);
+                ctx.fillRect(backOffset - tLen - 4, vSpread - tSize/4, 4, tSize/2);
+            }
             ctx.restore();
         }
 
@@ -232,28 +246,30 @@ export class Entity {
             let gunTier = Math.max(this.upgrades['fireRate'] || 0, this.upgrades['damage'] || 0, this.upgrades['multiShot'] || 0);
             let gunLen = 12 + (gunTier * 3); 
             let gunThickness = 6 + (gunTier * 1.5); 
-            let offsetDist = this.size - 2;
+            
+            // True front edge depending on class
+            let offsetDist = (this.type === 'square' ? this.size / 2 : this.size) - 2;
+            let spread = this.type === 'square' ? this.size * 0.35 : this.size * 0.4;
 
             ctx.fillStyle = '#555';
             if (gunCount === 1) {
                 ctx.fillRect(offsetDist, -gunThickness/2, gunLen, gunThickness);
                 ctx.fillStyle = '#222'; ctx.fillRect(offsetDist + gunLen - 4, -gunThickness/2 + 1, 4, gunThickness - 2);
             } else if (gunCount === 2) {
-                let spread = this.size * 0.4;
                 ctx.fillRect(offsetDist, -gunThickness/2 - spread, gunLen, gunThickness);
                 ctx.fillRect(offsetDist, -gunThickness/2 + spread, gunLen, gunThickness);
                 ctx.fillStyle = '#222';
                 ctx.fillRect(offsetDist + gunLen - 4, -gunThickness/2 - spread + 1, 4, gunThickness - 2);
                 ctx.fillRect(offsetDist + gunLen - 4, -gunThickness/2 + spread + 1, 4, gunThickness - 2);
             } else {
-                let spread = this.size * 0.5;
+                let outerSpread = spread * 1.2;
                 ctx.fillRect(offsetDist, -gunThickness/2, gunLen + 4, gunThickness); 
-                ctx.fillRect(offsetDist - 4, -gunThickness/2 - spread, gunLen, gunThickness);
-                ctx.fillRect(offsetDist - 4, -gunThickness/2 + spread, gunLen, gunThickness);
+                ctx.fillRect(offsetDist - 4, -gunThickness/2 - outerSpread, gunLen, gunThickness);
+                ctx.fillRect(offsetDist - 4, -gunThickness/2 + outerSpread, gunLen, gunThickness);
                 ctx.fillStyle = '#222';
                 ctx.fillRect(offsetDist + gunLen, -gunThickness/2 + 1, 4, gunThickness - 2);
-                ctx.fillRect(offsetDist + gunLen - 8, -gunThickness/2 - spread + 1, 4, gunThickness - 2);
-                ctx.fillRect(offsetDist + gunLen - 8, -gunThickness/2 + spread + 1, 4, gunThickness - 2);
+                ctx.fillRect(offsetDist + gunLen - 8, -gunThickness/2 - outerSpread + 1, 4, gunThickness - 2);
+                ctx.fillRect(offsetDist + gunLen - 8, -gunThickness/2 + outerSpread + 1, 4, gunThickness - 2);
             }
             ctx.restore();
         }
@@ -297,6 +313,7 @@ export class Entity {
             ctx.lineTo(-this.size / 2, this.size * 0.866); ctx.closePath(); ctx.fill();
         }
         ctx.restore();
+        
         if (this.equipped.Skin && ITEMS_DB) {
             const skinType = ITEMS_DB[this.equipped.Skin].value;
             ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle); ctx.beginPath();
@@ -312,19 +329,18 @@ export class Entity {
             ctx.restore();
         }
         
-        // HIDES ARROW IF ANY FRONT VISUAL (GUN/SPIKES) IS ON THE SHAPE. ONLY SHOWS FOR REAL PLAYERS IN MATCH.
+        // ONLY show the arrow if it's the true player in a match, and they don't have front visual upgrades
         let hideArrow = (this.frontVisual !== null);
-        
-        if (this.isPlayer && !hideArrow) {
+        if (this.isPlayer && !hideArrow && this.name !== "") {
             ctx.save(); 
             ctx.translate(this.x, this.y); 
             ctx.rotate(this.angle);
             ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
             ctx.beginPath();
-            let offset = this.size + 4;
-            ctx.moveTo(offset, -4);
-            ctx.lineTo(offset + 8, 0);
-            ctx.lineTo(offset, 4);
+            let arrowOffset = (this.type === 'square' ? this.size / 2 : this.size) + 4;
+            ctx.moveTo(arrowOffset, -4);
+            ctx.lineTo(arrowOffset + 8, 0);
+            ctx.lineTo(arrowOffset, 4);
             ctx.fill();
             ctx.restore();
         }
