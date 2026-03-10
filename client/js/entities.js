@@ -301,6 +301,7 @@ export class Entity {
             
             let pCount = isDashing ? 3 + tTier : 1 + Math.floor(tTier / 2);
             
+            // Dynamic Thruster Colors Based on Tier!
             let pColor = '#ffaa00'; 
             if (tTier === 2) pColor = '#ff2200'; 
             else if (tTier === 3) pColor = '#ffd700'; 
@@ -1324,7 +1325,6 @@ export class Entity {
     }
 }
 
-// --- RESTORED MISSING PLAYER CLASS ---
 export class Player extends Entity {
     constructor(x, y, type, name = "") {
         super(x, y, type);
@@ -1402,9 +1402,12 @@ export class Bot extends Entity {
             } 
         });
 
+        // FIXED RUBBERBANDING LOGIC to prevent freezing!
         if (this.points > targetScore * 1.5) {
-            this.points -= (this.points - targetScore) * 0.05;
-            this.upgradeProgress = this.points; 
+            let decay = (this.points - targetScore) * 0.05;
+            this.points -= decay;
+            this.upgradeProgress -= decay;
+            if (this.upgradeProgress < 0) this.upgradeProgress = 0;
         } else if (this.points < targetScore) {
             let catchUpGain = (targetScore - this.points) * 0.002;
             this.points += 0.5 + catchUpGain;
