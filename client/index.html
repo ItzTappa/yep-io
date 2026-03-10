@@ -27,9 +27,9 @@
                 <div class="lobby-center">
                     <h1>yep.io</h1>
                     <div class="class-selection">
-                        <button class="class-btn" data-class="triangle">Jet (Fast)</button>
-                        <button class="class-btn" data-class="square">Tank (Heavy)</button>
-                        <button class="class-btn active" data-class="circle">Soldier (Balanced)</button>
+                        <button class="class-btn active" data-class="triangle">Jet (Triangle)</button>
+                        <button class="class-btn" data-class="square">Tank (Square)</button>
+                        <button class="class-btn" data-class="circle">Soldier (Circle)</button>
                     </div>
                     <div id="class-info" class="hidden"></div>
                     <button id="play-btn">PLAY</button>
@@ -200,7 +200,6 @@
 
     <div id="account-modal" class="hidden">
         <div class="settings-content">
-            
             <div id="account-logged-out">
                 <h2>ACCOUNT</h2>
                 <div style="display: flex; flex-direction: column; gap: 15px;">
@@ -272,19 +271,16 @@
             </div>
             
             <div class="right-hud-column">
-                <div id="minimap-container">
-                    <canvas id="minimap-canvas"></canvas>
-                    <div id="player-count-display">ALIVE: 1</div>
-                </div>
-                <div id="teammate-pointers"></div>
-                
-                <div id="kill-feed"></div>
-
                 <div class="leaderboard" id="leaderboard-container">
                     <h3>LEADERBOARD</h3>
                     <ul id="leaderboard-list"></ul>
                 </div>
-            </div>
+
+                <div id="minimap-container">
+                    <canvas id="minimap-canvas"></canvas>
+                    </div>
+                <div id="teammate-pointers"></div>
+                </div>
 
             <div id="slot-machine-ui" class="hidden">
                 <div class="slot-machine-container">
@@ -300,11 +296,11 @@
         </div>
 
         <div id="notif-queue">
-            <div id="account-level-notif" class="notif-box notif-season hidden fade-out">
+            <div id="account-level-notif" class="notif-box hidden fade-out">
                 <div class="notif-text">SEASON LEVEL UP!</div>
                 <div class="notif-level">YOU REACHED LEVEL <span id="account-notif-level-num">2</span></div>
             </div>
-            <div id="level-up-notif" class="notif-box notif-upgrade hidden fade-out">
+            <div id="level-up-notif" class="notif-box hidden fade-out">
                 <div class="notif-text">UPGRADE READY</div>
                 <div class="notif-level">PRESS [1] [2] OR [3]</div>
             </div>
