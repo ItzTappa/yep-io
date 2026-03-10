@@ -53,9 +53,10 @@ export class GameEngine {
         this.accountLevelUpTimeout = null; 
         this.animationId = null; 
         
-        // PERFECT 60 FPS LOCK (Frame Dropping Method)
+        // PERFECT 60 FPS LOCK
         this.fpsInterval = 1000 / 60; 
         this.lastTime = performance.now();
+        this.accumulator = 0; 
         
         this.lastFpsTime = performance.now(); 
         this.framesThisSecond = 0;
@@ -423,8 +424,9 @@ export class GameEngine {
         this.camera.y = this.demoTargetY;
         this.cameraZoom = 1.0;
         
+        this.accumulator = 0;
         this.lastTime = performance.now(); 
-        this.animationId = requestAnimationFrame((t) => this.loop(t));
+        this.loop();
     }
 
     start(playerClass) {
@@ -511,8 +513,9 @@ export class GameEngine {
 
         this.totalMatchPlayers = this.bots.length + 1; 
         
+        this.accumulator = 0;
         this.lastTime = performance.now(); 
-        this.animationId = requestAnimationFrame((t) => this.loop(t));
+        this.loop();
     }
 
     startMultiplayer(players, lobbyCode, isHost) {
@@ -765,8 +768,10 @@ export class GameEngine {
 
         this.totalMatchPlayers = 50; 
         
+        this.accumulator = 0;
         this.lastTime = performance.now(); 
-        this.animationId = requestAnimationFrame((t) => this.loop(t));
+        
+        this.loop();
     }
 
     updateLeaderboard() {
@@ -1816,34 +1821,40 @@ export class GameEngine {
         pointersContainer.innerHTML = html;
     }
 
-    loop(timestamp) {
-        this.animationId = requestAnimationFrame((t) => this.loop(t));
+    loop() {
+        this.animationId = requestAnimationFrame(() => this.loop());
 
-        if (!timestamp) timestamp = performance.now();
+        const current = performance.now();
+        let dt = current - this.lastTime;
+        this.lastTime = current;
         
-        let dt = timestamp - this.lastTime;
-        
-        if (dt < this.fpsInterval) return;
-
-        if (dt > 100) {
-            this.lastTime = timestamp - this.fpsInterval;
-        } else {
-            this.lastTime = timestamp - (dt % this.fpsInterval);
+        if (dt > 250) {
+            dt = 16.666; 
         }
-
-        this.update();
-        this.draw();
+        if (dt < 0) {
+            dt = 0; 
+        }
+        
+        this.accumulator += dt;
 
         if (window.gameSettings.showFps) {
             this.framesThisSecond++;
-            if (timestamp - this.lastFpsTime >= 1000) {
+            if (current - this.lastFpsTime >= 1000) {
                 const fpsDisplay = document.getElementById('fps-display');
                 if (fpsDisplay) {
                     fpsDisplay.innerText = `${this.framesThisSecond} FPS`;
                 }
                 this.framesThisSecond = 0;
-                this.lastFpsTime = timestamp;
+                this.lastFpsTime = current;
             }
         }
+
+        // UNBREAKABLE 60 FPS LOCK
+        while (this.accumulator >= this.fpsInterval) {
+            this.update();
+            this.accumulator -= this.fpsInterval;
+        }
+        
+        this.draw();
     }
 }

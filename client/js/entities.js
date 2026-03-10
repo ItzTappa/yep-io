@@ -1296,20 +1296,6 @@ export class Entity {
     }
 }
 
-export class Player extends Entity {
-    constructor(x, y, type, name = "") {
-        super(x, y, type); 
-        this.name = name; 
-        this.isPlayer = true; 
-        this.equipped = window.equippedItems || { Skin: null, Trail: null, Banner: null, Color: null };
-        if (this.equipped.Color && ITEMS_DB && ITEMS_DB[this.equipped.Color]) {
-            this.color = ITEMS_DB[this.equipped.Color].value; 
-        } else { 
-            this.color = '#d3d3d3'; 
-        }
-    }
-}
-
 export class Bot extends Entity {
     constructor(x, y, type, startingPoints = 0) {
         super(x, y, type); 
@@ -1362,13 +1348,10 @@ export class Bot extends Entity {
         let nearestEnemy = null; 
         let minDist = 800;
         
-        let highestScore = 0;
+        let playerObj = allPlayers.find(p => p.isPlayer);
+        let targetScore = playerObj ? Math.max(100, playerObj.points * 1.1) : 100;
 
         allPlayers.forEach(p => { 
-            if (p.points > highestScore) {
-                highestScore = p.points;
-            }
-
             if (p === this || p.isDead) return; 
             if (this.isTeammate && (p.isPlayer || p.isTeammate)) return;
             if (p.inSafeZone) return; 
@@ -1382,8 +1365,17 @@ export class Bot extends Entity {
             } 
         });
 
-        let catchUpGain = (highestScore > this.points) ? (highestScore - this.points) * 0.002 : 0;
-        let passiveGain = 0.5 + catchUpGain; 
+        // NEW: STRICT BOT SCALING (Prevents 7 Million Point economies!)
+        let catchUpGain = 0;
+        if (this.points < targetScore) {
+            catchUpGain = (targetScore - this.points) * 0.001; 
+        }
+
+        if (this.points > targetScore * 1.5) {
+            this.points -= (this.points - (targetScore * 1.5)) * 0.01;
+        }
+
+        let passiveGain = 0.2 + catchUpGain; 
         
         this.points += passiveGain; 
         this.upgradeProgress += passiveGain;
