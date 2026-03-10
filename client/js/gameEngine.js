@@ -463,10 +463,6 @@ export class GameEngine {
             else mobileControls.classList.add('hidden');
         }
         
-        // FIX: Remove 'hidden' so the minimap is allowed to show in singleplayer!
-        const brUi = document.getElementById('br-ui');
-        if (brUi) brUi.classList.remove('hidden');
-        
         this.worldSize = 6000; 
         this.stormActive = false; 
 
@@ -506,7 +502,6 @@ export class GameEngine {
         const upgradeUi = document.getElementById('upgrade-ui');
         if (upgradeUi) upgradeUi.classList.add('hidden');
         
-        // FORCE UI ELEMENTS TO DISPLAY
         const gameUi = document.getElementById('game-ui');
         if (gameUi) {
             gameUi.classList.remove('hidden');
@@ -560,6 +555,10 @@ export class GameEngine {
                 badgeUI.style.opacity = '1';
             }
         }
+        
+        // ALLOW MINIMAP TO SHOW IN SINGLEPLAYER based on settings!
+        const brUi = document.getElementById('br-ui');
+        if (brUi) brUi.classList.remove('hidden'); 
         
         let matchSeed = Math.random();
         
@@ -944,7 +943,9 @@ export class GameEngine {
         
         allPlayers.slice(0, displayLimit).forEach((p, index) => {
             const li = document.createElement('li'); 
-            li.innerText = `#${index + 1} ${p.isPlayer ? "YOU" : p.name} - ${Math.floor(p.points)} Pts`;
+            // SMOOTH LEADERBOARD NUMBERS: 15400 becomes 15.4k!
+            let displayPts = p.points >= 1000 ? (p.points / 1000).toFixed(1) + 'k' : Math.floor(p.points);
+            li.innerText = `#${index + 1} ${p.isPlayer ? "YOU" : p.name} - ${displayPts} Pts`;
             if (p === this.player) {
                 li.style.color = '#00ffcc';
             }
@@ -1116,7 +1117,9 @@ export class GameEngine {
         }
 
         let totalTargetPoints = victim.points || 0;
-        let orbReward = Math.floor(totalTargetPoints * 0.75); 
+        
+        // BALANCING FIX: Only drop 35% of the score when dying to prevent massive instant level ups!
+        let orbReward = Math.floor(totalTargetPoints * 0.35); 
         
         if (killer) {
             if (killer === this.player && !this.isGameOver) {
@@ -1129,7 +1132,8 @@ export class GameEngine {
             }
         }
 
-        let orbsToSpawn = Math.min(orbReward, 20); 
+        // BALANCING FIX: Dead players explode into up to 100 tiny orbs like a piñata instead of a few massive ones!
+        let orbsToSpawn = Math.min(orbReward, 100); 
         if (orbsToSpawn > 0) {
             let valuePerOrb = Math.max(1, Math.floor(orbReward / orbsToSpawn));
             for (let o = 0; o < orbsToSpawn; o++) {
@@ -1764,6 +1768,7 @@ export class GameEngine {
                 } else {
                     let finalVal = orb.value * collectedBy.scavenger;
                     collectedBy.points += finalVal;
+                    // FIX: Replaced exponential XP scaling with smooth scaling!
                     collectedBy.upgradeProgress += finalVal;
                     if (collectedBy === this.player) pointsGainedThisFrame += finalVal;
                 }
@@ -1772,11 +1777,15 @@ export class GameEngine {
             }
         }
 
+        // FIX: The new smooth mathematical upgrade curve!
         if (pointsGainedThisFrame > 0 && !this.isDemo && !this.isGameOver) {
             while (this.player.upgradeProgress >= this.pointsToNextUpgrade) {
                 this.player.upgradeProgress -= this.pointsToNextUpgrade;
                 this.player.upgradeCount++;
-                this.pointsToNextUpgrade = Math.floor(this.pointsToNextUpgrade * 1.25) + 15; 
+                
+                let level = this.player.upgradeCount;
+                this.pointsToNextUpgrade = Math.floor(20 + (level * 15) + (Math.pow(level, 1.8) * 2));
+                
                 this.triggerUpgradeReady();
             }
         }
@@ -1918,7 +1927,6 @@ export class GameEngine {
 
         this.ctx.restore();
 
-        // FIX: Display the minimap based on the new settings toggle!
         const brUi = document.getElementById('br-ui');
         if (brUi && !brUi.classList.contains('hidden')) {
             const minimapContainer = document.getElementById('minimap-container');
@@ -1996,7 +2004,7 @@ export class GameEngine {
             ctx.strokeRect(cx, cy, viewW, viewH);
         }
 
-        // FIX: The "ALIVE: #" count only shows if you are playing multiplayer!
+        // FIX: The "ALIVE: #" count ONLY shows if you are playing multiplayer!
         const countDisplay = document.getElementById('player-count-display');
         if (countDisplay) {
             let isMultiplayer = this.lobbyCode || this.isHost;

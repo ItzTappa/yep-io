@@ -68,7 +68,7 @@ export class Entity {
         if (type === 'circle') {
             this.speed = 6.0; 
             this.size = 20; 
-            this.maxHealth = 130;
+            this.maxHealth = 260; // Doubled base health
             this.fireRate = 22; 
             this.baseDamage = 15; 
             this.dashMaxCooldown = 100; 
@@ -76,7 +76,7 @@ export class Entity {
         } else if (type === 'square') {
             this.speed = 4.2; 
             this.size = 28; 
-            this.maxHealth = 250; 
+            this.maxHealth = 500; // Doubled base health
             this.fireRate = 55; 
             this.baseDamage = 35; 
             this.dashMaxCooldown = 150; 
@@ -84,7 +84,7 @@ export class Entity {
         } else if (type === 'triangle') {
             this.speed = 9.0; 
             this.size = 20; 
-            this.maxHealth = 85; 
+            this.maxHealth = 170; // Doubled base health
             this.fireRate = 14; 
             this.baseDamage = 7; 
             this.dashMaxCooldown = 75; 
@@ -1209,12 +1209,11 @@ export class Entity {
             ctx.restore();
         }
         
-        // FIX: The arrow ALWAYS shows for the player now, unconditionally!
         if (this.isPlayer) {
             ctx.save(); 
             ctx.translate(this.x, this.y); 
             ctx.rotate(this.angle);
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'; // Bright so it's super visible!
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'; 
             ctx.beginPath();
             let arrowOffset = (this.type === 'square' ? this.size / 2 : this.size) + armorOffset + 6; 
             ctx.moveTo(arrowOffset, -5);
@@ -1258,6 +1257,7 @@ export class Entity {
                 
                 ctx.closePath(); 
                 ctx.fill(); 
+                
                 ctx.fillStyle = '#111'; 
                 ctx.shadowBlur = 0; 
                 ctx.beginPath(); 
@@ -1333,20 +1333,6 @@ export class Entity {
     }
 }
 
-export class Player extends Entity {
-    constructor(x, y, type, name = "") {
-        super(x, y, type); 
-        this.name = name; 
-        this.isPlayer = true; 
-        this.equipped = window.equippedItems || { Skin: null, Trail: null, Banner: null, Color: null };
-        if (this.equipped.Color && ITEMS_DB && ITEMS_DB[this.equipped.Color]) {
-            this.color = ITEMS_DB[this.equipped.Color].value; 
-        } else { 
-            this.color = '#d3d3d3'; 
-        }
-    }
-}
-
 export class Bot extends Entity {
     constructor(x, y, type, startingPoints = 0) {
         super(x, y, type); 
@@ -1368,7 +1354,7 @@ export class Bot extends Entity {
         while (this.upgradeProgress >= this.botPointsToNextUpgrade) {
             this.upgradeProgress -= this.botPointsToNextUpgrade;
             this.upgradeCount++; 
-            this.botPointsToNextUpgrade = Math.floor(this.botPointsToNextUpgrade * 1.25) + 15;
+            this.botPointsToNextUpgrade = Math.floor(20 + (this.upgradeCount * 15) + (Math.pow(this.upgradeCount, 1.8) * 2));
             let choices = getWeightedUpgrades(this, 1); 
             if (choices.length > 0) {
                 this.applyUpgrade(choices[0].id);
@@ -1416,7 +1402,6 @@ export class Bot extends Entity {
             } 
         });
 
-        // DYNAMIC RUBBER-BANDING (Decay logic)
         if (this.points > targetScore * 1.5) {
             this.points -= (this.points - targetScore) * 0.05;
             this.upgradeProgress = this.points; 
@@ -1432,7 +1417,7 @@ export class Bot extends Entity {
         while (this.upgradeProgress >= this.botPointsToNextUpgrade) {
             this.upgradeProgress -= this.botPointsToNextUpgrade; 
             this.upgradeCount++; 
-            this.botPointsToNextUpgrade = Math.floor(this.botPointsToNextUpgrade * 1.25) + 15;
+            this.botPointsToNextUpgrade = Math.floor(20 + (this.upgradeCount * 15) + (Math.pow(this.upgradeCount, 1.8) * 2));
             let choices = getWeightedUpgrades(this, 1); 
             if (choices.length > 0) {
                 this.applyUpgrade(choices[0].id);
