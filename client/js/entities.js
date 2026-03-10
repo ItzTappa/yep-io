@@ -68,7 +68,7 @@ export class Entity {
         if (type === 'circle') {
             this.speed = 6.0; 
             this.size = 20; 
-            this.maxHealth = 260; // Doubled base health
+            this.maxHealth = 260; 
             this.fireRate = 22; 
             this.baseDamage = 15; 
             this.dashMaxCooldown = 100; 
@@ -76,7 +76,7 @@ export class Entity {
         } else if (type === 'square') {
             this.speed = 4.2; 
             this.size = 28; 
-            this.maxHealth = 500; // Doubled base health
+            this.maxHealth = 500; 
             this.fireRate = 55; 
             this.baseDamage = 35; 
             this.dashMaxCooldown = 150; 
@@ -84,7 +84,7 @@ export class Entity {
         } else if (type === 'triangle') {
             this.speed = 9.0; 
             this.size = 20; 
-            this.maxHealth = 170; // Doubled base health
+            this.maxHealth = 170; 
             this.fireRate = 14; 
             this.baseDamage = 7; 
             this.dashMaxCooldown = 75; 
@@ -287,7 +287,6 @@ export class Entity {
             let armorOffset = this.bodyVisual === 'armor' ? (4 + armorTier + (4 + armorTier * 1.5) / 2) : 0;
             
             let backOffset = this.type === 'circle' ? -this.size : -this.size / 2;
-            
             if (this.bodyVisual === 'armor') {
                 backOffset -= armorOffset;
             }
@@ -634,7 +633,6 @@ export class Entity {
             ctx.restore();
         }
 
-        // --- DRAW BASE SHAPE ---
         ctx.save(); 
         ctx.translate(this.x, this.y); 
         ctx.rotate(this.angle);
@@ -674,7 +672,6 @@ export class Entity {
         }
         ctx.restore();
         
-        // --- DRAW UNIQUE SKINS ---
         if (this.equipped.Skin && ITEMS_DB && ITEMS_DB[this.equipped.Skin]) {
             const skinType = ITEMS_DB[this.equipped.Skin].value;
             ctx.save(); 
