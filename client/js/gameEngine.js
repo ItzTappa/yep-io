@@ -61,7 +61,6 @@ export class GameEngine {
         this.pointsToNextUpgrade = 10; 
         
         this.leftTouch = { id: null, originX: 0, originY: 0, x: 0, y: 0, active: false };
-        this.rightTouch = { id: null, originX: 0, originY: 0, x: 0, y: 0, active: false };
 
         this.initInput();
     }
@@ -95,12 +94,11 @@ export class GameEngine {
         });
 
         const leftZone = document.getElementById('joystick-left');
-        const rightZone = document.getElementById('joystick-right');
         const leftBase = document.getElementById('base-left');
         const leftStick = document.getElementById('stick-left');
-        const rightBase = document.getElementById('base-right');
-        const rightStick = document.getElementById('stick-right');
         const dashBtn = document.getElementById('mobile-dash-btn');
+
+        this.aimTouchId = null;
 
         if (leftZone) {
             leftZone.addEventListener('touchstart', (e) => {
@@ -116,8 +114,10 @@ export class GameEngine {
                         this.leftTouch.x = t.clientX;
                         this.leftTouch.y = t.clientY;
                         
+                        leftBase.style.bottom = 'auto'; 
                         leftBase.style.left = t.clientX + 'px';
                         leftBase.style.top = t.clientY + 'px';
+                        leftBase.style.transform = 'translate(-50%, -50%)';
                         leftBase.classList.add('active');
                         leftStick.style.transform = `translate(-50%, -50%)`;
                     }
@@ -149,6 +149,12 @@ export class GameEngine {
                     if (this.leftTouch.active && t.identifier === this.leftTouch.id) {
                         this.leftTouch.active = false;
                         leftBase.classList.remove('active'); 
+                        
+                        leftBase.style.top = 'auto';
+                        leftBase.style.bottom = '40px';
+                        leftBase.style.left = '40px';
+                        leftBase.style.transform = 'none';
+                        leftStick.style.transform = `translate(-50%, -50%)`;
                     }
                 }
             };
@@ -156,59 +162,39 @@ export class GameEngine {
             leftZone.addEventListener('touchcancel', endLeft);
         }
 
-        if (rightZone) {
-            rightZone.addEventListener('touchstart', (e) => {
-                if (this.isDemo || this.isGameOver) return; 
-                e.preventDefault();
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    const t = e.changedTouches[i];
-                    if (!this.rightTouch.active) {
-                        this.rightTouch.active = true;
-                        this.rightTouch.id = t.identifier;
-                        this.rightTouch.originX = t.clientX;
-                        this.rightTouch.originY = t.clientY;
-                        this.rightTouch.x = t.clientX;
-                        this.rightTouch.y = t.clientY;
-                        
-                        rightBase.style.left = t.clientX + 'px';
-                        rightBase.style.top = t.clientY + 'px';
-                        rightBase.classList.add('active');
-                        rightStick.style.transform = `translate(-50%, -50%)`;
-                    }
+        window.addEventListener('touchstart', (e) => {
+            if (this.isDemo || this.isGameOver) return;
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const t = e.changedTouches[i];
+                if ((!this.leftTouch.active || t.identifier !== this.leftTouch.id) && 
+                    e.target.id !== 'mobile-dash-btn' && 
+                    !e.target.closest('#joystick-left')) {
+                    
+                    this.aimTouchId = t.identifier;
+                    this.mouseX = t.clientX;
+                    this.mouseY = t.clientY;
                 }
-            }, {passive: false});
+            }
+        }, {passive: false});
 
-            rightZone.addEventListener('touchmove', (e) => {
-                if (this.isDemo || this.isGameOver) return; 
-                e.preventDefault();
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    const t = e.changedTouches[i];
-                    if (this.rightTouch.active && t.identifier === this.rightTouch.id) {
-                        this.rightTouch.x = t.clientX;
-                        this.rightTouch.y = t.clientY;
-                        
-                        let dx = t.clientX - this.rightTouch.originX;
-                        let dy = t.clientY - this.rightTouch.originY;
-                        let dist = Math.hypot(dx, dy);
-                        let maxDist = 40;
-                        if (dist > maxDist) { dx = (dx/dist) * maxDist; dy = (dy/dist) * maxDist; }
-                        rightStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-                    }
+        window.addEventListener('touchmove', (e) => {
+            if (this.isDemo || this.isGameOver) return;
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const t = e.changedTouches[i];
+                if (t.identifier === this.aimTouchId) {
+                    this.mouseX = t.clientX;
+                    this.mouseY = t.clientY;
                 }
-            }, {passive: false});
+            }
+        }, {passive: false});
 
-            const endRight = (e) => {
-                for (let i = 0; i < e.changedTouches.length; i++) {
-                    const t = e.changedTouches[i];
-                    if (this.rightTouch.active && t.identifier === this.rightTouch.id) {
-                        this.rightTouch.active = false;
-                        rightBase.classList.remove('active'); 
-                    }
+        window.addEventListener('touchend', (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === this.aimTouchId) {
+                    this.aimTouchId = null;
                 }
-            };
-            rightZone.addEventListener('touchend', endRight);
-            rightZone.addEventListener('touchcancel', endRight);
-        }
+            }
+        });
 
         if (dashBtn) {
             dashBtn.addEventListener('touchstart', (e) => {
@@ -324,7 +310,11 @@ export class GameEngine {
         if (this.animationId) cancelAnimationFrame(this.animationId);
         
         const mobileControls = document.getElementById('mobile-controls');
-        if (mobileControls) mobileControls.classList.remove('hidden');
+        if (mobileControls && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
+            mobileControls.classList.remove('hidden');
+        } else if (mobileControls) {
+            mobileControls.classList.add('hidden');
+        }
         const brUi = document.getElementById('br-ui');
         if (brUi) brUi.classList.add('hidden');
         
@@ -365,12 +355,15 @@ export class GameEngine {
         this.lastTime = performance.now(); this.lastFpsTime = performance.now(); this.framesThisSecond = 0;
         this.loop(this.lastTime);
     }
-startMultiplayer(players, lobbyCode, isHost) {
+    startMultiplayer(players, lobbyCode, isHost) {
         if (this.animationId) cancelAnimationFrame(this.animationId);
         
-        // SHOW MOBILE CONTROLS FOR MULTIPLAYER
         const mobileControls = document.getElementById('mobile-controls');
-        if (mobileControls) mobileControls.classList.remove('hidden');
+        if (mobileControls && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
+            mobileControls.classList.remove('hidden');
+        } else if (mobileControls) {
+            mobileControls.classList.add('hidden');
+        }
         
         this.lobbyCode = lobbyCode; 
         this.isHost = isHost || false;
@@ -391,7 +384,6 @@ startMultiplayer(players, lobbyCode, isHost) {
         document.getElementById('game-ui').classList.remove('hidden');
         document.querySelector('.hud').classList.remove('hidden');
         
-        // SHOW MINIMAP FOR MULTIPLAYER
         const brUi = document.getElementById('br-ui');
         if (brUi) brUi.classList.remove('hidden'); 
 
@@ -765,7 +757,6 @@ startMultiplayer(players, lobbyCode, isHost) {
         this.spectateTarget = killer;
         document.getElementById('upgrade-ui').classList.add('hidden'); 
 
-        // HIDE JOYSTICKS ON DEATH SCREEN
         const mobileControls = document.getElementById('mobile-controls');
         if (mobileControls) {
             mobileControls.classList.add('hidden');
@@ -779,7 +770,6 @@ startMultiplayer(players, lobbyCode, isHost) {
         const rank = allPlayers.indexOf(this.player) + 1;
         const totalPlayers = allPlayers.length;
 
-        // FIX: PLACEMENT TEXT FORMATTING
         let suffix = "th";
         if (rank % 10 === 1 && rank % 100 !== 11) suffix = "st";
         else if (rank % 10 === 2 && rank % 100 !== 12) suffix = "nd";
@@ -894,18 +884,7 @@ startMultiplayer(players, lobbyCode, isHost) {
                     this.player.vy += (dy / length) * (this.player.speed * 0.2);
                 }
 
-                // Mobile Aiming (Right Joystick or Mouse) with Lower Sensitivity Deadzone
-                if (this.rightTouch && this.rightTouch.active) {
-                    let adx = this.rightTouch.x - this.rightTouch.originX;
-                    let ady = this.rightTouch.y - this.rightTouch.originY;
-                    
-                    // Added a larger deadzone (15) so aim isn't twitchy
-                    if (Math.hypot(adx, ady) > 15) {
-                        this.player.angle = Math.atan2(ady, adx);
-                    }
-                } else {
-                    this.player.angle = Math.atan2(this.mouseY - this.height / 2, this.mouseX - this.width / 2);
-                }
+                this.player.angle = Math.atan2(this.mouseY - this.height / 2, this.mouseX - this.width / 2);
 
             } else {
                 this.player.angle = -Math.PI / 2;
