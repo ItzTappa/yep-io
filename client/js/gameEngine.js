@@ -65,6 +65,7 @@ export class GameEngine {
         this.aimTouchId = null;
         this.aimOriginX = 0;
         this.aimOriginY = 0;
+        this.isAimDragging = false; 
 
         this.initInput();
     }
@@ -196,6 +197,7 @@ export class GameEngine {
                     this.usingTouchAim = true;
                     this.aimOriginX = t.clientX;
                     this.aimOriginY = t.clientY;
+                    this.isAimDragging = false; 
                 }
             }
         }, {passive: false});
@@ -208,7 +210,11 @@ export class GameEngine {
                     let dx = t.clientX - this.aimOriginX;
                     let dy = t.clientY - this.aimOriginY;
                     
-                    if (Math.hypot(dx, dy) > 10) { 
+                    if (!this.isAimDragging && Math.hypot(dx, dy) > 15) { 
+                        this.isAimDragging = true;
+                    }
+
+                    if (this.isAimDragging) {
                         this.player.angle = Math.atan2(dy, dx);
                     }
                 }
@@ -220,6 +226,7 @@ export class GameEngine {
                 if (e.changedTouches[i].identifier === this.aimTouchId) {
                     this.aimTouchId = null;
                     this.usingTouchAim = false;
+                    this.isAimDragging = false;
                 }
             }
         });
@@ -383,6 +390,7 @@ export class GameEngine {
         this.lastTime = performance.now(); this.lastFpsTime = performance.now(); this.framesThisSecond = 0;
         this.loop(this.lastTime);
     }
+
     startMultiplayer(players, lobbyCode, isHost) {
         if (this.animationId) cancelAnimationFrame(this.animationId);
         
