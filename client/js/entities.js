@@ -83,7 +83,6 @@ export class Entity {
         this.heavyArt = 0; this.plating = 0; this.vampirism = 0;
         this.magnet = 0; this.rearguard = 0; this.efficiency = 0; this.shrapnel = 0;
         
-        // VISUAL UPGRADE TRACKERS
         this.frontVisual = null;
         this.bodyVisual = null;
         this.rearVisual = null;
@@ -93,7 +92,6 @@ export class Entity {
     applyUpgrade(upgradeId) {
         if (this.upgrades[upgradeId] >= this.maxUpgradeTier) return; 
         
-        // Permanently sets physical visuals. The first picked in that slot stays forever.
         if (upgradeId === 'spikes' && !this.frontVisual) this.frontVisual = 'spikes';
         if ((upgradeId === 'fireRate' || upgradeId === 'multiShot' || upgradeId === 'damage') && !this.frontVisual) this.frontVisual = 'gun';
         if ((upgradeId === 'maxHealth' || upgradeId === 'plating') && !this.bodyVisual) this.bodyVisual = 'armor';

@@ -50,7 +50,7 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .class-btn { padding: 10px 20px; background: var(--panel-bg); border: 2px solid transparent; color: white; cursor: pointer; font-weight: bold; border-radius: 5px; }
 .class-btn.active { border-color: var(--accent); background: rgba(255, 230, 0, 0.2); }
 
-#class-info { font-size: 1.1rem; font-weight: bold; margin-top: 20px; margin-bottom: 10px; height: 25px; transition: opacity 0.5s ease-in-out; letter-spacing: 1px; text-shadow: 1px 1px 2px black; text-align: center; }
+#class-info { position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%); width: 100%; pointer-events: none; font-size: 1.2rem; font-weight: bold; transition: opacity 0.5s ease-in-out; letter-spacing: 1px; text-shadow: 1px 1px 2px black; text-align: center; }
 #class-info.fade-out { opacity: 0; pointer-events: none; }
 
 #play-btn { padding: 15px 50px; font-size: 1.5rem; font-weight: bold; background: var(--accent); color: black; border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 0 15px var(--accent); transition: transform 0.1s; }
@@ -113,6 +113,7 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 #leaderboard-list { list-style: none; font-size: 0.9rem; }
 #leaderboard-list li { display: flex; justify-content: space-between; margin-bottom: 5px; }
 
+/* NOTIFICATIONS SLIDING IN FROM LEFT BOTTOM CORNER */
 #level-up-notif, #account-level-notif { position: absolute; left: -400px; padding: 15px 30px; border-radius: 0 12px 12px 0; font-weight: bold; transition: left 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none; z-index: 100; text-align: left; }
 #level-up-notif { bottom: 30px; background: linear-gradient(90deg, rgba(0,255,204,0.9), rgba(0,0,0,0.7)); border-left: 6px solid #00ffcc; box-shadow: 0 0 20px rgba(0,255,204,0.4); }
 #account-level-notif { bottom: 100px; background: linear-gradient(90deg, rgba(255,230,0,0.9), rgba(0,0,0,0.8)); border-left: 6px solid var(--accent); box-shadow: 0 0 20px rgba(255,230,0,0.5); }
@@ -256,7 +257,8 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 @media (max-width: 768px) {
     h1 { font-size: 3rem; }
     .class-selection { flex-direction: column; align-items: center; margin-bottom: 5px; }
-    #class-info { font-size: 0.8rem; height: 15px; margin-bottom: 15px; margin-top: 15px; }
+    
+    #class-info { position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); width: 100%; font-size: 0.9rem; }
     
     .mode-cards { flex-direction: column; gap: 10px; margin: 20px 0; }
     .mode-card { width: 150px; padding: 20px; }

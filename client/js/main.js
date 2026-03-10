@@ -1,11 +1,11 @@
 import { GameEngine } from './gameEngine.js';
 import { Player } from './entities.js';
 import { ITEMS_DB, RARITY_COLORS } from './items.js';
-import { UPGRADE_POOL } from './upgrades.js';
+import { UPGRADE_POOL } from './upgrades.js'; 
 import { sounds } from './soundManager.js';
 import { lobbyUI } from './networkLobby.js';
 
-let selectedClass = null;
+let selectedClass = null; 
 
 window.globalAccountXP = 0;
 window.globalAccountLevel = 1;
@@ -129,7 +129,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
             if (info) {
                 info.innerText = "PLEASE SELECT A CLASS FIRST!";
                 info.style.color = "red";
-                info.classList.remove('fade-out');
+                info.classList.remove('fade-out', 'hidden');
                 if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
                 window.classInfoTimeout = setTimeout(() => info.classList.add('fade-out'), 2000);
             }
@@ -165,7 +165,7 @@ document.querySelectorAll('.class-btn').forEach(btn => {
             if (selectedClass === 'circle') info.innerText = "SOLDIER: Balanced speed and health. The perfect all-rounder.";
             
             info.style.color = "var(--accent)";
-            info.classList.remove('fade-out');
+            info.classList.remove('hidden', 'fade-out');
             
             if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
             window.classInfoTimeout = setTimeout(() => {
@@ -231,7 +231,7 @@ document.getElementById('play-btn').addEventListener('click', () => {
         if (info) {
             info.innerText = "PLEASE SELECT A CLASS FIRST!";
             info.style.color = "red";
-            info.classList.remove('fade-out');
+            info.classList.remove('fade-out', 'hidden');
             if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
             window.classInfoTimeout = setTimeout(() => info.classList.add('fade-out'), 2000);
         }
@@ -376,9 +376,9 @@ function renderStats() {
                     let title = def ? def.title.toUpperCase() : key.toUpperCase();
                     
                     upgradesHtml += `
-                        <div class="upgrade-badge ${tClass}" style="height: 24px; font-size: 0.7rem;">
-                            <div class="badge-name">${title}</div>
-                            <div class="badge-tier">T${tier}</div>
+                        <div class="upgrade-badge ${tClass}" style="position: relative; top: auto; left: auto; display: flex; height: 24px; box-shadow: none;">
+                            <div class="badge-name" style="font-size: 0.65rem; padding: 0 8px;">${title}</div>
+                            <div class="badge-tier" style="font-size: 0.75rem; padding: 0 6px;">T${tier}</div>
                         </div>`;
                 }
             }
