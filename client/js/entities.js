@@ -338,6 +338,8 @@ export class Entity {
     }
 
     draw(ctx) {
+        if (!ctx || !window.gameSettings) return;
+
         this.trail.forEach(t => {
             if (t.type === 'fire') {
                 ctx.save(); 
@@ -1292,6 +1294,20 @@ export class Entity {
                     ctx.fillRect(this.x - 20, this.y + this.size + 28 + armorOffset, Math.min(40 * aPct, 38), 3);
                 }
             }
+        }
+    }
+}
+
+export class Player extends Entity {
+    constructor(x, y, type, name = "") {
+        super(x, y, type); 
+        this.name = name; 
+        this.isPlayer = true; 
+        this.equipped = window.equippedItems || { Skin: null, Trail: null, Banner: null, Color: null };
+        if (this.equipped.Color && ITEMS_DB && ITEMS_DB[this.equipped.Color]) {
+            this.color = ITEMS_DB[this.equipped.Color].value; 
+        } else { 
+            this.color = '#d3d3d3'; 
         }
     }
 }

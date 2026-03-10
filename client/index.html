@@ -35,30 +35,19 @@
         </div>
 
         <div id="multiplayer" class="tab-content">
-            <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
-                <h2 style="color: var(--accent); margin-bottom: 20px; font-size: 2rem;">SELECT MODE</h2>
+            <div class="multiplayer-container">
+                <h2>SELECT MODE</h2>
                 <div class="mode-cards">
-                    <div class="mode-card" data-mode="duos">
-                        <h3>DUOS</h3>
-                        <p>2 Players</p>
-                    </div>
-                    <div class="mode-card" data-mode="trios">
-                        <h3>TRIOS</h3>
-                        <p>3 Players</p>
-                    </div>
-                    <div class="mode-card" data-mode="squads">
-                        <h3>SQUADS</h3>
-                        <p>4 Players</p>
-                    </div>
+                    <div class="mode-card" data-mode="duos"><h3>DUOS</h3><p>2 Players</p></div>
+                    <div class="mode-card" data-mode="trios"><h3>TRIOS</h3><p>3 Players</p></div>
+                    <div class="mode-card" data-mode="squads"><h3>SQUADS</h3><p>4 Players</p></div>
                 </div>
             </div>
         </div>
         
         <div id="stats" class="tab-content">
             <div class="store-container">
-                <div class="store-header">
-                    <h2>CAREER STATS</h2>
-                </div>
+                <div class="store-header"><h2>CAREER STATS</h2></div>
                 <div class="lifetime-stats-grid">
                     <div class="stat-box"><div>ACCOUNT LEVEL</div><div id="stat-account-level" class="stat-val">1</div></div>
                     <div class="stat-box"><div>MATCHES</div><div id="stat-matches" class="stat-val">0</div></div>
@@ -67,44 +56,32 @@
                     <div class="stat-box"><div>TIME ALIVE</div><div id="stat-time" class="stat-val">0m 0s</div></div>
                 </div>
                 
-                <div class="store-header" style="margin-top: 20px;">
-                    <h2>MATCH HISTORY</h2>
-                </div>
-
+                <div class="store-header" style="margin-top: 20px;"><h2>MATCH HISTORY</h2></div>
                 <div class="match-history-header">
-                    <div>RANK</div>
-                    <div>CLASS</div>
-                    <div>KILLS</div>
-                    <div>POINTS</div>
-                    <div>TIME ALIVE</div>
+                    <div>RANK</div><div>CLASS</div><div>KILLS</div><div>POINTS</div><div>TIME ALIVE</div>
                 </div>
-
                 <div id="match-history-list" class="match-history-list">
-                    <p style="color: #aaa; text-align: center; padding: 20px; grid-column: span 5;">Play a match to see your history!</p>
+                    <p class="empty-history">Play a match to see your history!</p>
                 </div>
             </div>
         </div>
         
         <div id="locker" class="tab-content">
-            <div class="store-container" style="max-width: 1100px;">
-                <div class="store-header">
-                    <h2>YOUR LOCKER</h2>
-                </div>
-                <p class="store-desc" style="text-align: left; margin-bottom: 20px; width: 100%;">Equip your claimed cosmetics to use them in the arena.</p>
+            <div class="store-container locker-container">
+                <div class="store-header"><h2>YOUR LOCKER</h2></div>
+                <p class="store-desc locker-desc">Equip your claimed cosmetics to use them in the arena.</p>
                 
                 <div class="locker-layout">
                     <div class="locker-left">
                         <div id="locker-slots-view" class="locker-slots-grid"></div>
-
                         <div id="locker-items-view" class="hidden">
                             <div class="locker-items-header">
                                 <button id="locker-back-btn">◀ BACK</button>
                                 <h3 id="locker-category-title">CHOOSE ITEM</h3>
                             </div>
-                            <div class="store-grid" id="locker-item-grid" style="justify-content: flex-start;"></div>
+                            <div class="store-grid" id="locker-item-grid"></div>
                         </div>
                     </div>
-
                     <div class="locker-preview-box">
                         <canvas id="lockerPreviewCanvas" width="300" height="300"></canvas>
                     </div>
@@ -114,13 +91,9 @@
         
         <div id="season" class="tab-content">
             <div class="store-container">
-                <div class="store-header">
-                    <h2>SEASON 1: GENESIS</h2>
-                </div>
-                <div class="season-progress">
-                    <div id="season-progress-bar"></div>
-                </div>
-                <p class="store-desc" style="text-align: center; margin-bottom: 20px;">Level up your account to unlock free permanent rewards. (Click icon to preview)</p>
+                <div class="store-header"><h2>SEASON 1: GENESIS</h2></div>
+                <div class="season-progress"><div id="season-progress-bar"></div></div>
+                <p class="store-desc text-center">Level up your account to unlock free permanent rewards. (Click icon to preview)</p>
                 <div class="store-grid" id="season-grid"></div>
             </div>
         </div>
@@ -131,7 +104,7 @@
                     <h2>HOURLY ROTATION</h2>
                     <div class="store-timer">Rotates in: <span id="shop-timer">59:59</span></div>
                 </div>
-                <p class="store-desc" style="text-align: center; margin-bottom: 20px;">Reach the required stats before the hour ends to unlock these! (Click icon to preview)</p>
+                <p class="store-desc text-center">Reach the required stats before the hour ends to unlock these! (Click icon to preview)</p>
                 <div class="store-grid" id="main-store-grid"></div>
             </div>
         </div>
@@ -139,25 +112,21 @@
         <div class="menu-footer">
             <div class="player-level-ui">
                 <div>Season Level: <span id="menu-level">1</span></div>
-                <div class="menu-xp-bar-container">
-                    <div id="menu-xp-bar"></div>
-                </div>
+                <div class="menu-xp-bar-container"><div id="menu-xp-bar"></div></div>
             </div>
             <button id="settings-btn">⚙️</button>
         </div>
     </div>
 
-    <div id="item-preview-screen" class="hidden" style="position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 400; pointer-events: auto;">
+    <div id="item-preview-screen" class="hidden">
         <div class="preview-text-container">
             <h2 id="preview-screen-title">PREVIEW</h2>
             <div id="preview-screen-category">SKIN</div>
         </div>
-        
         <div class="fullscreen-preview-box">
             <canvas id="fullscreenPreviewCanvas" width="350" height="350"></canvas>
         </div>
-        
-        <button id="close-preview-btn" class="footer-btn dark-btn-outline" style="width: 250px;">BACK TO SHOP</button>
+        <button id="close-preview-btn" class="footer-btn dark-btn-outline">BACK TO SHOP</button>
     </div>
 
     <div id="settings-modal" class="hidden">
@@ -165,11 +134,15 @@
             <h2>SETTINGS</h2>
             
             <div class="setting-row">
-                <label for="set-hq">High Quality Graphics (Glow)</label>
+                <label for="set-volume">Master Volume</label>
+                <input type="range" id="set-volume" min="0" max="100" value="100" class="slider">
+            </div>
+            <div class="setting-row">
+                <label for="set-hq">High Quality Graphics</label>
                 <input type="checkbox" id="set-hq" checked>
             </div>
             <div class="setting-row">
-                <label for="set-particles">Enable Particle Effects</label>
+                <label for="set-particles">Particle Effects</label>
                 <input type="checkbox" id="set-particles" checked>
             </div>
             <div class="setting-row">
@@ -177,37 +150,31 @@
                 <input type="checkbox" id="set-names" checked>
             </div>
             <div class="setting-row">
+                <label for="set-leaderboard">Show Leaderboard</label>
+                <input type="checkbox" id="set-leaderboard" checked>
+            </div>
+            <div class="setting-row">
+                <label for="set-badges">Show Upgrade Badges</label>
+                <input type="checkbox" id="set-badges" checked>
+            </div>
+            <div class="setting-row">
+                <label for="set-notifs">Show Notifications</label>
+                <input type="checkbox" id="set-notifs" checked>
+            </div>
+            <div class="setting-row">
                 <label for="set-fps">Show FPS Counter</label>
                 <input type="checkbox" id="set-fps">
             </div>
 
-            <hr style="border-color: #444; margin: 20px 0;">
-            <h3 style="color: var(--accent); margin-bottom: 15px; text-align: center;">CONTROLS</h3>
+            <hr class="settings-divider">
+            <h3 class="controls-title">CONTROLS</h3>
             
-            <div class="setting-row">
-                <label>Move Up</label>
-                <button class="keybind-btn" data-action="up">W</button>
-            </div>
-            <div class="setting-row">
-                <label>Move Down</label>
-                <button class="keybind-btn" data-action="down">S</button>
-            </div>
-            <div class="setting-row">
-                <label>Move Left</label>
-                <button class="keybind-btn" data-action="left">A</button>
-            </div>
-            <div class="setting-row">
-                <label>Move Right</label>
-                <button class="keybind-btn" data-action="right">D</button>
-            </div>
-            <div class="setting-row">
-                <label>Dash</label>
-                <button class="keybind-btn" data-action="dash">SPACE</button>
-            </div>
-            <div class="setting-row">
-                <label>Use Ability</label>
-                <button class="keybind-btn" data-action="ability" style="color: #ff00ff; border-color: #ff00ff;">E</button>
-            </div>
+            <div class="setting-row"><label>Move Up</label><button class="keybind-btn" data-action="up">W</button></div>
+            <div class="setting-row"><label>Move Down</label><button class="keybind-btn" data-action="down">S</button></div>
+            <div class="setting-row"><label>Move Left</label><button class="keybind-btn" data-action="left">A</button></div>
+            <div class="setting-row"><label>Move Right</label><button class="keybind-btn" data-action="right">D</button></div>
+            <div class="setting-row"><label>Dash</label><button class="keybind-btn" data-action="dash">SPACE</button></div>
+            <div class="setting-row"><label>Use Ability</label><button class="keybind-btn ability-bind" data-action="ability">E</button></div>
 
             <button id="close-settings-btn">APPLY & CLOSE</button>
         </div>
@@ -216,35 +183,32 @@
     <div id="game-ui" class="hidden">
         <div class="hud">
             <div id="fps-display" class="hidden">60 FPS</div>
-            
             <div id="upgrade-badges" class="upgrade-badges-container"></div>
-            
             <div class="xp-bar-container">
                 <div id="xp-bar"></div>
                 <span id="level-display">0 PTS</span>
             </div>
-            <div class="leaderboard">
+            <div id="leaderboard-container" class="leaderboard">
                 <h3>Leaderboard</h3>
                 <ul id="leaderboard-list"></ul>
             </div>
         </div>
 
-        <div id="level-up-notif">
+        <div id="level-up-notif" class="notif-box notif-upgrade">
             <div class="notif-text">BAR FILLED!</div>
             <div class="notif-level">UPGRADE READY</div>
         </div>
-        
-        <div id="account-level-notif">
-            <div class="notif-text" style="color: #333; text-shadow: none;">SEASON LEVEL UP!</div>
-            <div class="notif-level" style="color: #000; text-shadow: none;">REACHED LEVEL <span id="account-notif-level-num">2</span></div>
+        <div id="account-level-notif" class="notif-box notif-season">
+            <div class="notif-text black-text">SEASON LEVEL UP!</div>
+            <div class="notif-level black-text">REACHED LEVEL <span id="account-notif-level-num">2</span></div>
         </div>
 
         <div id="upgrade-ui" class="hidden">
             <div class="upgrade-header">CHOOSE UPGRADE</div>
             <div class="upgrade-cards">
-                <div class="card" id="card-1"><div class="card-key">1</div><div class="card-title" id="title-1">Speed</div><div class="card-desc" id="desc-1"></div></div>
-                <div class="card" id="card-2"><div class="card-key">2</div><div class="card-title" id="title-2">Damage</div><div class="card-desc" id="desc-2"></div></div>
-                <div class="card" id="card-3"><div class="card-key">3</div><div class="card-title" id="title-3">Fire Rate</div><div class="card-desc" id="desc-3"></div></div>
+                <div class="card" id="card-1"><div class="card-key">1</div><div class="card-title" id="title-1"></div><div class="card-desc" id="desc-1"></div></div>
+                <div class="card" id="card-2"><div class="card-key">2</div><div class="card-title" id="title-2"></div><div class="card-desc" id="desc-2"></div></div>
+                <div class="card" id="card-3"><div class="card-key">3</div><div class="card-title" id="title-3"></div><div class="card-desc" id="desc-3"></div></div>
             </div>
         </div>
 
@@ -258,35 +222,33 @@
 
         <div id="game-over-screen" class="hidden">
             <h2>MATCH OVER</h2>
-            <div class="killed-by">SPECTATING: <span id="go-killer-name" style="color: #ffe600;">UNKNOWN</span></div>
+            <div class="killed-by">SPECTATING: <span id="go-killer-name" class="accent-text">UNKNOWN</span></div>
             <div class="stats-grid">
-                <div id="go-placement-container">Placed <span id="go-placement" style="color: #00ffcc;">1st</span></div>
+                <div id="go-placement-container">Placed <span id="go-placement" class="cyan-text">1st</span></div>
                 <div>Points: <span id="go-points">0</span></div>
                 <div>Kills: <span id="go-kills">0</span></div>
                 <div>Time Alive: <span id="go-time">0s</span></div>
             </div>
-            <div id="go-xp-container" class="xp-gained">Season Level XP Earned: <span id="go-xp" style="color: #ffe600;">+0</span></div>
+            <div id="go-xp-container" class="xp-gained">Season Level XP Earned: <span id="go-xp" class="accent-text">+0</span></div>
             <button id="return-lobby-btn">Return to Lobby</button>
         </div>
     </div>
 
     <div id="dev-console" class="hidden">
         <div id="dev-log">
-            <div style="color: #aaa;">Developer Console Started. Press ` to close. Type /help for commands.</div>
+            <div class="dev-startup">Developer Console Started. Press ` or / to close. Type /help for commands.</div>
         </div>
         <input type="text" id="dev-input" placeholder="Enter command (e.g., /level 50)" autocomplete="off">
     </div>
 
     <div id="lobby-screen" class="hidden full-screen-overlay">
         <div class="lobby-header">
-            <h2 style="font-size: 2.5rem; color: var(--accent); margin-bottom: 40px; letter-spacing: 3px;">MULTIPLAYER LOBBY</h2>
-            
+            <h2 class="lobby-title">MULTIPLAYER LOBBY</h2>
             <div class="lobby-header-controls">
                 <div class="control-box">
                     <div class="code-label">CODE: <span id="lobby-code-display">-----</span></div>
                     <button id="copy-code-btn" class="control-btn dark-btn">COPY</button>
                 </div>
-                
                 <div class="control-box">
                     <input type="text" id="join-code-input" placeholder="ENTER CODE" maxlength="5">
                     <button id="join-lobby-btn" class="control-btn yellow-btn">JOIN</button>
@@ -303,12 +265,9 @@
     </div>
 
     <div id="black-fade-overlay"></div>
-
     <div id="mobile-controls" class="hidden">
         <div id="joystick-left" class="joystick-zone">
-            <div class="joystick-base" id="base-left">
-                <div class="joystick-stick" id="stick-left"></div>
-            </div>
+            <div class="joystick-base" id="base-left"><div class="joystick-stick" id="stick-left"></div></div>
         </div>
         <button id="mobile-dash-btn">DASH</button>
         <button id="mobile-ability-btn">ABILITY</button>
