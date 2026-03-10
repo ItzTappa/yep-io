@@ -390,8 +390,6 @@ export class GameEngine {
             this.bots.push(new Bot(spawn.x, spawn.y, type, startingPts));
         }
         for(let i = 0; i < 300; i++) this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
-        
-        // Boosted base health orb spawns 15 -> 30
         for(let i = 0; i < 30; i++) { let pos = this.getSafeOrbPosition(500); this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0)); }
 
         this.totalMatchPlayers = this.bots.length + 1; 
@@ -499,7 +497,6 @@ export class GameEngine {
             this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
         }
         
-        // Boosted base health orb spawns 60 -> 100
         for(let i = 0; i < 100; i++) { 
             let pos = this.getSafeOrbPosition(500); 
             this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0));
@@ -645,6 +642,7 @@ export class GameEngine {
         this.loop(this.lastTime);
     }
 
+    // NEW: "YOU" shows up on the leaderboard now!
     updateLeaderboard() {
         const allPlayers = (this.isDemo || this.isGameOver) ? [...this.bots] : [this.player, ...this.bots];
         allPlayers.sort((a, b) => b.points - a.points); 
@@ -657,7 +655,7 @@ export class GameEngine {
         
         allPlayers.slice(0, displayLimit).forEach((p, index) => {
             const li = document.createElement('li'); 
-            li.innerText = `#${index + 1} ${p.name} - ${Math.floor(p.points)} Pts`;
+            li.innerText = `#${index + 1} ${p.isPlayer ? "YOU" : p.name} - ${Math.floor(p.points)} Pts`;
             if (p === this.player) li.style.color = '#00ffcc';
             list.appendChild(li);
         });
@@ -795,7 +793,6 @@ export class GameEngine {
             this.orbs.push(new Orb(victim.x, victim.y, 'health'));
         }
         
-        // NEW: Base 10% chance for ANY enemy to drop a health orb just to keep health slightly higher
         if (Math.random() < 0.10) {
             this.orbs.push(new Orb(victim.x, victim.y, 'health'));
         }
@@ -820,7 +817,11 @@ export class GameEngine {
                 setTimeout(() => {
                     if (this.isGameOver) return;
                     const safePos = this.getSafeSpawnPosition();
-                    let newBot = new Bot(safePos.x, safePos.y, ['triangle', 'square', 'circle'][Math.floor(Math.random()*3)], 0);
+                    
+                    // NEW: Late-game bots spawn with a huge chunk of your points so they are instantly a threat!
+                    let startPts = this.player ? this.player.points * (0.5 + Math.random() * 0.3) : 0;
+                    
+                    let newBot = new Bot(safePos.x, safePos.y, ['triangle', 'square', 'circle'][Math.floor(Math.random()*3)], startPts);
                     newBot.id = 'b_respawn' + Math.random();
                     this.bots.push(newBot);
                 }, 3000); 
@@ -1301,11 +1302,12 @@ export class GameEngine {
             }
         }
 
+        // NEW: FLatter upgrade scaling so late-game upgrades actually happen!
         if (pointsGainedThisFrame > 0 && !this.isDemo && !this.isGameOver) {
             while (this.player.upgradeProgress >= this.pointsToNextUpgrade) {
                 this.player.upgradeProgress -= this.pointsToNextUpgrade;
                 this.player.upgradeCount++;
-                this.pointsToNextUpgrade = Math.floor(this.pointsToNextUpgrade * 1.5); 
+                this.pointsToNextUpgrade = Math.floor(this.pointsToNextUpgrade * 1.25) + 15; 
                 this.triggerUpgradeReady();
             }
         }

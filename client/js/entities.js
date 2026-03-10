@@ -163,7 +163,6 @@ export class Entity {
             });
         }
 
-        // NEW: Thruster Exhaust Particles!
         if (this.rearVisual === 'thrusters' && (isDashing || speed > 1.0)) {
             let tTier = Math.max(this.upgrades['speed'] || 0, this.upgrades['dash'] || 0);
             let tLen = 8 + tTier * 3;
@@ -245,7 +244,6 @@ export class Entity {
             ctx.restore();
         }
 
-        // Draw Armor first so it sits cleanly under the weapons and thrusters
         let armorOffset = 0;
         if (this.bodyVisual === 'armor') {
             let armorTier = Math.max(this.upgrades['maxHealth'] || 0, this.upgrades['plating'] || 0);
@@ -377,6 +375,7 @@ export class Entity {
             ctx.restore();
         }
         
+        // DRAW ARROW IF IT IS A REAL PLAYER (IN A MATCH, NOT MENU) AND DOESNT HAVE GUN/SPIKES
         let hideArrow = (this.frontVisual !== null);
         if (this.isPlayer && !hideArrow) {
             ctx.save(); 
@@ -408,14 +407,6 @@ export class Entity {
                 ctx.closePath(); ctx.fill(); ctx.fillStyle = '#111'; ctx.shadowBlur = 0; ctx.beginPath(); ctx.arc(0, 0, 3, 0, Math.PI * 2); ctx.fill(); ctx.restore();
             }
             ctx.shadowBlur = 0; 
-        }
-        
-        if (window.gameSettings.showNames && this.name !== "") {
-            ctx.fillStyle = 'white'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
-            if (window.gameSettings.highQuality) { ctx.shadowBlur = 2; ctx.shadowColor = 'black'; }
-            let displayName = this.name;
-            if (this.equipped.Banner && ITEMS_DB) displayName = `${ITEMS_DB[this.equipped.Banner].value} ${this.name}`;
-            ctx.fillText(displayName, this.x, this.y - this.size - 20); ctx.shadowBlur = 0; 
         }
         
         let isMenuDummy = (!this.isPlayer && this.name === "");
@@ -460,14 +451,19 @@ export class Bot extends Entity {
 
         const names = ['OrbHunter', 'NovaStrike', 'PixelSlayer', 'GhostBlade', 'RogueBot', 'Vanguard', 'Titan', 'Apex'];
         this.name = names[Math.floor(Math.random() * names.length)] + Math.floor(Math.random() * 99);
-        this.points = startingPoints; this.upgradeProgress = startingPoints; this.botPointsToNextUpgrade = 10;
+        this.points = startingPoints; 
+        this.upgradeProgress = startingPoints; 
+        
+        // NEW: Bots get a much flatter upgrade curve so they can actually reach high tiers!
+        this.botPointsToNextUpgrade = 10;
         this.dashTendency = Math.random();
         this.strafeDir = Math.random() > 0.5 ? 1 : -1; 
         this.personality = Math.random(); 
         
         while (this.upgradeProgress >= this.botPointsToNextUpgrade) {
             this.upgradeProgress -= this.botPointsToNextUpgrade;
-            this.upgradeCount++; this.botPointsToNextUpgrade = Math.floor(this.botPointsToNextUpgrade * 1.5);
+            this.upgradeCount++; 
+            this.botPointsToNextUpgrade = Math.floor(this.botPointsToNextUpgrade * 1.25) + 15;
             let choices = getWeightedUpgrades(this, 1); if (choices.length > 0) this.applyUpgrade(choices[0].id);
         }
         
@@ -491,7 +487,12 @@ export class Bot extends Entity {
 
         this.changeTargetTimer--; let nearestEnemy = null; let minDist = 800;
         
+        // NEW: Dynamic scaling! Find the highest point player so bots can catch up
+        let highestScore = 0;
+
         allPlayers.forEach(p => { 
+            if (p.points > highestScore) highestScore = p.points;
+
             if (p === this || p.isDead) return; 
             if (this.isTeammate && (p.isPlayer || p.isTeammate)) return;
 
@@ -501,9 +502,17 @@ export class Bot extends Entity {
             if (randomizedDist < minDist) { minDist = randomizedDist; nearestEnemy = p; } 
         });
 
-        let passiveGain = 0.15; this.points += passiveGain; this.upgradeProgress += passiveGain;
+        // NEW: If a bot is far behind the leader, they artificially gain points rapidly to mutate
+        let catchUpGain = (highestScore > this.points) ? (highestScore - this.points) * 0.002 : 0;
+        let passiveGain = 0.5 + catchUpGain; 
+        
+        this.points += passiveGain; 
+        this.upgradeProgress += passiveGain;
+        
         while (this.upgradeProgress >= this.botPointsToNextUpgrade) {
-            this.upgradeProgress -= this.botPointsToNextUpgrade; this.upgradeCount++; this.botPointsToNextUpgrade = Math.floor(this.botPointsToNextUpgrade * 1.5);
+            this.upgradeProgress -= this.botPointsToNextUpgrade; 
+            this.upgradeCount++; 
+            this.botPointsToNextUpgrade = Math.floor(this.botPointsToNextUpgrade * 1.25) + 15;
             let choices = getWeightedUpgrades(this, 1); if (choices.length > 0) this.applyUpgrade(choices[0].id);
         }
 

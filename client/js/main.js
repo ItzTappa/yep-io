@@ -558,7 +558,7 @@ renderSeasonStore();
 renderMainStore();
 updateMenuXPBar(); 
 
-// --- DEV CONSOLE ---
+// --- DEV CONSOLE & ESCAPE KEY LOGIC ---
 const devConsole = document.getElementById('dev-console');
 const devInput = document.getElementById('dev-input');
 const devLog = document.getElementById('dev-log');
@@ -581,6 +581,10 @@ window.addEventListener('keydown', (e) => {
         if (devConsole && !devConsole.classList.contains('hidden')) {
             devConsole.classList.add('hidden');
             devInput.blur();
+        } 
+        // NEW: Quits the game completely and takes you to the death screen
+        else if (window.game && !window.game.isDemo && !window.game.isGameOver) {
+            window.game.handleGameOver({ name: "SURRENDERED" });
         }
     }
 });
