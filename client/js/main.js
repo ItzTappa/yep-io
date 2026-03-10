@@ -1,11 +1,11 @@
 import { GameEngine } from './gameEngine.js';
 import { Player } from './entities.js';
 import { ITEMS_DB, RARITY_COLORS } from './items.js';
-import { UPGRADE_POOL } from './upgrades.js'; // NEW: Imported to name the badges correctly
+import { UPGRADE_POOL } from './upgrades.js';
 import { sounds } from './soundManager.js';
 import { lobbyUI } from './networkLobby.js';
 
-let selectedClass = null; // Starts as null to force selection
+let selectedClass = null;
 
 window.globalAccountXP = 0;
 window.globalAccountLevel = 1;
@@ -101,7 +101,7 @@ function renderPreview() {
         lockerPreviewCtx.clearRect(0, 0, 300, 300);
         const dummyClass = selectedClass || 'triangle'; 
         const dummy = new Player(150, 150, dummyClass, ""); 
-        dummy.isPlayer = false; // NEW: Prevents drawing the arrow in the menu
+        dummy.isPlayer = false; 
         dummy.equipped = window.equippedItems;
         if (dummy.equipped.Color && ITEMS_DB && ITEMS_DB[dummy.equipped.Color]) {
             const dbColor = ITEMS_DB[dummy.equipped.Color].value;
@@ -129,7 +129,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
             if (info) {
                 info.innerText = "PLEASE SELECT A CLASS FIRST!";
                 info.style.color = "red";
-                info.classList.remove('fade-out', 'hidden');
+                info.classList.remove('fade-out');
                 if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
                 window.classInfoTimeout = setTimeout(() => info.classList.add('fade-out'), 2000);
             }
@@ -165,7 +165,7 @@ document.querySelectorAll('.class-btn').forEach(btn => {
             if (selectedClass === 'circle') info.innerText = "SOLDIER: Balanced speed and health. The perfect all-rounder.";
             
             info.style.color = "var(--accent)";
-            info.classList.remove('hidden', 'fade-out');
+            info.classList.remove('fade-out');
             
             if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
             window.classInfoTimeout = setTimeout(() => {
@@ -231,7 +231,7 @@ document.getElementById('play-btn').addEventListener('click', () => {
         if (info) {
             info.innerText = "PLEASE SELECT A CLASS FIRST!";
             info.style.color = "red";
-            info.classList.remove('fade-out', 'hidden');
+            info.classList.remove('fade-out');
             if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
             window.classInfoTimeout = setTimeout(() => info.classList.add('fade-out'), 2000);
         }
