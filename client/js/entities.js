@@ -222,6 +222,21 @@ export class Entity {
             else if (skinType === 'gladiator') { ctx.fillStyle = '#9ca3af'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff'; ctx.stroke(); }
             ctx.restore();
         }
+        
+        // NEW: Draw a subtle aim indicator for the player so you know where you're looking
+        if (this.isPlayer) {
+            ctx.save(); 
+            ctx.translate(this.x, this.y); 
+            ctx.rotate(this.angle);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.beginPath();
+            ctx.moveTo(this.size + 5, -6);
+            ctx.lineTo(this.size + 20, 0);
+            ctx.lineTo(this.size + 5, 6);
+            ctx.fill();
+            ctx.restore();
+        }
+
         if (this.orbiters > 0) {
             ctx.fillStyle = '#a855f7';
             if (window.gameSettings.highQuality) { ctx.shadowBlur = 10; ctx.shadowColor = '#a855f7'; }
@@ -270,7 +285,7 @@ export class Player extends Entity {
     constructor(x, y, type, name = "YOU") {
         super(x, y, type); 
         this.name = name;
-        this.isPlayer = true; // NEW: Marks them as the true local player
+        this.isPlayer = true; 
         this.equipped = window.equippedItems || { Skin: null, Trail: null, Banner: null, Color: null };
         if (this.equipped.Color && ITEMS_DB && ITEMS_DB[this.equipped.Color]) {
             this.color = ITEMS_DB[this.equipped.Color].value; 
@@ -282,7 +297,7 @@ export class Bot extends Entity {
     constructor(x, y, type, startingPoints = 0) {
         super(x, y, type); 
         this.targetX = x; this.targetY = y; this.changeTargetTimer = 0;
-        this.isTeammate = false; // NEW: Controls teammate logic
+        this.isTeammate = false; 
 
         const names = ['OrbHunter', 'NovaStrike', 'PixelSlayer', 'GhostBlade', 'RogueBot', 'Vanguard', 'Titan', 'Apex'];
         this.name = names[Math.floor(Math.random() * names.length)] + Math.floor(Math.random() * 99);
@@ -306,11 +321,10 @@ export class Bot extends Entity {
         }
     }
     
-    // NEW: Accepts isCinematicIntro flag to freeze AI during camera intro
     updateBot(allPlayers, isCinematicIntro = false) {
         if (isCinematicIntro && (this.isTeammate || this.isPlayer)) {
-            this.angle = -Math.PI / 2; // Look straight up dramatically during intro
-            super.update(); // Update visuals only
+            this.angle = -Math.PI / 2; 
+            super.update(); 
             return;
         }
 
@@ -318,9 +332,7 @@ export class Bot extends Entity {
         
         allPlayers.forEach(p => { 
             if (p === this || p.isDead) return; 
-            // Teammates ignore each other and the player
             if (this.isTeammate && (p.isPlayer || p.isTeammate)) return;
-            // Enemies ignore other bots in BR mode to focus player/teammates
             if (!this.isTeammate && !p.isPlayer && !p.isTeammate) return; 
 
             const dist = distance(this.x, this.y, p.x, p.y); 
@@ -333,7 +345,6 @@ export class Bot extends Entity {
             let choices = getWeightedUpgrades(this, 1); if (choices.length > 0) this.applyUpgrade(choices[0].id);
         }
 
-        // Teammates follow you if there are no enemies nearby!
         if (this.isTeammate && !nearestEnemy) {
             const player = allPlayers.find(p => p.isPlayer);
             if (player && !player.isDead) {

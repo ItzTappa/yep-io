@@ -74,7 +74,7 @@ function formatTime(secs) {
 
 const canvas = document.getElementById('gameCanvas');
 const game = new GameEngine(canvas);
-window.game = game; // Exposes the engine to the lobby!
+window.game = game; 
 game.startDemo();
 
 // --- BUTTON SOUNDS ---
@@ -270,7 +270,6 @@ function renderLocker() {
             <button class="btn-equip ${isDefault ? 'equipped' : ''}" onclick="window.toggleEquip(null, '${currentLockerCategory}')">${isDefault ? '✓ EQUIPPED' : 'EQUIP'}</button></div>`;
         
         if (ITEMS_DB) {
-            // SORTS BY RARITY (Highest to Lowest)
             const sortedItems = Object.keys(window.claimedItems)
                 .map(id => ITEMS_DB[id])
                 .filter(item => item && item.category === currentLockerCategory)
@@ -308,10 +307,18 @@ function renderStats() {
     window.matchHistory.forEach(match => {
         let rankColor = '#a0a0a0'; 
         let rank = match.rank ? match.rank : '?';
-        let tot = match.totalPlayers ? match.totalPlayers : '?';
         
         if (rank === 1) rankColor = '#ffe600'; 
         else if (rank !== '?' && rank <= 5) rankColor = '#00ffcc'; 
+        
+        let suffix = "th";
+        if (rank !== '?') {
+            let r = parseInt(rank);
+            if (r % 10 === 1 && r % 100 !== 11) suffix = "st";
+            else if (r % 10 === 2 && r % 100 !== 12) suffix = "nd";
+            else if (r % 10 === 3 && r % 100 !== 13) suffix = "rd";
+        }
+        let displayRank = rank === '?' ? '?' : `${rank}${suffix}`;
         
         let pClass = match.playerClass ? match.playerClass.charAt(0).toUpperCase() + match.playerClass.slice(1) : 'Unknown';
 
@@ -320,7 +327,7 @@ function renderStats() {
                 <div class="match-detail-item">
                     <span class="match-detail-label">RANK</span>
                     <div class="match-rank" style="color: ${rankColor};">
-                        #${rank}<span style="font-size: 0.8rem; color: #666;">/${tot}</span>
+                        ${displayRank}
                     </div>
                 </div>
                 <div class="match-detail-item">
@@ -388,7 +395,6 @@ function renderMainStore() {
     if (!grid) return;
     grid.innerHTML = '';
     
-    // SORTS BY RARITY (Highest to Lowest)
     let shopItems = [...window.currentShopItems];
     shopItems.sort((a, b) => (ITEMS_DB[b.id]?.rarity || 1) - (ITEMS_DB[a.id]?.rarity || 1));
 
@@ -481,7 +487,6 @@ setInterval(() => {
     }
 }, 1000);
 
-// Initialize UI
 renderSeasonStore();
 renderMainStore();
 updateMenuXPBar(); 
