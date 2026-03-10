@@ -136,6 +136,7 @@ export const UPGRADE_POOL = [
     { id: 'emp', title: 'EMP Blast', desc: 'Active: Stuns enemies and disables weapons.', weight: 5, maxTier: 1, isActiveAbility: true, apply: (e) => { e.activeAbility = 'emp'; } },
     { id: 'cloak', title: 'Active Camo', desc: 'Active: Become invisible and drop enemy aggro.', weight: 4, maxTier: 1, isActiveAbility: true, apply: (e) => { e.activeAbility = 'cloak'; } },
     { id: 'repulsor', title: 'Repulsor Field', desc: 'Active: Continuously pushes enemies away from you.', weight: 4, maxTier: 1, isActiveAbility: true, apply: (e) => { e.activeAbility = 'repulsor'; } },
+    { id: 'railgun', title: 'Plasma Railgun', desc: 'Active: Fires a devastating, infinite-pierce plasma beam.', weight: 5, maxTier: 1, isActiveAbility: true, apply: (e) => { e.activeAbility = 'railgun'; } }, // <--- THE RAILGUN IS HERE
 
     // TRIANGLE (Jet) EXCLUSIVE - Weight 6
     { id: 'sonic_boom', title: 'Sonic Boom', desc: 'Active: Massive speed boost that damages enemies hit.', weight: 6, maxTier: 1, classes: ['triangle'], isActiveAbility: true, apply: (e) => { e.activeAbility = 'sonic_boom'; } },

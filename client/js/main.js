@@ -100,7 +100,7 @@ async function listenToUserData(uid) {
             window.globalAccountXP = data.xp || 0;
             window.globalAccountLevel = data.level || 1;
             
-            // 🚨 SAFEGUARD: Ensure equippedItems is always a valid object
+            // 🚨 SAFEGUARD: Ensure equippedItems is always a valid object, even if database is corrupted
             if (data.equipped && typeof data.equipped === 'object') {
                 window.equippedItems = data.equipped;
             } else {
@@ -185,11 +185,6 @@ window.gameSettings = JSON.parse(localStorage.getItem('yepio_settings')) || {
     keybinds: { up: 'w', down: 's', left: 'a', right: 'd', dash: ' ', ability: 'e' }
 };
 
-// Sync audio manager volume on boot
-if (sounds && sounds.setVolume) {
-    sounds.setVolume(window.gameSettings.volume);
-}
-
 window.hourlyStats = { kills: 0, time: 0, points: 0, distance: 0 };
 
 function generateShop() {
@@ -266,6 +261,14 @@ let lobbyUnsub = null;
 function renderLobbySlots(hostName = null) {
     const container = document.getElementById('player-slots-container');
     if (!container) return;
+    
+    // FORCES THE LOBBY PREVIEWS TO CENTER VERTICALLY IN THE MIDDLE OF THE SCREEN
+    container.style.display = 'flex';
+    container.style.justifyContent = 'center';
+    container.style.alignItems = 'center';
+    container.style.flexGrow = '1';
+    container.style.marginTop = 'auto';
+    container.style.marginBottom = 'auto';
     
     let count = currentLobbyMode === 'duos' ? 2 : currentLobbyMode === 'trios' ? 3 : 4;
     container.innerHTML = '';
@@ -400,9 +403,10 @@ async function joinLobbyByCode(code, sourceBtn) {
         const snap = await getDoc(doc(db, "lobbies", code));
         
         if (!snap.exists()) {
-            if (sounds) sounds.play('ui_error', 'ui');
             sourceBtn.innerText = "NOT FOUND!";
-            setTimeout(() => { sourceBtn.innerText = originalText; }, 2000);
+            setTimeout(() => {
+                sourceBtn.innerText = originalText;
+            }, 2000);
             return false;
         }
         
@@ -410,16 +414,18 @@ async function joinLobbyByCode(code, sourceBtn) {
         const max = data.mode === 'duos' ? 2 : data.mode === 'trios' ? 3 : 4;
         
         if (data.players.length >= max) {
-            if (sounds) sounds.play('ui_error', 'ui');
             sourceBtn.innerText = "LOBBY FULL!";
-            setTimeout(() => { sourceBtn.innerText = originalText; }, 2000);
+            setTimeout(() => {
+                sourceBtn.innerText = originalText;
+            }, 2000);
             return false;
         }
         
         if (data.inGame) {
-            if (sounds) sounds.play('ui_error', 'ui');
             sourceBtn.innerText = "IN MATCH!";
-            setTimeout(() => { sourceBtn.innerText = originalText; }, 2000);
+            setTimeout(() => {
+                sourceBtn.innerText = originalText;
+            }, 2000);
             return false;
         }
 
@@ -445,9 +451,10 @@ async function joinLobbyByCode(code, sourceBtn) {
         
     } catch(e) {
         console.error(e);
-        if (sounds) sounds.play('ui_error', 'ui');
         sourceBtn.innerText = "ERROR!";
-        setTimeout(() => { sourceBtn.innerText = originalText; }, 2000);
+        setTimeout(() => {
+            sourceBtn.innerText = originalText;
+        }, 2000);
         return false;
     }
 }
@@ -458,6 +465,7 @@ async function joinLobbyByCode(code, sourceBtn) {
 let currentLockerCategory = null;
 window.activePreviewItem = null;
 
+// 🚨 CRITICAL FIX: Ensure all variables exist before calling renderers
 function refreshAllUIs() {
     if (!window.equippedItems || typeof window.equippedItems !== 'object') {
         window.equippedItems = { Skin: null, Trail: null, Banner: null, Color: null };
@@ -473,23 +481,12 @@ function refreshAllUIs() {
     updateMenuXPBar();
 }
 
-// UI Hover Sounds Add-on
-document.addEventListener('mouseover', (e) => {
-    const target = e.target;
-    if (target.tagName === 'BUTTON' || target.closest('button') || target.classList.contains('tab-btn') || target.classList.contains('item-icon') || target.classList.contains('locker-slot') || target.closest('.locker-slot')) {
-        if (sounds && sounds.play) {
-            sounds.play('ui_hover', 'ui');
-        }
-    }
-});
-
 document.addEventListener('click', async (e) => {
     const target = e.target;
 
-    // UI Click Sound
-    if (target.tagName === 'BUTTON' || target.closest('button') || target.classList.contains('tab-btn') || target.classList.contains('item-icon') || target.classList.contains('locker-slot') || target.closest('.locker-slot')) {
+    if (target.tagName === 'BUTTON' || target.closest('button')) {
         if (sounds && sounds.play) {
-            sounds.play('ui_click', 'ui');
+            sounds.play('ui_click', 0.4 * (window.gameSettings.volume || 1.0));
         }
     }
 
@@ -545,7 +542,6 @@ document.addEventListener('click', async (e) => {
     // Manual Join by Code
     if (target.id === 'join-lobby-btn') {
         if (!selectedClass) {
-            if (sounds) sounds.play('ui_error', 'ui');
             document.querySelector('.tab-btn[data-target="lobby"]').click();
             const info = document.getElementById('class-info');
             info.innerText = "PLEASE SELECT A CLASS FIRST!";
@@ -560,8 +556,6 @@ document.addEventListener('click', async (e) => {
         const codeInput = document.getElementById('join-code-input').value.trim();
         if (codeInput.length === 5) {
             joinLobbyByCode(codeInput.toUpperCase(), target);
-        } else {
-            if (sounds) sounds.play('ui_error', 'ui');
         }
         return;
     }
@@ -583,8 +577,6 @@ document.addEventListener('click', async (e) => {
             } else {
                 // Toggle ready status
                 const isReady = !me.ready;
-                if (isReady && sounds) sounds.play('ui_ready', 'ui'); // Play satisfying ready sound!
-                
                 const newPlayers = window.lobbyPlayers.map(p => p.uid === myUid ? { ...p, ready: isReady } : p);
                 updateDoc(doc(db, "lobbies", window.currentLobbyCode), { players: newPlayers });
             }
@@ -635,12 +627,10 @@ document.addEventListener('click', async (e) => {
         const errorText = document.getElementById('acc-error');
         
         if (user.length < 3) { 
-            if (sounds) sounds.play('ui_error', 'ui');
             errorText.innerText = "Username must be at least 3 chars!"; 
             return; 
         }
         if (pass.length < 6) { 
-            if (sounds) sounds.play('ui_error', 'ui');
             errorText.innerText = "Password must be at least 6 chars!"; 
             return; 
         }
@@ -653,7 +643,6 @@ document.addEventListener('click', async (e) => {
                 document.getElementById('account-modal').classList.add('hidden');
             })
             .catch((error) => {
-                if (sounds) sounds.play('ui_error', 'ui');
                 errorText.style.color = "#ff4444";
                 if(error.code === 'auth/email-already-in-use') {
                     errorText.innerText = "Username already taken!";
@@ -671,7 +660,6 @@ document.addEventListener('click', async (e) => {
         const errorText = document.getElementById('acc-error');
         
         if (!user || !pass) { 
-            if (sounds) sounds.play('ui_error', 'ui');
             errorText.innerText = "Please enter username and password!"; 
             return; 
         }
@@ -684,7 +672,6 @@ document.addEventListener('click', async (e) => {
                 document.getElementById('account-modal').classList.add('hidden');
             })
             .catch((error) => {
-                if (sounds) sounds.play('ui_error', 'ui');
                 errorText.style.color = "#ff4444";
                 errorText.innerText = "Incorrect username or password!";
             });
@@ -719,7 +706,6 @@ document.addEventListener('click', async (e) => {
         
         if (!targetName) return;
         if (targetName === currentUser) { 
-            if (sounds) sounds.play('ui_error', 'ui');
             msg.innerText = "You can't add yourself!"; 
             msg.style.color = "#ff4444"; 
             return; 
@@ -732,7 +718,6 @@ document.addEventListener('click', async (e) => {
         const snap = await getDocs(q);
         
         if (snap.empty) {
-            if (sounds) sounds.play('ui_error', 'ui');
             msg.innerText = "Player not found!";
             msg.style.color = "#ff4444";
         } else {
@@ -740,7 +725,6 @@ document.addEventListener('click', async (e) => {
             const targetUid = targetDoc.id;
             
             if (window.myFriends.includes(targetUid)) {
-                if (sounds) sounds.play('ui_error', 'ui');
                 msg.innerText = "Already friends!";
                 msg.style.color = "#ff4444";
                 return;
@@ -754,7 +738,6 @@ document.addEventListener('click', async (e) => {
                 msg.style.color = "#00ffcc";
                 searchInput.value = "";
             } catch(e) {
-                if (sounds) sounds.play('ui_error', 'ui');
                 msg.innerText = "Error sending request.";
                 msg.style.color = "#ff4444";
             }
@@ -798,7 +781,6 @@ document.addEventListener('click', async (e) => {
         
         // Protect from joining without a class
         if (!selectedClass) {
-            if (sounds) sounds.play('ui_error', 'ui');
             document.querySelector('.tab-btn[data-target="lobby"]').click();
             document.getElementById('account-modal').classList.add('hidden');
             const info = document.getElementById('class-info');
@@ -808,7 +790,7 @@ document.addEventListener('click', async (e) => {
             setTimeout(() => {
                 info.classList.add('fade-out');
             }, 2000);
-            return; 
+            return; // DON'T REMOVE INVITE, JUST WARN
         }
         
         const hostUid = target.dataset.hostuid;
@@ -821,7 +803,7 @@ document.addEventListener('click', async (e) => {
         if (joined) {
             const notifBox = target.closest('.notif-box');
             if (notifBox) {
-                notifBox.classList.remove('show');
+                notifBox.classList.add('fade-out');
                 setTimeout(() => {
                     notifBox.remove();
                 }, 400);
@@ -878,7 +860,6 @@ document.addEventListener('click', async (e) => {
                 }, 1000);
 
             } catch(e) {
-                if (sounds) sounds.play('ui_error', 'ui');
                 inviteBtn.innerText = "ERROR!";
                 setTimeout(() => { 
                     inviteBtn.innerText = "INVITE TO MULTIPLAYER"; 
@@ -978,7 +959,6 @@ document.addEventListener('click', async (e) => {
         const targetTab = target.dataset.target;
         
         if (targetTab === 'multiplayer' && !selectedClass) {
-            if (sounds) sounds.play('ui_error', 'ui');
             const info = document.getElementById('class-info');
             if (info) {
                 info.innerText = "PLEASE SELECT A CLASS FIRST!";
@@ -1053,7 +1033,7 @@ document.addEventListener('click', async (e) => {
 
 
 // ==========================================
-// RENDERERS
+// RENDERERS (CRITICAL FIX: Fully Restored)
 // ==========================================
 function renderLocker() {
     const slotsView = document.getElementById('locker-slots-view');
@@ -1437,7 +1417,7 @@ async function renderFriendsUI() {
     }
 }
 
-// Slide-in Notification
+// Slide-in Notification - RESTORED OLD CLASS TOGGLING
 function showInviteNotification(senderName, code, hostUid) {
     const queue = document.getElementById('notif-queue');
     const template = document.getElementById('invite-template');
@@ -1446,7 +1426,7 @@ function showInviteNotification(senderName, code, hostUid) {
 
     const clone = template.cloneNode(true);
     clone.id = "";
-    clone.classList.remove('hidden');
+    clone.classList.remove('hidden', 'fade-out'); // Restore old logic
     clone.querySelector('.invite-sender-name').innerText = `From: ${senderName}`;
     
     const btn = clone.querySelector('.accept-invite-btn');
@@ -1455,20 +1435,17 @@ function showInviteNotification(senderName, code, hostUid) {
     btn.dataset.hostname = senderName;
     
     queue.appendChild(clone);
-    requestAnimationFrame(() => {
-        clone.classList.add('show');
-    });
     
     if(sounds && sounds.play) {
-        sounds.play('notification', 'alert');
+        sounds.play('notification', 0.8);
     }
 
     setTimeout(() => {
         if(clone.parentNode) {
-            clone.classList.remove('show');
+            clone.classList.add('fade-out'); // Restore old fade out class
             setTimeout(() => {
                 clone.remove();
-            }, 400);
+            }, 500);
         }
     }, 15000);
 }
@@ -1494,7 +1471,7 @@ const startClaim = (e) => {
         saveUserData(); 
         
         if(sounds && sounds.play) {
-            sounds.play('ui_claim', 'ui'); 
+            sounds.play('level_up', 0.6 * (window.gameSettings.volume || 1.0)); // Fixed sound name
         }
         
         btn.classList.remove('holding');
@@ -1727,11 +1704,6 @@ document.getElementById('close-settings-btn').addEventListener('click', () => {
 
     localStorage.setItem('yepio_settings', JSON.stringify(window.gameSettings));
 
-    // Update global SoundManager master volume
-    if (sounds && sounds.setVolume) {
-        sounds.setVolume(window.gameSettings.volume);
-    }
-
     const fpsDisplay = document.getElementById('fps-display');
     if (fpsDisplay) {
         if (window.gameSettings.showFps) {
@@ -1798,7 +1770,6 @@ function updateMenuXPBar() {
 
 document.getElementById('play-btn').addEventListener('click', () => {
     if (!selectedClass) {
-        if (sounds) sounds.play('ui_error', 'ui');
         const info = document.getElementById('class-info');
         if (info) {
             info.innerText = "PLEASE SELECT A CLASS FIRST!";

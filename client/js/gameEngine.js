@@ -375,6 +375,7 @@ export class GameEngine {
         this.checkAccountLevelUp();
     }
 
+    // RESTORED OLD CLASS TOGGLING
     checkAccountLevelUp() {
         let xpRequired = window.globalAccountLevel * 1000;
         let leveledUp = false;
@@ -390,22 +391,17 @@ export class GameEngine {
             if (!window.gameSettings || window.gameSettings.showNotifs !== false) {
                 const notif = document.getElementById('account-level-notif');
                 if (notif) {
-                    sounds.play('levelUp', 0.8 * this.getVol());
+                    sounds.play('level_up', 0.8 * this.getVol()); // Fixed sound name
                     document.getElementById('account-notif-level-num').innerText = window.globalAccountLevel;
                     
-                    // Display Notification dynamically
-                    notif.classList.add('active'); 
-                    setTimeout(() => {
-                        if(notif) notif.classList.add('show');
-                    }, 50);
+                    notif.classList.remove('hidden', 'fade-out'); 
                     
                     if (this.accountLevelUpTimeout) {
                         clearTimeout(this.accountLevelUpTimeout);
                     }
                     this.accountLevelUpTimeout = setTimeout(() => {
                         if(notif) {
-                            notif.classList.remove('show');
-                            setTimeout(() => notif.classList.remove('active'), 500);
+                            notif.classList.add('fade-out');
                         }
                     }, 4000);
                 }
@@ -1070,10 +1066,10 @@ export class GameEngine {
         }
     }
 
+    // RESTORED OLD CLASS TOGGLING
     triggerUpgradeReady() {
         if (this.isDemo || this.isGameOver) return;
         
-        // ADDED LEVEL UP FLASH ANIMATION TO XP BAR
         const xpBarContainer = document.querySelector('.xp-bar-container');
         if (xpBarContainer) {
             xpBarContainer.classList.add('level-up-flash');
@@ -1083,12 +1079,9 @@ export class GameEngine {
         if (!window.gameSettings || window.gameSettings.showNotifs !== false) {
             const notif = document.getElementById('level-up-notif');
             if (notif) {
-                sounds.play('upgradeReady', 0.6 * this.getVol()); 
+                sounds.play('upgrade_ready', 0.6 * this.getVol()); // Fixed sound name
                 
-                notif.classList.add('active'); 
-                setTimeout(() => {
-                    if(notif) notif.classList.add('show');
-                }, 50);
+                notif.classList.remove('hidden', 'fade-out'); 
                 
                 if (this.levelUpTimeout) {
                     clearTimeout(this.levelUpTimeout);
@@ -1096,8 +1089,7 @@ export class GameEngine {
                 
                 this.levelUpTimeout = setTimeout(() => {
                     if(notif) {
-                        notif.classList.remove('show');
-                        setTimeout(() => notif.classList.remove('active'), 500); 
+                        notif.classList.add('fade-out'); 
                     }
                 }, 3000);
             }
@@ -1114,8 +1106,6 @@ export class GameEngine {
         let p = new Projectile(owner.x, owner.y, angle, owner);
         this.projectiles.push(p);
         
-        this.playSoundAt('shoot', owner.x, owner.y, 0.25);
-        
         if (owner.rearguard > 0) {
             let rearP = new Projectile(owner.x, owner.y, angle + Math.PI, owner);
             this.projectiles.push(rearP);
@@ -1126,7 +1116,7 @@ export class GameEngine {
         if (victim.isDead) return;
         victim.isDead = true;
 
-        this.playSoundAt('explosion', victim.x, victim.y, 0.7);
+        this.playSoundAt('enemy_death', victim.x, victim.y, 0.7); // Fixed sound name
         this.spawnParticles(victim.x, victim.y, victim.color, 30); 
         
         if (!this.isDemo && this.player && distance(this.player.x, this.player.y, victim.x, victim.y) < 500) {
@@ -1289,6 +1279,7 @@ export class GameEngine {
 
         // ==========================================
         // CONTINUOUS ORB SPAWNING (TARGETED TO KEEP ACTION HIGH!)
+        // 3000 Max Orbs. 60% chance to spawn near an existing player!
         // ==========================================
         let desiredOrbs = this.isDemo ? 1000 : 3000;
         if (this.orbs.length < desiredOrbs) {
@@ -1338,7 +1329,6 @@ export class GameEngine {
                 let vol = (p.isPlayer || distance(this.camera.x, this.camera.y, p.x, p.y) < 1500) ? 0.6 : 0;
                 
                 if (p.activeAbility === 'bullet_nova') {
-                    if (vol) this.playSoundAt('shoot', p.x, p.y, vol);
                     for(let a=0; a<Math.PI*2; a+=Math.PI/18) {
                         this.fireProjectile(p, a);
                     }
@@ -1354,7 +1344,7 @@ export class GameEngine {
                     this.spawnParticles(p.x, p.y, '#a855f7', 15);
                 }
                 else if (p.activeAbility === 'emp') {
-                    if (vol) this.playSoundAt('explosion', p.x, p.y, vol);
+                    if (vol) this.playSoundAt('ability_emp', p.x, p.y, vol); // Fixed sound name
                     this.spawnParticles(p.x, p.y, '#00ffff', 40);
                     if (p.isPlayer) this.screenShake = Math.max(this.screenShake, 15);
                     allPlayers.forEach(e => {
@@ -1368,14 +1358,14 @@ export class GameEngine {
                     });
                 }
                 else if (p.activeAbility === 'missile_swarm') {
-                    if (vol) this.playSoundAt('shoot', p.x, p.y, vol);
+                    if (vol) this.playSoundAt('ability_missile', p.x, p.y, vol); // Fixed sound name
                     for(let i=-6; i<=6; i++) {
                         let proj = new Projectile(p.x, p.y, p.angle + (i * 0.15), p, true, false);
                         this.projectiles.push(proj);
                     }
                 }
                 else if (p.activeAbility === 'earthshatter') {
-                    if (vol) this.playSoundAt('explosion', p.x, p.y, vol);
+                    if (vol) this.playSoundAt('ability_nuke', p.x, p.y, vol); // Fixed sound name
                     this.spawnParticles(p.x, p.y, '#ffaa00', 50);
                     if (p.isPlayer) this.screenShake = Math.max(this.screenShake, 25);
                     allPlayers.forEach(e => {
@@ -1388,7 +1378,7 @@ export class GameEngine {
                     });
                 }
                 else if (p.activeAbility === 'tactical_nuke') {
-                    if (vol) this.playSoundAt('shoot', p.x, p.y, vol);
+                    if (vol) this.playSoundAt('ability_nuke', p.x, p.y, vol); // Fixed sound name
                     let nuke = new Projectile(p.x, p.y, p.angle, p, false, true);
                     this.projectiles.push(nuke);
                 }
@@ -1596,7 +1586,7 @@ export class GameEngine {
             if (!this.isCinematicIntro) {
                 if (this.player.wantsShockwave) {
                     this.player.wantsShockwave = false;
-                    this.playSoundAt('explosion', this.player.x, this.player.y, 0.4); 
+                    this.playSoundAt('enemy_death', this.player.x, this.player.y, 0.4); // Fixed sound name
                     this.spawnParticles(this.player.x, this.player.y, '#ffcc00', 20); 
                     this.screenShake = Math.max(this.screenShake, 10);
                     
@@ -1704,7 +1694,7 @@ export class GameEngine {
 
             if (bot.wantsShockwave) {
                 bot.wantsShockwave = false;
-                this.playSoundAt('explosion', bot.x, bot.y, 0.4); 
+                this.playSoundAt('enemy_death', bot.x, bot.y, 0.4); // Fixed sound name
                 this.spawnParticles(bot.x, bot.y, '#ffcc00', 20); 
                 
                 if (!this.isDemo && this.player && distance(this.player.x, this.player.y, bot.x, bot.y) < 500) {
@@ -1870,7 +1860,11 @@ export class GameEngine {
                         if (target.health < target.maxHealth * 0.5) dmg *= (1 + proj.owner.executioner);
                         target.health -= Math.max(1, dmg - (target.plating * 2));
                         
-                        this.playSoundAt('hit', target.x, target.y, 0.4);
+                        this.playSoundAt('take_damage', target.x, target.y, 0.4); // Fixed sound name
+                        if (proj.owner === this.player) {
+                            sounds.play('hit_marker', 1.0 * this.getVol()); // Added satisfying hit tick
+                        }
+
                         this.spawnParticles(proj.x, proj.y, proj.color, 4);
                         if (target === this.player) this.screenShake = Math.max(this.screenShake, 8);
                         
@@ -1879,7 +1873,7 @@ export class GameEngine {
                         }
                     } else {
                         this.spawnParticles(proj.x, proj.y, '#0096ff', 3);
-                        this.playSoundAt('hit', target.x, target.y, 0.1);
+                        this.playSoundAt('take_damage', target.x, target.y, 0.1); // Fixed sound name
                     }
                     
                     if (proj.pierce > 0) { 
@@ -1940,7 +1934,7 @@ export class GameEngine {
             }
 
             if (collectedBy) {
-                if (collectedBy === this.player) sounds.play('collect', 0.4 * this.getVol()); 
+                if (collectedBy === this.player) sounds.play('xp_pickup', 0.4 * this.getVol()); // Fixed sound name
                 
                 if (orb.type === 'health') {
                     if (collectedBy.health < collectedBy.maxHealth) {
