@@ -76,7 +76,7 @@ export class GameEngine {
         this.pendingUpgrades = 0; 
         this.currentUpgradeChoices = [];
         this.isChoosingUpgrade = false;
-        this.pointsToNextUpgrade = 10; 
+        this.pointsToNextUpgrade = 20; 
         
         this.leftTouch = { id: null, originX: 0, originY: 0, x: 0, y: 0, active: false };
         this.aimTouchId = null;
@@ -904,17 +904,13 @@ export class GameEngine {
         const container = document.getElementById('leaderboard-container') || document.querySelector('.leaderboard');
         
         if (window.gameSettings && window.gameSettings.showLeaderboard === false) {
-            if (container) {
-                container.style.display = 'none';
-            }
+            if (container) container.style.display = 'none';
             return;
         }
         
-        if (container) {
-            container.style.display = 'block';
-        }
+        if (container) container.style.display = 'block';
 
-        const allPlayers = (this.isDemo || this.isGameOver) ? [...this.bots] : [this.player, ...this.bots];
+        const allPlayers = (this.isDemo || this.isGameOver) ? [...this.bots] : (this.player ? [this.player, ...this.bots] : [...this.bots]);
         allPlayers.sort((a, b) => b.points - a.points); 
         
         if (this.isDemo) return; 
@@ -948,7 +944,7 @@ export class GameEngine {
         container.style.display = 'flex';
         container.innerHTML = '';
         
-        if (this.player.activeAbility) {
+        if (this.player && this.player.activeAbility) {
             let abName = this.player.activeAbility === 'shield' ? 'DOME SHIELD' : 'OVERDRIVE';
             let keyText = this.isTouchDevice ? 'TAP ABILITY' : '[E] TO USE';
             container.innerHTML += `
@@ -958,26 +954,28 @@ export class GameEngine {
                 </div>`;
         }
         
-        for (let upgId in this.player.upgrades) {
-            if (upgId === 'shield' || upgId === 'overdrive') continue;
-            
-            let tier = this.player.upgrades[upgId];
-            if (tier > 0) {
-                let def = UPGRADE_POOL.find(u => u && u.id === upgId);
-                let title = def ? def.title.toUpperCase() : upgId.toUpperCase();
-                let tierClass = tier === 1 ? 'badge-t1' : tier === 2 ? 'badge-t2' : tier === 3 ? 'badge-t3' : tier === 4 ? 'badge-t4' : 'badge-t5';
+        if (this.player && this.player.upgrades) {
+            for (let upgId in this.player.upgrades) {
+                if (upgId === 'shield' || upgId === 'overdrive') continue;
                 
-                container.innerHTML += `
-                    <div class="upgrade-badge ${tierClass}" title="${def ? def.title : ''}">
-                        <div class="badge-name">${title}</div>
-                        <div class="badge-tier">T${tier}</div>
-                    </div>`;
+                let tier = this.player.upgrades[upgId];
+                if (tier > 0) {
+                    let def = UPGRADE_POOL.find(u => u && u.id === upgId);
+                    let title = def ? def.title.toUpperCase() : upgId.toUpperCase();
+                    let tierClass = tier === 1 ? 'badge-t1' : tier === 2 ? 'badge-t2' : tier === 3 ? 'badge-t3' : tier === 4 ? 'badge-t4' : 'badge-t5';
+                    
+                    container.innerHTML += `
+                        <div class="upgrade-badge ${tierClass}" title="${def ? def.title : ''}">
+                            <div class="badge-name">${title}</div>
+                            <div class="badge-tier">T${tier}</div>
+                        </div>`;
+                }
             }
         }
     }
 
     showNextUpgrade() {
-        if (this.pendingUpgrades <= 0 || this.isDemo || this.isGameOver) return;
+        if (this.pendingUpgrades <= 0 || this.isDemo || this.isGameOver || !this.player) return;
         
         this.isChoosingUpgrade = true; 
         this.currentUpgradeChoices = getWeightedUpgrades(this.player, 3);
@@ -1025,7 +1023,7 @@ export class GameEngine {
     }
 
     selectUpgrade(index) {
-        if (this.isDemo || this.isGameOver) return;
+        if (this.isDemo || this.isGameOver || !this.player) return;
         
         const choice = this.currentUpgradeChoices[index];
         this.player.applyUpgrade(choice.id); 
@@ -1167,7 +1165,7 @@ export class GameEngine {
     }
 
     handleGameOver(killer) {
-        if (this.isDemo || this.isGameOver) return; 
+        if (this.isDemo || this.isGameOver || !this.player) return; 
         
         this.isGameOver = true;
         this.spectateTarget = killer;
