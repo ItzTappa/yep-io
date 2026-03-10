@@ -123,7 +123,7 @@ export class GameEngine {
         window.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'INPUT') return;
             const key = e.key.toLowerCase();
-            if (Object.values(window.gameSettings.keybinds).includes(key)) { 
+            if (window.gameSettings && window.gameSettings.keybinds && Object.values(window.gameSettings.keybinds).includes(key)) { 
                 e.preventDefault(); 
             }
             this.keys[key] = true;
@@ -253,7 +253,7 @@ export class GameEngine {
                         this.isAimDragging = true;
                     }
 
-                    if (this.isAimDragging) {
+                    if (this.isAimDragging && this.player) {
                         this.player.angle = Math.atan2(dy, dx);
                     }
                 }
@@ -273,12 +273,12 @@ export class GameEngine {
             dashBtn.addEventListener('touchstart', (e) => {
                 if (this.isDemo || this.isGameOver) return;
                 e.preventDefault();
-                this.keys[window.gameSettings.keybinds.dash] = true;
+                if (window.gameSettings && window.gameSettings.keybinds) this.keys[window.gameSettings.keybinds.dash] = true;
             });
             dashBtn.addEventListener('touchend', (e) => {
                 if (this.isDemo || this.isGameOver) return;
                 e.preventDefault();
-                this.keys[window.gameSettings.keybinds.dash] = false;
+                if (window.gameSettings && window.gameSettings.keybinds) this.keys[window.gameSettings.keybinds.dash] = false;
             });
         }
         
@@ -286,12 +286,12 @@ export class GameEngine {
             abilityBtn.addEventListener('touchstart', (e) => {
                 if (this.isDemo || this.isGameOver) return;
                 e.preventDefault();
-                this.keys[window.gameSettings.keybinds.ability] = true;
+                if (window.gameSettings && window.gameSettings.keybinds) this.keys[window.gameSettings.keybinds.ability] = true;
             });
             abilityBtn.addEventListener('touchend', (e) => {
                 if (this.isDemo || this.isGameOver) return;
                 e.preventDefault();
-                this.keys[window.gameSettings.keybinds.ability] = false;
+                if (window.gameSettings && window.gameSettings.keybinds) this.keys[window.gameSettings.keybinds.ability] = false;
             });
         }
     }
@@ -347,7 +347,7 @@ export class GameEngine {
 
     grantAccountXP(baseAmount, enemyPoints = 0) {
         let multiplier = 1;
-        if (enemyPoints > this.player.points) { 
+        if (this.player && enemyPoints > this.player.points) { 
             multiplier = enemyPoints / Math.max(1, this.player.points); 
         }
         multiplier = Math.min(multiplier, 5);
@@ -404,7 +404,10 @@ export class GameEngine {
         if (mobileControls) mobileControls.classList.add('hidden');
         
         const gameUi = document.getElementById('game-ui');
-        if (gameUi) gameUi.classList.add('hidden');
+        if (gameUi) {
+            gameUi.classList.add('hidden');
+            gameUi.style.display = 'none';
+        }
         
         const hudEl = document.querySelector('.hud');
         if (hudEl) {
@@ -463,10 +466,7 @@ export class GameEngine {
             else mobileControls.classList.add('hidden');
         }
         
-        const brUi = document.getElementById('br-ui');
-        if (brUi) brUi.classList.remove('hidden');
-        
-        this.worldSize = 6000; 
+        this.worldSize = 15000; // Increased map size to 15k for classic .io pacing!
         this.stormActive = false; 
 
         this.isDemo = false; 
@@ -482,7 +482,7 @@ export class GameEngine {
         this.safeZones = [];
         this.safeZoneSpawnTimer = 0;
         
-        for(let i = 0; i < 2; i++) {
+        for(let i = 0; i < 3; i++) {
             let pos = this.getSafeSpawnPosition();
             this.safeZones.push(new SafeZone(pos.x, pos.y));
         }
@@ -494,7 +494,7 @@ export class GameEngine {
         this.cameraZoom = 1.0; 
         this.isCinematicIntro = false;
         
-        this.pointsToNextUpgrade = 10; 
+        this.pointsToNextUpgrade = 20; // Starts at 20 based on smooth leveling math
         this.matchStartTime = Date.now(); 
         this.matchXPEarned = 0; 
         this.distanceTraveled = 0; 
@@ -515,17 +515,12 @@ export class GameEngine {
         if (hudEl) {
             hudEl.classList.remove('hidden');
             hudEl.style.display = 'block';
-            hudEl.style.visibility = 'visible';
-            hudEl.style.opacity = '1';
-            hudEl.style.pointerEvents = 'none';
         }
 
         const xpBarContainer = document.querySelector('.xp-bar-container');
         if (xpBarContainer) {
             xpBarContainer.classList.remove('hidden');
             xpBarContainer.style.display = 'block';
-            xpBarContainer.style.visibility = 'visible';
-            xpBarContainer.style.opacity = '1';
         }
         
         const xpBar = document.getElementById('xp-bar');
@@ -541,8 +536,6 @@ export class GameEngine {
                 lb.style.display = 'none';
             } else {
                 lb.style.display = 'block';
-                lb.style.visibility = 'visible';
-                lb.style.opacity = '1';
             }
         }
         
@@ -554,33 +547,36 @@ export class GameEngine {
                 badgeUI.style.display = 'none';
             } else {
                 badgeUI.style.display = 'flex';
-                badgeUI.style.visibility = 'visible';
-                badgeUI.style.opacity = '1';
             }
         }
         
+        const brUi = document.getElementById('br-ui');
+        if (brUi) brUi.classList.remove('hidden'); 
+        
         let matchSeed = Math.random();
         
-        for(let i = 0; i < 49; i++) {
+        // Spawn 80 bots for standard game pacing!
+        for(let i = 0; i < 80; i++) {
             const types = ['triangle', 'square', 'circle']; 
             const type = types[Math.floor(Math.random() * 3)]; 
             const spawn = this.getSafeSpawnPosition();
             
             let startingPts = 0;
-            if (matchSeed > 0.9) startingPts = Math.random() < 0.2 ? Math.random() * 25000 : Math.random() * 1500; 
+            if (matchSeed > 0.9) startingPts = Math.random() < 0.2 ? Math.random() * 5000 : Math.random() * 500; 
             else if (matchSeed < 0.4) startingPts = Math.random() * 80; 
-            else startingPts = Math.random() < 0.1 ? Math.random() * 3000 : Math.random() * 300; 
+            else startingPts = Math.random() < 0.1 ? Math.random() * 1000 : Math.random() * 100; 
             
             this.bots.push(new Bot(spawn.x, spawn.y, type, startingPts));
         }
         
-        for(let i = 0; i < 300; i++) {
+        // Huge amount of orbs mapped to the 15k world size!
+        for(let i = 0; i < 2000; i++) {
             const x = Math.random() * this.worldSize;
             const y = Math.random() * this.worldSize;
             this.orbs.push(new Orb(x, y, 'xp', 1, null, 0));
         }
         
-        for(let i = 0; i < 30; i++) { 
+        for(let i = 0; i < 100; i++) { 
             let pos = this.getSafeOrbPosition(500); 
             this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0)); 
         }
@@ -608,10 +604,10 @@ export class GameEngine {
         this.lobbyCode = lobbyCode; 
         this.isHost = isHost || false;
         
-        this.worldSize = 10000; 
+        this.worldSize = 15000; 
         this.stormActive = true; 
         this.stormCenter = { x: this.worldSize / 2, y: this.worldSize / 2 };
-        this.stormRadius = 7500; 
+        this.stormRadius = 11000; 
 
         this.isDemo = false; 
         this.isGameOver = false; 
@@ -625,7 +621,7 @@ export class GameEngine {
         
         this.safeZones = [];
         this.safeZoneSpawnTimer = 0;
-        for(let i = 0; i < 2; i++) {
+        for(let i = 0; i < 3; i++) {
             let pos = this.getSafeSpawnPosition();
             this.safeZones.push(new SafeZone(pos.x, pos.y));
         }
@@ -640,17 +636,12 @@ export class GameEngine {
         if (hudEl) {
             hudEl.classList.remove('hidden');
             hudEl.style.display = 'block';
-            hudEl.style.visibility = 'visible';
-            hudEl.style.opacity = '1';
-            hudEl.style.pointerEvents = 'none';
         }
 
         const xpBarContainer = document.querySelector('.xp-bar-container');
         if (xpBarContainer) {
             xpBarContainer.classList.remove('hidden');
             xpBarContainer.style.display = 'block';
-            xpBarContainer.style.visibility = 'visible';
-            xpBarContainer.style.opacity = '1';
         }
         
         const lb = document.getElementById('leaderboard-container') || document.querySelector('.leaderboard');
@@ -660,8 +651,6 @@ export class GameEngine {
                 lb.style.display = 'none';
             } else {
                 lb.style.display = 'block';
-                lb.style.visibility = 'visible';
-                lb.style.opacity = '1';
             }
         }
         
@@ -673,8 +662,6 @@ export class GameEngine {
                 badgeUI.style.display = 'none';
             } else {
                 badgeUI.style.display = 'flex';
-                badgeUI.style.visibility = 'visible';
-                badgeUI.style.opacity = '1';
             }
         }
         
@@ -714,7 +701,7 @@ export class GameEngine {
         }
 
         if (this.isHost) {
-            let botsToSpawn = 50 - players.length;
+            let botsToSpawn = 80 - players.length;
             
             for(let i = 0; i < botsToSpawn; i++) {
                 const types = ['triangle', 'square', 'circle']; 
@@ -747,11 +734,11 @@ export class GameEngine {
             this.bots = [...this.teammates]; 
         }
 
-        for(let i = 0; i < 1500; i++) {
+        for(let i = 0; i < 2000; i++) {
             this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
         }
         
-        for(let i = 0; i < 100; i++) { 
+        for(let i = 0; i < 150; i++) { 
             let pos = this.getSafeOrbPosition(500); 
             this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0));
         }
@@ -894,7 +881,7 @@ export class GameEngine {
         
         this.cameraZoom = this.introStartZoom;
 
-        this.pointsToNextUpgrade = 10; 
+        this.pointsToNextUpgrade = 20; 
         this.matchStartTime = Date.now(); 
         this.matchXPEarned = 0; 
         this.distanceTraveled = 0; 
@@ -906,7 +893,7 @@ export class GameEngine {
         document.getElementById('xp-bar').style.width = '0%';
         document.getElementById('level-display').innerText = '0 PTS';
 
-        this.totalMatchPlayers = 50; 
+        this.totalMatchPlayers = 80; 
         
         this.isRunning = true;
         this.accumulator = 0;
@@ -919,15 +906,11 @@ export class GameEngine {
         const container = document.getElementById('leaderboard-container') || document.querySelector('.leaderboard');
         
         if (window.gameSettings && window.gameSettings.showLeaderboard === false) {
-            if (container) {
-                container.style.display = 'none';
-            }
+            if (container) container.style.display = 'none';
             return;
         }
         
-        if (container) {
-            container.style.display = 'block';
-        }
+        if (container) container.style.display = 'block';
 
         const allPlayers = (this.isDemo || this.isGameOver) ? [...this.bots] : [this.player, ...this.bots];
         allPlayers.sort((a, b) => b.points - a.points); 
@@ -942,6 +925,7 @@ export class GameEngine {
         
         allPlayers.slice(0, displayLimit).forEach((p, index) => {
             const li = document.createElement('li'); 
+            // SMOOTHED OUT NUMBERS FOR STABILITY
             let displayPts = p.points >= 1000 ? (p.points / 1000).toFixed(1) + 'k' : Math.floor(p.points);
             li.innerText = `#${index + 1} ${p.isPlayer ? "YOU" : p.name} - ${displayPts} Pts`;
             if (p === this.player) {
@@ -1115,6 +1099,8 @@ export class GameEngine {
         }
 
         let totalTargetPoints = victim.points || 0;
+        
+        // BALANCED DEATH DROP: 35%
         let orbReward = Math.floor(totalTargetPoints * 0.35); 
         
         if (killer) {
@@ -1128,6 +1114,7 @@ export class GameEngine {
             }
         }
 
+        // BALANCED ORB SPREAD: Piñata style explosion!
         let orbsToSpawn = Math.min(orbReward, 100); 
         if (orbsToSpawn > 0) {
             let valuePerOrb = Math.max(1, Math.floor(orbReward / orbsToSpawn));
@@ -1250,6 +1237,7 @@ export class GameEngine {
     update() {
         this.frameCount++;
         
+        // Throttled leaderboard updating (60 times a sec -> roughly twice a sec visually via formatting)
         if (this.frameCount % 30 === 0) {
             this.updateLeaderboard(); 
         }
@@ -1300,10 +1288,14 @@ export class GameEngine {
             }
         }
 
-        if (!this.isDemo && !this.isGameOver) {
+        if (!this.isDemo && !this.isGameOver && this.player) {
             let dx = 0; 
             let dy = 0;
-            const binds = window.gameSettings.keybinds;
+            
+            let binds = { up: 'w', down: 's', left: 'a', right: 'd', dash: ' ', ability: 'e' };
+            if (window.gameSettings && window.gameSettings.keybinds) {
+                binds = window.gameSettings.keybinds;
+            }
 
             if (!this.isCinematicIntro) {
                 if (this.keys[binds.up]) dy -= 1; 
@@ -1717,7 +1709,7 @@ export class GameEngine {
 
             let collectedBy = null;
             
-            if (!this.isDemo && !this.isGameOver && !this.isCinematicIntro) {
+            if (!this.isDemo && !this.isGameOver && !this.isCinematicIntro && this.player) {
                 let pullRadius = 150 + (this.player.magnet * 100);
                 
                 let distP = distance(this.player.x, this.player.y, orb.x, orb.y);
@@ -1771,7 +1763,8 @@ export class GameEngine {
             }
         }
 
-        if (pointsGainedThisFrame > 0 && !this.isDemo && !this.isGameOver) {
+        // SMOOTHED POLYNOMIAL LEVELING CURVE
+        if (pointsGainedThisFrame > 0 && !this.isDemo && !this.isGameOver && this.player) {
             while (this.player.upgradeProgress >= this.pointsToNextUpgrade) {
                 this.player.upgradeProgress -= this.pointsToNextUpgrade;
                 this.player.upgradeCount++;
@@ -1783,9 +1776,16 @@ export class GameEngine {
             }
         }
 
-        if (!this.isDemo && !this.isGameOver) {
-            document.getElementById('level-display').innerText = `${Math.floor(this.player.points)} PTS`;
-            document.getElementById('xp-bar').style.width = Math.min(100, (this.player.upgradeProgress / this.pointsToNextUpgrade) * 100) + '%';
+        if (!this.isDemo && !this.isGameOver && this.player) {
+            let lvlDisplay = document.getElementById('level-display');
+            let xpBar = document.getElementById('xp-bar');
+            
+            if (lvlDisplay) {
+                lvlDisplay.innerText = `${Math.floor(this.player.points)} PTS`;
+            }
+            if (xpBar) {
+                xpBar.style.width = Math.min(100, (this.player.upgradeProgress / this.pointsToNextUpgrade) * 100) + '%';
+            }
         }
 
         if (this.isHost && this.frameCount % 5 === 0 && this.lobbyCode && window.gameSocket) {
@@ -1836,19 +1836,19 @@ export class GameEngine {
             } else if (this.introTimer < 240) {
                 let progress = (this.introTimer - 120) / 120;
                 let ease = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-                targetCamX = this.player.x; 
-                targetCamY = this.player.y;
+                targetCamX = this.player ? this.player.x : this.worldSize/2; 
+                targetCamY = this.player ? this.player.y : this.worldSize/2;
                 glideSpeed = 0.05 + (ease * 0.1); 
                 this.cameraZoom = this.introStartZoom + (1.0 - this.introStartZoom) * ease;
             } else {
                 this.isCinematicIntro = false;
-                targetCamX = this.player.x; 
-                targetCamY = this.player.y; 
+                targetCamX = this.player ? this.player.x : this.worldSize/2; 
+                targetCamY = this.player ? this.player.y : this.worldSize/2; 
                 this.cameraZoom = 1.0;
             }
         } else {
-            targetCamX = this.player.x;
-            targetCamY = this.player.y;
+            targetCamX = this.player ? this.player.x : this.worldSize/2;
+            targetCamY = this.player ? this.player.y : this.worldSize/2;
             glideSpeed = 0.15; 
             this.cameraZoom += (1.0 - this.cameraZoom) * 0.1;
         }
@@ -1877,8 +1877,11 @@ export class GameEngine {
             this.ctx.shadowBlur = 20;
             this.ctx.shadowColor = '#00ffff';
         }
+        
+        // Outer glowing line
         this.ctx.strokeRect(0, 0, this.worldSize, this.worldSize);
 
+        // Animated dashed inner line for a sci-fi energy feel
         this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
         this.ctx.lineWidth = 2;
         this.ctx.setLineDash([30, 30]);
@@ -1886,11 +1889,12 @@ export class GameEngine {
         this.ctx.strokeRect(0, 0, this.worldSize, this.worldSize);
         this.ctx.restore();
 
+        // Darken everything outside the map boundaries
         this.ctx.fillStyle = 'rgba(0, 20, 30, 0.6)';
-        this.ctx.fillRect(-10000, -10000, this.worldSize + 20000, 10000); 
-        this.ctx.fillRect(-10000, this.worldSize, this.worldSize + 20000, 10000); 
-        this.ctx.fillRect(-10000, 0, 10000, this.worldSize); 
-        this.ctx.fillRect(this.worldSize, 0, 10000, this.worldSize); 
+        this.ctx.fillRect(-10000, -10000, this.worldSize + 20000, 10000); // Top
+        this.ctx.fillRect(-10000, this.worldSize, this.worldSize + 20000, 10000); // Bottom
+        this.ctx.fillRect(-10000, 0, 10000, this.worldSize); // Left
+        this.ctx.fillRect(this.worldSize, 0, 10000, this.worldSize); // Right
         // ==========================================
 
         if (this.stormActive) {
@@ -1940,7 +1944,7 @@ export class GameEngine {
         this.projectiles.forEach(proj => proj.draw(this.ctx));
         this.bots.forEach(bot => { if (!bot.isDead) bot.draw(this.ctx) });
         
-        if (!this.isDemo && !this.player.isDead) {
+        if (!this.isDemo && this.player && !this.player.isDead) {
             this.player.draw(this.ctx);
         }
 
