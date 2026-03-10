@@ -94,7 +94,11 @@ export class Entity {
         
         if (upgradeId === 'spikes' && !this.frontVisual) this.frontVisual = 'spikes';
         if ((upgradeId === 'fireRate' || upgradeId === 'multiShot' || upgradeId === 'damage') && !this.frontVisual) this.frontVisual = 'gun';
-        if ((upgradeId === 'maxHealth' || upgradeId === 'plating') && !this.bodyVisual) this.bodyVisual = 'armor';
+        
+        // Catches multiple potential defensive upgrade names to apply the physical armor
+        const armorUpgrades = ['maxHealth', 'health', 'plating', 'armor', 'defense', 'shield'];
+        if (armorUpgrades.includes(upgradeId) && !this.bodyVisual) this.bodyVisual = 'armor';
+        
         if ((upgradeId === 'speed' || upgradeId === 'dash') && !this.rearVisual) this.rearVisual = 'thrusters';
         if ((upgradeId === 'regen' || upgradeId === 'vampirism') && !this.auraVisual) this.auraVisual = 'regen';
 
@@ -145,7 +149,6 @@ export class Entity {
             let movementAngle = Math.atan2(this.vy, this.vx);
             let backAngle = movementAngle + Math.PI;
             
-            // Adjust spawn for square vs circle/triangle
             let spawnRadius = this.type === 'square' ? this.size / 2 : this.size * 0.8;
             let spawnX = this.x + Math.cos(backAngle) * spawnRadius;
             let spawnY = this.y + Math.sin(backAngle) * spawnRadius;
@@ -188,7 +191,6 @@ export class Entity {
             ctx.restore();
         });
 
-        // VISUAL REGEN AURA
         if (this.auraVisual === 'regen') {
             ctx.save(); ctx.translate(this.x, this.y);
             ctx.beginPath(); ctx.arc(0, 0, (this.type === 'square' ? this.size / 1.5 : this.size) + 15, 0, Math.PI * 2);
@@ -200,14 +202,12 @@ export class Entity {
             ctx.restore();
         }
 
-        // VISUAL SPEED THRUSTERS ON THE BACK
         if (this.rearVisual === 'thrusters') {
             ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
             let tTier = Math.max(this.upgrades['speed'] || 0, this.upgrades['dash'] || 0);
             let tSize = 6 + tTier * 2;
             let tLen = 8 + tTier * 2;
             
-            // True back edge depending on class
             let backOffset = this.type === 'circle' ? -this.size : -this.size / 2;
             let vSpread = this.type === 'square' ? this.size * 0.3 : this.size * 0.4;
             
@@ -215,7 +215,6 @@ export class Entity {
             ctx.fillRect(backOffset - tLen, -vSpread - tSize/2, tLen, tSize);
             ctx.fillRect(backOffset - tLen, vSpread - tSize/2, tLen, tSize);
             
-            // Add a tiny active flame if moving or dashing
             if (this.dashTimer > 0 || Math.hypot(this.vx, this.vy) > 1.0) {
                 ctx.fillStyle = '#00ffcc';
                 ctx.fillRect(backOffset - tLen - 4, -vSpread - tSize/4, 4, tSize/2);
@@ -224,21 +223,20 @@ export class Entity {
             ctx.restore();
         }
 
-        // VISUAL ARMOR BODY PLATING
+        // HEAVIER VISUAL ARMOR BODY PLATING
         if (this.bodyVisual === 'armor') {
             ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
-            ctx.strokeStyle = '#888'; ctx.lineWidth = 4;
+            ctx.strokeStyle = '#9ca3af'; ctx.lineWidth = 5; 
             ctx.beginPath();
-            if (this.type === 'circle') ctx.arc(0, 0, this.size + 4, 0, Math.PI*2);
-            else if (this.type === 'square') ctx.rect(-this.size/2-4, -this.size/2-4, this.size+8, this.size+8);
+            if (this.type === 'circle') ctx.arc(0, 0, this.size + 5, 0, Math.PI*2);
+            else if (this.type === 'square') ctx.rect(-this.size/2-5, -this.size/2-5, this.size+10, this.size+10);
             else if (this.type === 'triangle') {
-                let S = this.size + 6;
+                let S = this.size + 7;
                 ctx.moveTo(S, 0); ctx.lineTo(-S / 2, -S * 0.866); ctx.lineTo(-S / 2, S * 0.866); ctx.closePath();
             }
             ctx.stroke(); ctx.restore();
         }
 
-        // VISUAL GUN BARRELS ON THE FRONT
         if (this.frontVisual === 'gun') {
             ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
             
@@ -247,7 +245,6 @@ export class Entity {
             let gunLen = 12 + (gunTier * 3); 
             let gunThickness = 6 + (gunTier * 1.5); 
             
-            // True front edge depending on class
             let offsetDist = (this.type === 'square' ? this.size / 2 : this.size) - 2;
             let spread = this.type === 'square' ? this.size * 0.35 : this.size * 0.4;
 
@@ -313,7 +310,6 @@ export class Entity {
             ctx.lineTo(-this.size / 2, this.size * 0.866); ctx.closePath(); ctx.fill();
         }
         ctx.restore();
-        
         if (this.equipped.Skin && ITEMS_DB) {
             const skinType = ITEMS_DB[this.equipped.Skin].value;
             ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle); ctx.beginPath();
@@ -329,7 +325,6 @@ export class Entity {
             ctx.restore();
         }
         
-        // ONLY show the arrow if it's the true player in a match, and they don't have front visual upgrades
         let hideArrow = (this.frontVisual !== null);
         if (this.isPlayer && !hideArrow && this.name !== "") {
             ctx.save(); 
@@ -362,6 +357,8 @@ export class Entity {
             }
             ctx.shadowBlur = 0; 
         }
+        
+        // NAMES DRAWING LOGIC
         if (window.gameSettings.showNames && this.name !== "") {
             ctx.fillStyle = 'white'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
             if (window.gameSettings.highQuality) { ctx.shadowBlur = 2; ctx.shadowColor = 'black'; }
@@ -369,11 +366,17 @@ export class Entity {
             if (this.equipped.Banner && ITEMS_DB) displayName = `${ITEMS_DB[this.equipped.Banner].value} ${this.name}`;
             ctx.fillText(displayName, this.x, this.y - this.size - 20); ctx.shadowBlur = 0; 
         }
-        if (this.name !== "") {
-            if (this.health < this.maxHealth) {
+        
+        // HEALTH AND DASH BAR LOGIC (Only ignores pure UI menu dummies)
+        let isMenuDummy = (!this.isPlayer && this.name === "");
+        if (!isMenuDummy) {
+            // Draw health bar if damaged, OR if you are the player (always show your own HP)
+            if (this.health < this.maxHealth || this.isPlayer) {
                 ctx.fillStyle = 'rgba(255, 0, 0, 0.7)'; ctx.fillRect(this.x - 20, this.y + this.size + 15, 40, 5);
                 ctx.fillStyle = '#00ffcc'; ctx.fillRect(this.x - 20, this.y + this.size + 15, 40 * (this.health / this.maxHealth), 5);
             }
+            
+            // Dash bar
             ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'; ctx.fillRect(this.x - 20, this.y + this.size + 22, 40, 3);
             let dashCost = Math.max(0, 2 - this.efficiency); 
             if (this.dashCooldown <= 0) {
