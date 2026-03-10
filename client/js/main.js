@@ -222,11 +222,11 @@ const stopClaim = (e) => {
     });
 };
 
-document.body.addEventListener('mousedown', startClaim);
-document.body.addEventListener('touchstart', startClaim, {passive: false});
-document.body.addEventListener('mouseup', stopClaim);
-document.body.addEventListener('mouseleave', stopClaim);
-document.body.addEventListener('touchend', stopClaim);
+document.addEventListener('mousedown', startClaim);
+document.addEventListener('touchstart', startClaim, {passive: false});
+document.addEventListener('mouseup', stopClaim);
+document.addEventListener('mouseleave', stopClaim);
+document.addEventListener('touchend', stopClaim);
 
 
 // ==========================================
@@ -251,49 +251,51 @@ let previewAngle = 0;
 let previewDummy = new Player(0, 0, 'triangle', "");
 previewDummy.isPlayer = false; 
 
+// EXACT SAME FIX AS GAME ENGINE: Frame Dropping for 60 FPS
 let previewLastTime = performance.now();
-let previewAccumulator = 0;
-let previewAnimationId = null;
+const previewFpsInterval = 1000 / 60; 
 
-function renderPreview() {
-    previewAnimationId = requestAnimationFrame(renderPreview); // Call immediately to ensure stable loop
-
-    let current = performance.now();
-    let dt = current - previewLastTime;
-    previewLastTime = current;
+function renderPreview(timestamp) {
+    requestAnimationFrame(renderPreview); // Loop immediately
     
-    if (dt > 100) dt = 16.666; 
-    if (dt < 0) dt = 0; 
+    if (!timestamp) timestamp = performance.now();
+    let dt = timestamp - previewLastTime;
     
-    previewAccumulator += dt;
+    // If not enough time has passed for a 60 FPS frame, skip drawing entirely!
+    if (dt < previewFpsInterval) return;
     
-    while (previewAccumulator >= 16.666) {
-        previewAngle += 0.015;
-        
-        let needsTrail = false;
-        
-        if (document.getElementById('locker').classList.contains('active')) {
-            if (currentLockerCategory === 'Trail') needsTrail = true;
-        }
-
-        if (!document.getElementById('item-preview-screen').classList.contains('hidden')) {
-            if (window.activePreviewItem && ITEMS_DB[window.activePreviewItem] && ITEMS_DB[window.activePreviewItem].category === 'Trail') {
-                needsTrail = true;
-            }
-        }
-        
-        if (needsTrail) {
-            previewDummy.vx = Math.cos(previewAngle) * 4;
-            previewDummy.vy = Math.sin(previewAngle) * 4;
-        } else {
-            previewDummy.vx = 0; 
-            previewDummy.vy = 0; 
-            previewDummy.trail = [];
-        }
-        
-        previewDummy.update();
-        previewAccumulator -= 16.666;
+    // Safety clamp if you alt-tabbed out
+    if (dt > 100) {
+        previewLastTime = timestamp - previewFpsInterval;
+    } else {
+        // Adjust for slight sub-frame drifting
+        previewLastTime = timestamp - (dt % previewFpsInterval);
     }
+    
+    previewAngle += 0.015;
+    
+    let needsTrail = false;
+    
+    if (document.getElementById('locker').classList.contains('active')) {
+        if (currentLockerCategory === 'Trail') needsTrail = true;
+    }
+
+    if (!document.getElementById('item-preview-screen').classList.contains('hidden')) {
+        if (window.activePreviewItem && ITEMS_DB[window.activePreviewItem] && ITEMS_DB[window.activePreviewItem].category === 'Trail') {
+            needsTrail = true;
+        }
+    }
+    
+    if (needsTrail) {
+        previewDummy.vx = Math.cos(previewAngle) * 4;
+        previewDummy.vy = Math.sin(previewAngle) * 4;
+    } else {
+        previewDummy.vx = 0; 
+        previewDummy.vy = 0; 
+        previewDummy.trail = [];
+    }
+    
+    previewDummy.update();
     
     // Draw Locker Preview
     if (lockerCtx && document.getElementById('locker').classList.contains('active')) {
@@ -347,11 +349,8 @@ function renderPreview() {
         window.gameSettings.showNames = tmp;
     }
 }
-
-// Start Preview Loop
-if (!previewAnimationId) {
-    previewAnimationId = requestAnimationFrame(renderPreview);
-}
+// Start the engine loop
+requestAnimationFrame(renderPreview);
 
 // ==========================================
 // RENDER UI FUNCTIONS
@@ -721,7 +720,7 @@ function logDev(msg) {
 }
 
 window.addEventListener('keydown', (e) => {
-    // FIX: Explicitly check for / and input it into the text box seamlessly!
+    // FIX: Prevents typing the initial slash twice, but guarantees it starts with one!
     if ((e.key === '/' || e.key === '`') && document.activeElement !== devInput) {
         e.preventDefault(); 
         if (devConsole) {

@@ -53,10 +53,9 @@ export class GameEngine {
         this.accountLevelUpTimeout = null; 
         this.animationId = null; 
         
-        // PERFECT FIXED TIMESTEP LOGIC
+        // PERFECT 60 FPS LOCK (Frame Dropping Method)
         this.fpsInterval = 1000 / 60; 
         this.lastTime = performance.now();
-        this.accumulator = 0; 
         
         this.lastFpsTime = performance.now(); 
         this.framesThisSecond = 0;
@@ -375,11 +374,15 @@ export class GameEngine {
         }
     }
 
-    startDemo() {
+    stopLoop() {
         if (this.animationId) {
             cancelAnimationFrame(this.animationId);
             this.animationId = null;
         }
+    }
+
+    startDemo() {
+        this.stopLoop();
         
         const mobileControls = document.getElementById('mobile-controls');
         if (mobileControls) mobileControls.classList.add('hidden');
@@ -420,18 +423,12 @@ export class GameEngine {
         this.camera.y = this.demoTargetY;
         this.cameraZoom = 1.0;
         
-        // Setup initial time to prevent NaN crashes
-        this.accumulator = 0;
         this.lastTime = performance.now(); 
-        
-        this.animationId = requestAnimationFrame(() => this.loop());
+        this.animationId = requestAnimationFrame((t) => this.loop(t));
     }
 
     start(playerClass) {
-        if (this.animationId) {
-            cancelAnimationFrame(this.animationId);
-            this.animationId = null;
-        }
+        this.stopLoop();
         
         const mobileControls = document.getElementById('mobile-controls');
         if (mobileControls && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
@@ -514,17 +511,12 @@ export class GameEngine {
 
         this.totalMatchPlayers = this.bots.length + 1; 
         
-        this.accumulator = 0;
         this.lastTime = performance.now(); 
-        
-        this.animationId = requestAnimationFrame(() => this.loop());
+        this.animationId = requestAnimationFrame((t) => this.loop(t));
     }
 
     startMultiplayer(players, lobbyCode, isHost) {
-        if (this.animationId) {
-            cancelAnimationFrame(this.animationId);
-            this.animationId = null;
-        }
+        this.stopLoop();
         
         const mobileControls = document.getElementById('mobile-controls');
         if (mobileControls && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
@@ -773,10 +765,8 @@ export class GameEngine {
 
         this.totalMatchPlayers = 50; 
         
-        this.accumulator = 0;
         this.lastTime = performance.now(); 
-        
-        this.animationId = requestAnimationFrame(() => this.loop());
+        this.animationId = requestAnimationFrame((t) => this.loop(t));
     }
 
     updateLeaderboard() {
@@ -1826,41 +1816,34 @@ export class GameEngine {
         pointersContainer.innerHTML = html;
     }
 
-    loop() {
-        // ALWAYS QUEUE THE NEXT FRAME IMMEDIATELY
-        this.animationId = requestAnimationFrame(() => this.loop());
+    loop(timestamp) {
+        this.animationId = requestAnimationFrame((t) => this.loop(t));
 
-        const current = performance.now();
-        let dt = current - this.lastTime;
-        this.lastTime = current;
+        if (!timestamp) timestamp = performance.now();
         
+        let dt = timestamp - this.lastTime;
+        
+        if (dt < this.fpsInterval) return;
+
         if (dt > 100) {
-            dt = 16.666; 
+            this.lastTime = timestamp - this.fpsInterval;
+        } else {
+            this.lastTime = timestamp - (dt % this.fpsInterval);
         }
-        if (dt < 0) {
-            dt = 0; 
-        }
-        
-        this.accumulator += dt;
+
+        this.update();
+        this.draw();
 
         if (window.gameSettings.showFps) {
             this.framesThisSecond++;
-            if (current - this.lastFpsTime >= 1000) {
+            if (timestamp - this.lastFpsTime >= 1000) {
                 const fpsDisplay = document.getElementById('fps-display');
                 if (fpsDisplay) {
                     fpsDisplay.innerText = `${this.framesThisSecond} FPS`;
                 }
                 this.framesThisSecond = 0;
-                this.lastFpsTime = current;
+                this.lastFpsTime = timestamp;
             }
         }
-
-        // PERFECT FIXED TIMESTEP (Forces Game Logic to 60 FPS!)
-        while (this.accumulator >= 16.666) {
-            this.update();
-            this.accumulator -= 16.666;
-        }
-        
-        this.draw();
     }
 }
