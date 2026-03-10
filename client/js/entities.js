@@ -287,6 +287,7 @@ export class Entity {
             let armorOffset = this.bodyVisual === 'armor' ? (4 + armorTier + (4 + armorTier * 1.5) / 2) : 0;
             
             let backOffset = this.type === 'circle' ? -this.size : -this.size / 2;
+            
             if (this.bodyVisual === 'armor') {
                 backOffset -= armorOffset;
             }
@@ -301,12 +302,11 @@ export class Entity {
             
             let pCount = isDashing ? 3 + tTier : 1 + Math.floor(tTier / 2);
             
-            // DYNAMIC THRUSTER COLORS BASED ON TIER
-            let pColor = '#ffaa00'; // Default / Tier 1 (Yellow-Orange Fire)
-            if (tTier === 2) pColor = '#ff2200'; // Tier 2 / Silver (Intense Red)
-            else if (tTier === 3) pColor = '#ffd700'; // Tier 3 / Gold (Golden)
-            else if (tTier === 4) pColor = '#00ffcc'; // Tier 4 / Cyan (Cyan)
-            else if (tTier >= 5) pColor = '#ff00ff'; // Tier 5 / Amethyst (Purple)
+            let pColor = '#ffaa00'; 
+            if (tTier === 2) pColor = '#ff2200'; 
+            else if (tTier === 3) pColor = '#ffd700'; 
+            else if (tTier === 4) pColor = '#00ffcc'; 
+            else if (tTier >= 5) pColor = '#ff00ff'; 
             
             for (let k = 0; k < pCount; k++) {
                 let exAngle1 = this.angle + Math.PI + (Math.random() - 0.5) * 0.6;
@@ -314,25 +314,13 @@ export class Entity {
                 let exSpeed = Math.random() * 3 + (isDashing ? 5 : 2);
                 
                 this.trail.push({ 
-                    type: 'fire', 
-                    x: px1, 
-                    y: py1, 
-                    vx: Math.cos(exAngle1) * exSpeed, 
-                    vy: Math.sin(exAngle1) * exSpeed, 
-                    alpha: 1.0, 
-                    color: pColor, 
-                    size: 2 + Math.random() * 2 
+                    type: 'fire', x: px1, y: py1, vx: Math.cos(exAngle1) * exSpeed, 
+                    vy: Math.sin(exAngle1) * exSpeed, alpha: 1.0, color: pColor, size: 2 + Math.random() * 2 
                 });
                 
                 this.trail.push({ 
-                    type: 'fire', 
-                    x: px2, 
-                    y: py2, 
-                    vx: Math.cos(exAngle2) * exSpeed, 
-                    vy: Math.sin(exAngle2) * exSpeed, 
-                    alpha: 1.0, 
-                    color: pColor, 
-                    size: 2 + Math.random() * 2 
+                    type: 'fire', x: px2, y: py2, vx: Math.cos(exAngle2) * exSpeed, 
+                    vy: Math.sin(exAngle2) * exSpeed, alpha: 1.0, color: pColor, size: 2 + Math.random() * 2 
                 });
             }
         }
