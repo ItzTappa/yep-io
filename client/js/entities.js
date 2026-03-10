@@ -301,7 +301,6 @@ export class Entity {
             
             let pCount = isDashing ? 3 + tTier : 1 + Math.floor(tTier / 2);
             
-            // Dynamic Thruster Colors Based on Tier!
             let pColor = '#ffaa00'; 
             if (tTier === 2) pColor = '#ff2200'; 
             else if (tTier === 3) pColor = '#ffd700'; 
@@ -1177,7 +1176,7 @@ export class Entity {
                 
                 if (skinType === 'neon') { 
                     ctx.fillStyle = '#ffffff'; 
-                    if (window.gameSettings && window.gameSettings.highQuality) { 
+                    if (window.gameSettings.highQuality) { 
                         ctx.shadowBlur = 15; 
                         ctx.shadowColor = '#ffffff'; 
                     } 
@@ -1201,7 +1200,8 @@ export class Entity {
             ctx.restore();
         }
         
-        if (this.isPlayer) {
+        // HIDE ARROW IF FRONT WEAPON EQUIPPED
+        if (this.isPlayer && this.frontVisual !== 'gun' && this.frontVisual !== 'spikes') {
             ctx.save(); 
             ctx.translate(this.x, this.y); 
             ctx.rotate(this.angle);
@@ -1217,7 +1217,7 @@ export class Entity {
 
         if (this.orbiters > 0) {
             ctx.fillStyle = '#a855f7';
-            if (window.gameSettings && window.gameSettings.highQuality) { 
+            if (window.gameSettings.highQuality) { 
                 ctx.shadowBlur = 10; 
                 ctx.shadowColor = '#a855f7'; 
             }
@@ -1330,6 +1330,18 @@ export class Player extends Entity {
         super(x, y, type);
         this.name = name;
         this.isPlayer = true;
+        
+        if (window.equippedItems) {
+            this.equipped = { ...window.equippedItems };
+            if (this.equipped.Color && ITEMS_DB && ITEMS_DB[this.equipped.Color]) {
+                const dbColor = ITEMS_DB[this.equipped.Color].value;
+                this.color = dbColor === 'gold' ? '#ffe600' : dbColor;
+            } else {
+                this.color = '#d3d3d3'; 
+            }
+        } else {
+            this.color = '#d3d3d3';
+        }
     }
 }
 
@@ -1346,7 +1358,7 @@ export class Bot extends Entity {
         this.points = startingPoints; 
         this.upgradeProgress = startingPoints; 
         
-        this.botPointsToNextUpgrade = 10;
+        this.botPointsToNextUpgrade = 15;
         this.dashTendency = Math.random();
         this.strafeDir = Math.random() > 0.5 ? 1 : -1; 
         this.personality = Math.random(); 
@@ -1354,7 +1366,7 @@ export class Bot extends Entity {
         while (this.upgradeProgress >= this.botPointsToNextUpgrade) {
             this.upgradeProgress -= this.botPointsToNextUpgrade;
             this.upgradeCount++; 
-            this.botPointsToNextUpgrade = Math.floor(20 + (this.upgradeCount * 15) + (Math.pow(this.upgradeCount, 1.8) * 2));
+            this.botPointsToNextUpgrade = Math.floor(15 + (this.upgradeCount * 12) + (Math.pow(this.upgradeCount, 1.7) * 1.5));
             let choices = getWeightedUpgrades(this, 1); 
             if (choices.length > 0) {
                 this.applyUpgrade(choices[0].id);
@@ -1402,7 +1414,6 @@ export class Bot extends Entity {
             } 
         });
 
-        // FIXED RUBBERBANDING LOGIC to prevent freezing!
         if (this.points > targetScore * 1.5) {
             let decay = (this.points - targetScore) * 0.05;
             this.points -= decay;
@@ -1420,7 +1431,7 @@ export class Bot extends Entity {
         while (this.upgradeProgress >= this.botPointsToNextUpgrade) {
             this.upgradeProgress -= this.botPointsToNextUpgrade; 
             this.upgradeCount++; 
-            this.botPointsToNextUpgrade = Math.floor(20 + (this.upgradeCount * 15) + (Math.pow(this.upgradeCount, 1.8) * 2));
+            this.botPointsToNextUpgrade = Math.floor(15 + (this.upgradeCount * 12) + (Math.pow(this.upgradeCount, 1.7) * 1.5));
             let choices = getWeightedUpgrades(this, 1); 
             if (choices.length > 0) {
                 this.applyUpgrade(choices[0].id);
