@@ -17,7 +17,7 @@ export class GameEngine {
         this.canvas.style.height = `${this.height}px`;
         this.ctx.scale(dpr, dpr);
 
-        this.worldSize = 4000;
+        this.worldSize = 15000;
         this.player = null; 
         this.bots = []; 
         this.orbs = []; 
@@ -76,7 +76,7 @@ export class GameEngine {
         this.pendingUpgrades = 0; 
         this.currentUpgradeChoices = [];
         this.isChoosingUpgrade = false;
-        this.pointsToNextUpgrade = 20; 
+        this.pointsToNextUpgrade = 15; 
         
         this.leftTouch = { id: null, originX: 0, originY: 0, x: 0, y: 0, active: false };
         this.aimTouchId = null;
@@ -440,7 +440,7 @@ export class GameEngine {
             this.bots.push(new Bot(Math.random() * this.worldSize, Math.random() * this.worldSize, type, Math.random() * 5000));
         }
         
-        for(let i = 0; i < 400; i++) {
+        for(let i = 0; i < 1000; i++) {
             this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
         }
 
@@ -497,7 +497,7 @@ export class GameEngine {
         this.cameraZoom = 1.0; 
         this.isCinematicIntro = false;
         
-        this.pointsToNextUpgrade = 20; 
+        this.pointsToNextUpgrade = 15; 
         this.matchStartTime = Date.now(); 
         this.matchXPEarned = 0; 
         this.distanceTraveled = 0; 
@@ -568,13 +568,13 @@ export class GameEngine {
             this.bots.push(new Bot(spawn.x, spawn.y, type, startingPts));
         }
         
-        for(let i = 0; i < 2000; i++) {
+        for(let i = 0; i < 5000; i++) {
             const x = Math.random() * this.worldSize;
             const y = Math.random() * this.worldSize;
             this.orbs.push(new Orb(x, y, 'xp', 1, null, 0));
         }
         
-        for(let i = 0; i < 100; i++) { 
+        for(let i = 0; i < 150; i++) { 
             let pos = this.getSafeOrbPosition(500); 
             this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0)); 
         }
@@ -732,7 +732,7 @@ export class GameEngine {
             this.bots = [...this.teammates]; 
         }
 
-        for(let i = 0; i < 2000; i++) {
+        for(let i = 0; i < 5000; i++) {
             this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
         }
         
@@ -879,7 +879,7 @@ export class GameEngine {
         
         this.cameraZoom = this.introStartZoom;
 
-        this.pointsToNextUpgrade = 20; 
+        this.pointsToNextUpgrade = 15; 
         this.matchStartTime = Date.now(); 
         this.matchXPEarned = 0; 
         this.distanceTraveled = 0; 
@@ -1246,6 +1246,15 @@ export class GameEngine {
             }
         }
 
+        // CONTINUOUS ORB SPAWNING TO MAINTAIN MASSIVE SLITHER.IO DENSITY
+        let desiredOrbs = this.isDemo ? 1000 : 5000;
+        if (this.orbs.length < desiredOrbs) {
+            let spawnCount = Math.min(50, desiredOrbs - this.orbs.length);
+            for(let i = 0; i < spawnCount; i++) {
+                this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
+            }
+        }
+
         if (this.isGameOver && this.spectateTarget) {
             if (this.spectateTarget.isDead || !this.bots.includes(this.spectateTarget)) {
                 if (this.bots.length > 0) {
@@ -1371,17 +1380,17 @@ export class GameEngine {
                 
                 if (sz.state === 'active' && sz.lifeTimer <= 0) {
                     this.safeZones.splice(i, 1);
-                    this.safeZoneSpawnTimer = 600; 
+                    this.safeZoneSpawnTimer = 1800; // 30 seconds wait!
                 }
             }
 
-            if (this.safeZones.length < 2) {
+            if (this.safeZones.length < 3) {
                 if (this.safeZoneSpawnTimer > 0) {
                     this.safeZoneSpawnTimer--;
                 } else {
                     let pos = this.getSafeSpawnPosition();
                     this.safeZones.push(new SafeZone(pos.x, pos.y));
-                    this.safeZoneSpawnTimer = 600; 
+                    this.safeZoneSpawnTimer = 1800; 
                 }
             }
 
@@ -1758,13 +1767,14 @@ export class GameEngine {
             }
         }
 
+        // SMOOTHED POLYNOMIAL LEVELING CURVE & FASTER PACING
         if (pointsGainedThisFrame > 0 && !this.isDemo && !this.isGameOver && this.player) {
             while (this.player.upgradeProgress >= this.pointsToNextUpgrade) {
                 this.player.upgradeProgress -= this.pointsToNextUpgrade;
                 this.player.upgradeCount++;
                 
                 let level = this.player.upgradeCount;
-                this.pointsToNextUpgrade = Math.floor(20 + (level * 15) + (Math.pow(level, 1.8) * 2));
+                this.pointsToNextUpgrade = Math.floor(15 + (level * 12) + (Math.pow(level, 1.7) * 1.5));
                 
                 this.triggerUpgradeReady();
             }
@@ -1970,6 +1980,14 @@ export class GameEngine {
 
         ctx.clearRect(0, 0, 220, 220);
         const scale = 220 / this.worldSize;
+
+        // RENDER SAFE ZONES ON MINIMAP
+        this.safeZones.forEach(sz => {
+            ctx.fillStyle = sz.state === 'active' ? 'rgba(0, 255, 204, 0.4)' : 'rgba(0, 255, 204, 0.15)';
+            ctx.beginPath();
+            ctx.arc(sz.x * scale, sz.y * scale, sz.radius * scale, 0, Math.PI * 2);
+            ctx.fill();
+        });
 
         if (this.stormActive) {
             ctx.fillStyle = 'rgba(138, 43, 226, 0.4)';
