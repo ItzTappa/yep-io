@@ -226,7 +226,7 @@ export class Entity {
             ctx.stroke(); ctx.restore();
         }
 
-        // VISUAL GUN BARRELS ON THE FRONT (SCALES WITH TIERS AND MULTISHOT)
+        // VISUAL GUN BARRELS ON THE FRONT
         if (this.frontVisual === 'gun') {
             ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
             
@@ -248,7 +248,6 @@ export class Entity {
                 ctx.fillRect(offsetDist + gunLen - 4, -gunThickness/2 - spread + 1, 4, gunThickness - 2);
                 ctx.fillRect(offsetDist + gunLen - 4, -gunThickness/2 + spread + 1, 4, gunThickness - 2);
             } else {
-                // 3 or more guns! (1 Center + 2 sides)
                 let spread = this.size * 0.5;
                 ctx.fillRect(offsetDist, -gunThickness/2, gunLen + 4, gunThickness); 
                 ctx.fillRect(offsetDist - 4, -gunThickness/2 - spread, gunLen, gunThickness);
@@ -315,14 +314,14 @@ export class Entity {
             ctx.restore();
         }
         
-        // HIDES ARROW IF ANY FRONT VISUAL (GUN/SPIKES) IS ON THE SHAPE
+        // HIDES ARROW IF ANY FRONT VISUAL (GUN/SPIKES) IS ON THE SHAPE. ONLY SHOWS FOR REAL PLAYERS IN MATCH.
         let hideArrow = (this.frontVisual !== null);
         
-        if (this.isPlayer && !hideArrow && this.name !== "") {
+        if (this.isPlayer && !hideArrow) {
             ctx.save(); 
             ctx.translate(this.x, this.y); 
             ctx.rotate(this.angle);
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
             ctx.beginPath();
             let offset = this.size + 4;
             ctx.moveTo(offset, -4);
@@ -526,7 +525,6 @@ export class Projectile {
                 if (diff > 0) this.angle += Math.min(this.turnSpeed, diff); else this.angle += Math.max(-this.turnSpeed, diff);
             }
         } 
-        // PERFECT AIM ASSIST FOR THE LOCAL PLAYER
         else if (!this.isMissile && this.owner.isPlayer && targets) {
             let nearest = null; let minDist = 350; 
             targets.forEach(t => { 
@@ -540,7 +538,6 @@ export class Projectile {
                 while (diff < -Math.PI) diff += Math.PI * 2; 
                 while (diff > Math.PI) diff -= Math.PI * 2;
                 
-                // Only slightly curve the bullet if you are already aiming somewhat closely to them
                 if (Math.abs(diff) < 0.4) {
                     this.angle += diff * 0.05; 
                 }

@@ -669,12 +669,12 @@ export class GameEngine {
             let tier = this.player.upgrades[upgId];
             if (tier > 0) {
                 let def = UPGRADE_POOL.find(u => u.id === upgId);
-                let title = def.title.toUpperCase();
+                let title = def ? def.title.toUpperCase() : upgId.toUpperCase();
                 let tierClass = tier === 1 ? 'badge-t1' : tier === 2 ? 'badge-t2' : tier === 3 ? 'badge-t3' : tier === 4 ? 'badge-t4' : 'badge-t5';
                 
                 container.innerHTML += `
-                    <div class="upgrade-badge ${tierClass}" title="${def.title}">
-                        <div class="badge-icon">${title}</div>
+                    <div class="upgrade-badge ${tierClass}" title="${def ? def.title : ''}">
+                        <div class="badge-name">${title}</div>
                         <div class="badge-tier">T${tier}</div>
                     </div>`;
             }
@@ -807,7 +807,6 @@ export class GameEngine {
                 }
             }
 
-            // NEW: Respawn bots in Singleplayer so the map doesn't get empty
             let isSinglePlayer = !this.lobbyCode;
             if (!this.isDemo && !this.stormActive && (this.isHost || isSinglePlayer)) { 
                 setTimeout(() => {
@@ -816,7 +815,7 @@ export class GameEngine {
                     let newBot = new Bot(safePos.x, safePos.y, ['triangle', 'square', 'circle'][Math.floor(Math.random()*3)], 0);
                     newBot.id = 'b_respawn' + Math.random();
                     this.bots.push(newBot);
-                }, 3000); // 3 seconds after dying, a new 0-point bot joins
+                }, 3000); 
             }
         }
     }

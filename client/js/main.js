@@ -1,10 +1,11 @@
 import { GameEngine } from './gameEngine.js';
 import { Player } from './entities.js';
 import { ITEMS_DB, RARITY_COLORS } from './items.js';
+import { UPGRADE_POOL } from './upgrades.js'; // NEW: Imported to name the badges correctly
 import { sounds } from './soundManager.js';
 import { lobbyUI } from './networkLobby.js';
 
-let selectedClass = null; // NEW: Starts as null to force selection
+let selectedClass = null; // Starts as null to force selection
 
 window.globalAccountXP = 0;
 window.globalAccountLevel = 1;
@@ -98,8 +99,9 @@ function renderPreview() {
     previewAngle += 0.015;
     if (lockerPreviewCtx) {
         lockerPreviewCtx.clearRect(0, 0, 300, 300);
-        const dummyClass = selectedClass || 'triangle'; // Default to triangle if none selected yet
+        const dummyClass = selectedClass || 'triangle'; 
         const dummy = new Player(150, 150, dummyClass, ""); 
+        dummy.isPlayer = false; // NEW: Prevents drawing the arrow in the menu
         dummy.equipped = window.equippedItems;
         if (dummy.equipped.Color && ITEMS_DB && ITEMS_DB[dummy.equipped.Color]) {
             const dbColor = ITEMS_DB[dummy.equipped.Color].value;
@@ -122,7 +124,6 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
         const targetTab = e.target.dataset.target;
         
-        // NEW: Prevent entering multiplayer without a class
         if (targetTab === 'multiplayer' && !selectedClass) {
             const info = document.getElementById('class-info');
             if (info) {
@@ -225,7 +226,6 @@ function updateMenuXPBar() {
 
 // --- PLAY & GAME OVER ---
 document.getElementById('play-btn').addEventListener('click', () => {
-    // NEW: Prevent playing without a class
     if (!selectedClass) {
         const info = document.getElementById('class-info');
         if (info) {
@@ -371,8 +371,15 @@ function renderStats() {
             for(let key in match.upgrades) {
                 let tier = match.upgrades[key];
                 if (tier > 0) {
-                    let tColor = tier === 1 ? '#cd7f32' : tier === 2 ? '#c0c0c0' : tier === 3 ? '#ffd700' : tier === 4 ? '#00ffcc' : '#ff00ff';
-                    upgradesHtml += `<div style="color:${tColor}; font-size:0.75rem; background:rgba(0,0,0,0.5); padding:4px 8px; border-radius:4px; border:1px solid ${tColor};">${key.toUpperCase()} T${tier}</div>`;
+                    let tClass = tier === 1 ? 'badge-t1' : tier === 2 ? 'badge-t2' : tier === 3 ? 'badge-t3' : tier === 4 ? 'badge-t4' : 'badge-t5';
+                    let def = UPGRADE_POOL.find(u => u.id === key);
+                    let title = def ? def.title.toUpperCase() : key.toUpperCase();
+                    
+                    upgradesHtml += `
+                        <div class="upgrade-badge ${tClass}" style="height: 24px; font-size: 0.7rem;">
+                            <div class="badge-name">${title}</div>
+                            <div class="badge-tier">T${tier}</div>
+                        </div>`;
                 }
             }
         }
