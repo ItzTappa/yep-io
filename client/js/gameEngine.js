@@ -7,7 +7,6 @@ export class GameEngine {
     constructor(canvas) {
         this.canvas = canvas; 
         this.ctx = canvas.getContext('2d');
-        
         this.width = window.innerWidth; 
         this.height = window.innerHeight;
         
@@ -16,7 +15,6 @@ export class GameEngine {
         this.canvas.height = this.height * dpr;
         this.canvas.style.width = `${this.width}px`; 
         this.canvas.style.height = `${this.height}px`;
-        
         this.ctx.scale(dpr, dpr);
 
         this.worldSize = 4000;
@@ -53,10 +51,10 @@ export class GameEngine {
         
         this.levelUpTimeout = null; 
         this.accountLevelUpTimeout = null; 
-        
-        // STRICT LOOP CONTROL VARIABLES
         this.animationId = null; 
-        this.isRunning = false; 
+        
+        // FIX: Added 'isRunning' flag to prevent multiple game loops from stacking
+        this.isRunning = false;
         
         this.fpsInterval = 1000 / 60; 
         this.lastTime = performance.now();
@@ -93,6 +91,7 @@ export class GameEngine {
         this.initInput();
     }
 
+    // FIX: Safely retrieve the volume from window.gameSettings
     getVol() {
         if (window.gameSettings && window.gameSettings.volume !== undefined) {
             return window.gameSettings.volume;
@@ -104,13 +103,11 @@ export class GameEngine {
         window.addEventListener('resize', () => {
             this.width = window.innerWidth; 
             this.height = window.innerHeight;
-            
             const dpr = window.devicePixelRatio || 1;
             this.canvas.width = this.width * dpr; 
             this.canvas.height = this.height * dpr;
             this.canvas.style.width = `${this.width}px`; 
             this.canvas.style.height = `${this.height}px`;
-            
             this.ctx.scale(dpr, dpr);
         });
         
@@ -127,25 +124,16 @@ export class GameEngine {
         
         window.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'INPUT') return;
-            
             const key = e.key.toLowerCase();
-            
-            if (Object.values(window.gameSettings.keybinds).includes(key)) {
+            if (Object.values(window.gameSettings.keybinds).includes(key)) { 
                 e.preventDefault(); 
             }
-            
             this.keys[key] = true;
             
             if (this.isChoosingUpgrade && !this.isDemo && !this.isGameOver) {
-                if (key === '1' && this.currentUpgradeChoices[0]) {
-                    this.selectUpgrade(0);
-                }
-                if (key === '2' && this.currentUpgradeChoices[1]) {
-                    this.selectUpgrade(1);
-                }
-                if (key === '3' && this.currentUpgradeChoices[2]) {
-                    this.selectUpgrade(2);
-                }
+                if (key === '1' && this.currentUpgradeChoices[0]) this.selectUpgrade(0);
+                if (key === '2' && this.currentUpgradeChoices[1]) this.selectUpgrade(1);
+                if (key === '3' && this.currentUpgradeChoices[2]) this.selectUpgrade(2);
             }
         });
         
@@ -176,7 +164,6 @@ export class GameEngine {
             leftZone.addEventListener('touchstart', (e) => {
                 if (this.isDemo || this.isGameOver) return; 
                 e.preventDefault();
-                
                 for (let i = 0; i < e.changedTouches.length; i++) {
                     const t = e.changedTouches[i];
                     if (!this.leftTouch.active) {
@@ -192,7 +179,6 @@ export class GameEngine {
                         leftBase.style.top = t.clientY + 'px';
                         leftBase.style.transform = 'translate(-50%, -50%)';
                         leftBase.classList.add('active');
-                        
                         leftStick.style.transform = `translate(-50%, -50%)`;
                     }
                 }
@@ -201,7 +187,6 @@ export class GameEngine {
             leftZone.addEventListener('touchmove', (e) => {
                 if (this.isDemo || this.isGameOver) return; 
                 e.preventDefault();
-                
                 for (let i = 0; i < e.changedTouches.length; i++) {
                     const t = e.changedTouches[i];
                     if (this.leftTouch.active && t.identifier === this.leftTouch.id) {
@@ -212,10 +197,9 @@ export class GameEngine {
                         let dy = t.clientY - this.leftTouch.originY;
                         let dist = Math.hypot(dx, dy);
                         let maxDist = 40; 
-                        
                         if (dist > maxDist) { 
-                            dx = (dx / dist) * maxDist; 
-                            dy = (dy / dist) * maxDist; 
+                            dx = (dx/dist) * maxDist; 
+                            dy = (dy/dist) * maxDist; 
                         }
                         leftStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
                     }
@@ -237,24 +221,20 @@ export class GameEngine {
                     }
                 }
             };
-            
             leftZone.addEventListener('touchend', endLeft);
             leftZone.addEventListener('touchcancel', endLeft);
         }
 
         window.addEventListener('touchstart', (e) => {
             if (this.isDemo || this.isGameOver) return;
-            
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const t = e.changedTouches[i];
-                
-                let isJoystick = e.target.closest('#joystick-left');
-                let isCard = e.target.closest('.card');
-                let isDashBtn = e.target.id === 'mobile-dash-btn';
-                let isAbilityBtn = e.target.id === 'mobile-ability-btn';
-                let isLeftTouch = this.leftTouch.active && t.identifier === this.leftTouch.id;
-                
-                if (!isLeftTouch && !isDashBtn && !isAbilityBtn && !isJoystick && !isCard) { 
+                if ((!this.leftTouch.active || t.identifier !== this.leftTouch.id) && 
+                    e.target.id !== 'mobile-dash-btn' && 
+                    e.target.id !== 'mobile-ability-btn' && 
+                    !e.target.closest('#joystick-left') &&
+                    !e.target.closest('.card')) { 
+                    
                     this.aimTouchId = t.identifier;
                     this.aimOriginX = t.clientX;
                     this.aimOriginY = t.clientY;
@@ -265,7 +245,6 @@ export class GameEngine {
 
         window.addEventListener('touchmove', (e) => {
             if (this.isDemo || this.isGameOver) return;
-            
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const t = e.changedTouches[i];
                 if (t.identifier === this.aimTouchId) {
@@ -322,9 +301,9 @@ export class GameEngine {
     playSoundAt(soundName, x, y, baseVolume = 1.0) {
         const dist = distance(this.camera.x, this.camera.y, x, y);
         const maxHearingDistance = 2000; 
-        
         if (dist < maxHearingDistance) {
             const falloff = 1 - (dist / maxHearingDistance);
+            // FIX: Applies volume to the sounds!
             const spatialVolume = baseVolume * (falloff * falloff) * this.getVol();
             sounds.play(soundName, spatialVolume);
         }
@@ -332,16 +311,13 @@ export class GameEngine {
 
     getSafeSpawnPosition() {
         let x, y, isSafe = false;
-        
         while (!isSafe) {
             x = Math.random() * this.worldSize; 
             y = Math.random() * this.worldSize;
-            
             if (!this.player || distance(x, y, this.player.x, this.player.y) > 1000) {
                 isSafe = true;
             }
         }
-        
         return { x, y };
     }
 
@@ -363,13 +339,11 @@ export class GameEngine {
             }
             attempts++;
         }
-        
         return { x, y };
     }
 
     spawnParticles(x, y, color, amount) {
-        if (window.gameSettings && !window.gameSettings.particles) return;
-        
+        if (!window.gameSettings.particles) return;
         for (let i = 0; i < amount; i++) {
             this.particles.push(new Particle(x, y, color));
         }
@@ -377,7 +351,6 @@ export class GameEngine {
 
     grantAccountXP(baseAmount, enemyPoints = 0) {
         let multiplier = 1;
-        
         if (enemyPoints > this.player.points) { 
             multiplier = enemyPoints / Math.max(1, this.player.points); 
         }
@@ -385,10 +358,8 @@ export class GameEngine {
         
         let bonusFromScore = Math.floor(enemyPoints / 100); 
         const finalXP = Math.floor(baseAmount * multiplier) + bonusFromScore;
-        
         window.globalAccountXP += finalXP;
         this.matchXPEarned += finalXP;
-        
         this.checkAccountLevelUp();
     }
 
@@ -404,26 +375,21 @@ export class GameEngine {
         }
         
         if (leveledUp && !this.isDemo) {
+            // FIX: Ensure notification obeys the settings!
             if (window.gameSettings && window.gameSettings.showNotifs !== false) {
                 const notif = document.getElementById('account-level-notif');
-                
                 if (notif) {
                     sounds.play('levelUp', 0.8 * this.getVol());
                     document.getElementById('account-notif-level-num').innerText = window.globalAccountLevel;
                     notif.classList.add('show');
-                    
-                    if (this.accountLevelUpTimeout) {
-                        clearTimeout(this.accountLevelUpTimeout);
-                    }
-                    
-                    this.accountLevelUpTimeout = setTimeout(() => {
-                        notif.classList.remove('show');
-                    }, 4000);
+                    if (this.accountLevelUpTimeout) clearTimeout(this.accountLevelUpTimeout);
+                    this.accountLevelUpTimeout = setTimeout(() => notif.classList.remove('show'), 4000);
                 }
             }
         }
     }
 
+    // FIX: We MUST clear previous animation frames to prevent games layering on top of each other!
     stopLoop() {
         this.isRunning = false;
         if (this.animationId) {
@@ -433,22 +399,21 @@ export class GameEngine {
     }
 
     startDemo() {
-        this.stopLoop();
+        this.stopLoop(); // Stop any existing loop first
+        
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+        }
         
         const mobileControls = document.getElementById('mobile-controls');
-        if (mobileControls) {
-            mobileControls.classList.add('hidden');
-        }
+        if (mobileControls) mobileControls.classList.add('hidden');
         
         const brUi = document.getElementById('br-ui');
-        if (brUi) {
-            brUi.classList.add('hidden');
-        }
+        if (brUi) brUi.classList.add('hidden');
         
         const badgeUI = document.getElementById('upgrade-badges');
-        if (badgeUI) {
-            badgeUI.innerHTML = '';
-        }
+        if (badgeUI) badgeUI.innerHTML = '';
 
         this.worldSize = 4000;
         this.stormActive = false;
@@ -468,17 +433,10 @@ export class GameEngine {
 
         for(let i = 0; i < 40; i++) {
             const types = ['triangle', 'square', 'circle'];
-            const type = types[Math.floor(Math.random() * 3)];
-            const x = Math.random() * this.worldSize;
-            const y = Math.random() * this.worldSize;
-            const pts = Math.random() * 5000;
-            this.bots.push(new Bot(x, y, type, pts));
+            this.bots.push(new Bot(Math.random() * this.worldSize, Math.random() * this.worldSize, types[Math.floor(Math.random()*3)], Math.random() * 5000));
         }
-        
         for(let i = 0; i < 400; i++) {
-            const x = Math.random() * this.worldSize;
-            const y = Math.random() * this.worldSize;
-            this.orbs.push(new Orb(x, y, 'xp', 1, null, 0));
+            this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
         }
 
         this.demoTargetX = this.worldSize / 2; 
@@ -488,26 +446,29 @@ export class GameEngine {
         this.cameraZoom = 1.0;
         
         this.isRunning = true;
+        this.accumulator = 0;
         this.lastTime = performance.now(); 
+        
         this.animationId = requestAnimationFrame((t) => this.loop(t));
     }
 
     start(playerClass) {
-        this.stopLoop();
+        this.stopLoop(); // Stop any existing loop first
+        
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+        }
         
         const mobileControls = document.getElementById('mobile-controls');
-        if (mobileControls) {
-            if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-                mobileControls.classList.remove('hidden');
-            } else {
-                mobileControls.classList.add('hidden');
-            }
+        if (mobileControls && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
+            mobileControls.classList.remove('hidden');
+        } else if (mobileControls) {
+            mobileControls.classList.add('hidden');
         }
         
         const brUi = document.getElementById('br-ui');
-        if (brUi) {
-            brUi.classList.add('hidden');
-        }
+        if (brUi) brUi.classList.add('hidden');
         
         this.worldSize = 6000; 
         this.stormActive = false; 
@@ -524,7 +485,6 @@ export class GameEngine {
         
         this.safeZones = [];
         this.safeZoneSpawnTimer = 0;
-        
         for(let i = 0; i < 2; i++) {
             let pos = this.getSafeSpawnPosition();
             this.safeZones.push(new SafeZone(pos.x, pos.y));
@@ -548,17 +508,14 @@ export class GameEngine {
         document.getElementById('upgrade-ui').classList.add('hidden');
         document.getElementById('xp-bar').style.width = '0%';
         document.getElementById('level-display').innerText = '0 PTS';
-        
         const badgeUI = document.getElementById('upgrade-badges');
-        if (badgeUI) {
-            badgeUI.innerHTML = '';
-        }
+        if (badgeUI) badgeUI.innerHTML = '';
         
         let matchSeed = Math.random();
         
         for(let i = 0; i < 49; i++) {
             const types = ['triangle', 'square', 'circle']; 
-            const type = types[Math.floor(Math.random() * 3)]; 
+            const type = types[Math.floor(Math.random()*3)]; 
             const spawn = this.getSafeSpawnPosition();
             
             let startingPts = 0;
@@ -575,11 +532,8 @@ export class GameEngine {
         }
         
         for(let i = 0; i < 300; i++) {
-            const x = Math.random() * this.worldSize;
-            const y = Math.random() * this.worldSize;
-            this.orbs.push(new Orb(x, y, 'xp', 1, null, 0));
+            this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
         }
-        
         for(let i = 0; i < 30; i++) { 
             let pos = this.getSafeOrbPosition(500); 
             this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0)); 
@@ -588,6 +542,7 @@ export class GameEngine {
         this.totalMatchPlayers = this.bots.length + 1; 
         
         this.isRunning = true;
+        this.accumulator = 0;
         this.lastTime = performance.now(); 
         this.lastFpsTime = performance.now(); 
         this.framesThisSecond = 0;
@@ -596,20 +551,22 @@ export class GameEngine {
     }
 
     startMultiplayer(players, lobbyCode, isHost) {
-        this.stopLoop();
+        this.stopLoop(); // Stop any existing loop first
+        
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+        }
         
         const mobileControls = document.getElementById('mobile-controls');
-        if (mobileControls) {
-            if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
-                mobileControls.classList.remove('hidden');
-            } else {
-                mobileControls.classList.add('hidden');
-            }
+        if (mobileControls && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
+            mobileControls.classList.remove('hidden');
+        } else if (mobileControls) {
+            mobileControls.classList.add('hidden');
         }
         
         this.lobbyCode = lobbyCode; 
         this.isHost = isHost || false;
-        
         this.worldSize = 10000; 
         this.stormActive = true; 
         this.stormCenter = { x: this.worldSize / 2, y: this.worldSize / 2 };
@@ -627,7 +584,6 @@ export class GameEngine {
         
         this.safeZones = [];
         this.safeZoneSpawnTimer = 0;
-        
         for(let i = 0; i < 2; i++) {
             let pos = this.getSafeSpawnPosition();
             this.safeZones.push(new SafeZone(pos.x, pos.y));
@@ -635,16 +591,11 @@ export class GameEngine {
 
         document.getElementById('game-ui').classList.remove('hidden');
         document.querySelector('.hud').classList.remove('hidden');
-        
         const badgeUI = document.getElementById('upgrade-badges');
-        if (badgeUI) {
-            badgeUI.innerHTML = '';
-        }
+        if (badgeUI) badgeUI.innerHTML = '';
         
         const brUi = document.getElementById('br-ui');
-        if (brUi) {
-            brUi.classList.remove('hidden'); 
-        }
+        if (brUi) brUi.classList.remove('hidden'); 
 
         let spawnX = this.worldSize / 2;
         let spawnY = this.worldSize / 2;
@@ -660,7 +611,6 @@ export class GameEngine {
             if (pData.id === 'local') {
                 const activeBtn = document.querySelector('.class-btn.active');
                 let pClass = activeBtn ? activeBtn.dataset.class : 'triangle';
-                
                 this.player = new Player(px, py, pClass, "");
                 this.player.color = pData.color; 
                 this.introTargetX = px;
@@ -683,9 +633,8 @@ export class GameEngine {
             
             for(let i = 0; i < botsToSpawn; i++) {
                 const types = ['triangle', 'square', 'circle']; 
-                const type = types[Math.floor(Math.random() * 3)]; 
+                const type = types[Math.floor(Math.random()*3)]; 
                 const spawn = this.getSafeSpawnPosition();
-                
                 let b = new Bot(spawn.x, spawn.y, type, 0);
                 b.id = 'b' + i; 
                 this.bots.push(b);
@@ -713,9 +662,7 @@ export class GameEngine {
         }
 
         for(let i = 0; i < 1500; i++) {
-            const x = Math.random() * this.worldSize;
-            const y = Math.random() * this.worldSize;
-            this.orbs.push(new Orb(x, y, 'xp', 1, null, 0));
+            this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
         }
         
         for(let i = 0; i < 100; i++) { 
@@ -732,7 +679,6 @@ export class GameEngine {
             
             window.gameSocket.on('hostInit', (data) => {
                 if (this.isHost) return;
-                
                 this.bots = [...this.teammates]; 
                 
                 data.bots.forEach(b => {
@@ -743,14 +689,10 @@ export class GameEngine {
                     if (b.c) bot.color = b.c;
                     
                     if (b.u && typeof bot.applyUpgrade === 'function') {
-                        if (!bot.upgrades) {
-                            bot.upgrades = {};
-                        }
+                        if (!bot.upgrades) bot.upgrades = {};
                         for (let key in b.u) {
                             let hostTier = b.u[key];
-                            for(let i = 0; i < hostTier; i++) {
-                                bot.applyUpgrade(key);
-                            }
+                            for(let i=0; i<hostTier; i++) bot.applyUpgrade(key);
                         }
                     }
                     bot.upgradeProgress = -999999; 
@@ -760,7 +702,6 @@ export class GameEngine {
 
             window.gameSocket.on('hostBotSync', (data) => {
                 if (this.isHost) return;
-                
                 data.bots.forEach(bd => {
                     let bot = this.bots.find(b => b.id === bd.id);
                     if (bot) {
@@ -784,9 +725,7 @@ export class GameEngine {
                         }
                         
                         bot.upgradeProgress = -999999; 
-                        if (bd.d && !bot.isDead) {
-                            this.processDeath(bot, null); 
-                        }
+                        if (bd.d && !bot.isDead) this.processDeath(bot, null); 
                     } else if (!bd.d) {
                         let newBot = new Bot(bd.x, bd.y, bd.type, 0);
                         newBot.id = bd.id;
@@ -798,9 +737,7 @@ export class GameEngine {
                         if (bd.u && typeof newBot.applyUpgrade === 'function') {
                             for (let key in bd.u) {
                                 let hostTier = bd.u[key];
-                                for(let i = 0; i < hostTier; i++) {
-                                    newBot.applyUpgrade(key);
-                                }
+                                for(let i=0; i<hostTier; i++) newBot.applyUpgrade(key);
                             }
                         }
                         newBot.upgradeProgress = -999999; 
@@ -827,12 +764,9 @@ export class GameEngine {
                     const totalShots = (data.multiShot || 0) + 1;
                     const spreadAngle = 0.2; 
                     const startAngle = data.angle - (spreadAngle * (totalShots - 1)) / 2;
-                    
                     for (let s = 0; s < totalShots; s++) {
                         let finalAngle = startAngle + (s * spreadAngle);
-                        if (data.type === 'triangle') {
-                            finalAngle += (Math.random() - 0.5) * 0.15;
-                        }
+                        if (data.type === 'triangle') finalAngle += (Math.random() - 0.5) * 0.15;
                         this.fireProjectile(tm, finalAngle);
                     }
                 }
@@ -851,13 +785,9 @@ export class GameEngine {
         this.camera.x = spawnX;
         this.camera.y = spawnY;
         
-        if (players.length <= 2) {
-            this.introStartZoom = 0.8;
-        } else if (players.length === 3) {
-            this.introStartZoom = 0.65;
-        } else {
-            this.introStartZoom = 0.5;
-        }
+        if (players.length <= 2) this.introStartZoom = 0.8;
+        else if (players.length === 3) this.introStartZoom = 0.65;
+        else this.introStartZoom = 0.5;
         
         this.cameraZoom = this.introStartZoom;
 
@@ -876,29 +806,30 @@ export class GameEngine {
         this.totalMatchPlayers = 50; 
         
         this.isRunning = true;
+        this.accumulator = 0;
         this.lastTime = performance.now(); 
+        this.lastFpsTime = performance.now(); 
+        this.framesThisSecond = 0;
+        
         this.animationId = requestAnimationFrame((t) => this.loop(t));
     }
 
     updateLeaderboard() {
+        // FIX: Verify leaderboard setting!
         const container = document.getElementById('leaderboard-container');
-        
         if (window.gameSettings && window.gameSettings.showLeaderboard === false) {
             if (container) container.classList.add('hidden');
             return;
         }
-        
-        if (container) {
-            container.classList.remove('hidden');
-        }
+        if (container) container.classList.remove('hidden');
 
         const allPlayers = (this.isDemo || this.isGameOver) ? [...this.bots] : [this.player, ...this.bots];
         allPlayers.sort((a, b) => b.points - a.points); 
-        
         if (this.isDemo) return; 
         
         const list = document.getElementById('leaderboard-list'); 
         if (!list) return;
+        
         list.innerHTML = ''; 
         
         const displayLimit = window.innerWidth <= 768 ? 5 : 10;
@@ -906,9 +837,7 @@ export class GameEngine {
         allPlayers.slice(0, displayLimit).forEach((p, index) => {
             const li = document.createElement('li'); 
             li.innerText = `#${index + 1} ${p.isPlayer ? "YOU" : p.name} - ${Math.floor(p.points)} Pts`;
-            if (p === this.player) {
-                li.style.color = '#00ffcc';
-            }
+            if (p === this.player) li.style.color = '#00ffcc';
             list.appendChild(li);
         });
     }
@@ -917,6 +846,7 @@ export class GameEngine {
         const container = document.getElementById('upgrade-badges');
         if (!container) return;
         
+        // FIX: Verify badges setting!
         if (window.gameSettings && window.gameSettings.showBadges === false) {
             container.innerHTML = '';
             return;
@@ -993,11 +923,7 @@ export class GameEngine {
                 card.style.display = 'none'; 
             }
         }
-        
-        const ui = document.getElementById('upgrade-ui');
-        if (ui) {
-            ui.classList.remove('hidden');
-        }
+        document.getElementById('upgrade-ui').classList.remove('hidden');
     }
 
     selectUpgrade(index) {
@@ -1008,11 +934,7 @@ export class GameEngine {
         this.grantAccountXP(15); 
         this.updateUpgradeBadges(); 
         
-        const ui = document.getElementById('upgrade-ui');
-        if (ui) {
-            ui.classList.add('hidden');
-        }
-        
+        document.getElementById('upgrade-ui').classList.add('hidden');
         this.isChoosingUpgrade = false; 
         this.pendingUpgrades--;
         
@@ -1024,24 +946,18 @@ export class GameEngine {
     triggerUpgradeReady() {
         if (this.isDemo || this.isGameOver) return;
         
+        // FIX: Verify notifs setting!
         if (window.gameSettings && window.gameSettings.showNotifs !== false) {
             const notif = document.getElementById('level-up-notif');
             if (notif) {
                 sounds.play('upgradeReady', 0.6 * this.getVol()); 
                 notif.classList.add('show');
-                
-                if (this.levelUpTimeout) {
-                    clearTimeout(this.levelUpTimeout);
-                }
-                
-                this.levelUpTimeout = setTimeout(() => {
-                    notif.classList.remove('show');
-                }, 3000);
+                if (this.levelUpTimeout) clearTimeout(this.levelUpTimeout);
+                this.levelUpTimeout = setTimeout(() => notif.classList.remove('show'), 3000);
             }
         }
         
         this.pendingUpgrades++; 
-        
         if (!this.isChoosingUpgrade) {
             this.showNextUpgrade();
         }
@@ -1050,12 +966,10 @@ export class GameEngine {
     fireProjectile(owner, angle) {
         let p = new Projectile(owner.x, owner.y, angle, owner);
         this.projectiles.push(p);
-        
         this.playSoundAt('shoot', owner.x, owner.y, 0.25);
         
         if (owner.rearguard > 0) {
-            let rearP = new Projectile(owner.x, owner.y, angle + Math.PI, owner);
-            this.projectiles.push(rearP);
+            this.projectiles.push(new Projectile(owner.x, owner.y, angle + Math.PI, owner));
         }
     }
 
@@ -1117,23 +1031,20 @@ export class GameEngine {
             
             if (this.spectateTarget === victim) {
                 this.spectateTarget = killer;
-                const killerNameEl = document.getElementById('go-killer-name');
-                if (killerNameEl) {
-                    killerNameEl.innerText = killer ? killer.name : "UNKNOWN";
+                if (document.getElementById('go-killer-name')) {
+                    document.getElementById('go-killer-name').innerText = killer ? killer.name : "UNKNOWN";
                 }
             }
 
             let isSinglePlayer = !this.lobbyCode;
-            
             if (!this.isDemo && !this.stormActive && (this.isHost || isSinglePlayer)) { 
                 setTimeout(() => {
                     if (this.isGameOver) return;
-                    
                     const safePos = this.getSafeSpawnPosition();
-                    let startPts = this.player ? this.player.points * (0.5 + Math.random() * 0.3) : 0;
-                    const types = ['triangle', 'square', 'circle'];
                     
-                    let newBot = new Bot(safePos.x, safePos.y, types[Math.floor(Math.random() * 3)], startPts);
+                    let startPts = this.player ? this.player.points * (0.5 + Math.random() * 0.3) : 0;
+                    
+                    let newBot = new Bot(safePos.x, safePos.y, ['triangle', 'square', 'circle'][Math.floor(Math.random()*3)], startPts);
                     newBot.id = 'b_respawn' + Math.random();
                     this.bots.push(newBot);
                 }, 3000); 
@@ -1146,11 +1057,7 @@ export class GameEngine {
         
         this.isGameOver = true;
         this.spectateTarget = killer;
-        
-        const ui = document.getElementById('upgrade-ui');
-        if (ui) {
-            ui.classList.add('hidden'); 
-        }
+        document.getElementById('upgrade-ui').classList.add('hidden'); 
 
         const mobileControls = document.getElementById('mobile-controls');
         if (mobileControls) {
@@ -1191,25 +1098,15 @@ export class GameEngine {
             upgrades: JSON.parse(JSON.stringify(this.player.upgrades || {})) 
         };
 
-        const goKillerName = document.getElementById('go-killer-name');
-        if (goKillerName) goKillerName.innerText = killer ? killer.name : "UNKNOWN";
-        
-        const goPoints = document.getElementById('go-points');
-        if (goPoints) goPoints.innerText = Math.floor(this.player.points);
-        
-        const goKills = document.getElementById('go-kills');
-        if (goKills) goKills.innerText = this.player.kills;
-        
-        const goTime = document.getElementById('go-time');
-        if (goTime) goTime.innerText = `${timeAlive}s`;
-        
-        const gameOverScreen = document.getElementById('game-over-screen');
-        if (gameOverScreen) gameOverScreen.classList.remove('hidden');
+        document.getElementById('go-killer-name').innerText = killer ? killer.name : "UNKNOWN";
+        document.getElementById('go-points').innerText = Math.floor(this.player.points);
+        document.getElementById('go-kills').innerText = this.player.kills;
+        document.getElementById('go-time').innerText = `${timeAlive}s`;
+        document.getElementById('game-over-screen').classList.remove('hidden');
     }
 
     update() {
         this.frameCount++;
-        
         if (this.frameCount % 30 === 0) {
             this.updateLeaderboard(); 
         }
@@ -1218,9 +1115,7 @@ export class GameEngine {
 
         if (this.screenShake > 0) {
             this.screenShake *= 0.9;
-            if (this.screenShake < 0.5) {
-                this.screenShake = 0;
-            }
+            if (this.screenShake < 0.5) this.screenShake = 0;
         }
 
         if (this.isGameOver && this.spectateTarget) {
@@ -1228,9 +1123,7 @@ export class GameEngine {
                 if (this.bots.length > 0) {
                     this.spectateTarget = this.bots.reduce((a, b) => a.points > b.points ? a : b);
                     const nameEl = document.getElementById('go-killer-name');
-                    if (nameEl) {
-                        nameEl.innerText = this.spectateTarget.name;
-                    }
+                    if (nameEl) nameEl.innerText = this.spectateTarget.name;
                 } else {
                     this.spectateTarget = null;
                 }
@@ -1284,7 +1177,6 @@ export class GameEngine {
                 if (this.keys[binds.dash]) {
                     let preDashPts = this.player.points;
                     this.player.dash(dx, dy);
-                    
                     if (preDashPts > this.player.points) { 
                         sounds.play('dash', 0.4 * this.getVol());
                         this.spawnParticles(this.player.x, this.player.y, '#ffffff', 8);
@@ -1303,8 +1195,8 @@ export class GameEngine {
 
                 if (dx !== 0 || dy !== 0) {
                     const length = Math.hypot(dx, dy);
-                    let currentSpeed = this.player.speed * (this.player.abilityTimer > 0 && this.player.activeAbility === 'overdrive' ? 1.8 : 1.0);
                     
+                    let currentSpeed = this.player.speed * (this.player.abilityTimer > 0 && this.player.activeAbility === 'overdrive' ? 1.8 : 1.0);
                     this.player.vx += (dx / length) * (currentSpeed * 0.2);
                     this.player.vy += (dy / length) * (currentSpeed * 0.2);
                 }
@@ -1380,7 +1272,6 @@ export class GameEngine {
                     allPlayers.forEach(p => {
                         if (p === this.player || p.isDead) return;
                         if (p.isTeammate) return;
-                        
                         if (distance(this.player.x, this.player.y, p.x, p.y) < 250) { 
                             if (!(p.abilityTimer > 0 && p.activeAbility === 'shield')) {
                                 p.health -= this.player.shockwave * 25; 
@@ -1467,7 +1358,6 @@ export class GameEngine {
             for (let sz of this.safeZones) {
                 let distToSZ = distance(bot.x, bot.y, sz.x, sz.y);
                 let minAllowed = sz.radius + bot.size;
-                
                 if (distToSZ < minAllowed) {
                     if (distToSZ === 0) { 
                         distToSZ = 1; 
@@ -1491,7 +1381,6 @@ export class GameEngine {
                 allPlayers.forEach(p => {
                     if (p === bot || p.isDead) return;
                     if (bot.isTeammate && (p.isPlayer || p.isTeammate)) return;
-                    
                     if (distance(bot.x, bot.y, p.x, p.y) < 250) {
                         if (!(p.abilityTimer > 0 && p.activeAbility === 'shield')) {
                             p.health -= bot.shockwave * 25; 
@@ -1747,7 +1636,6 @@ export class GameEngine {
 
         if (this.isHost && this.frameCount % 5 === 0 && this.lobbyCode && window.gameSocket) {
             let syncData = [];
-            
             for (let b of this.bots) {
                 if (!b.isRemotePlayer) {
                     syncData.push({ 
@@ -1764,7 +1652,6 @@ export class GameEngine {
                     });
                 }
             }
-            
             window.gameSocket.emit('hostBotSync', { code: this.lobbyCode, bots: syncData });
         }
     }
@@ -2007,14 +1894,12 @@ export class GameEngine {
         
         // --- THE PERFECT 60 FPS LOCK ---
         if (dt < this.fpsInterval) {
-            return; // Drop frames that are too fast!
+            return; 
         }
 
         if (dt > 100) {
-            // Failsafe for background tabs
             this.lastTime = timestamp - this.fpsInterval;
         } else {
-            // Adjust for micro-stutters
             this.lastTime = timestamp - (dt % this.fpsInterval);
         }
 
