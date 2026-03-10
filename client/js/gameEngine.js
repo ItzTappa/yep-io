@@ -90,6 +90,13 @@ export class GameEngine {
         this.initInput();
     }
 
+    getVol() {
+        if (window.gameSettings && window.gameSettings.volume !== undefined) {
+            return window.gameSettings.volume;
+        }
+        return 1.0;
+    }
+
     initInput() {
         window.addEventListener('resize', () => {
             this.width = window.innerWidth; 
@@ -211,7 +218,7 @@ export class GameEngine {
                         leftStick.style.transform = `translate(-50%, -50%)`;
                     }
                 }
-            }
+            };
             leftZone.addEventListener('touchend', endLeft);
             leftZone.addEventListener('touchcancel', endLeft);
         }
@@ -289,13 +296,13 @@ export class GameEngine {
         }
     }
 
-    playSoundAt(soundName, x, y, baseVolume = 1.0, category = 'combat', varyPitch = false) {
+    playSoundAt(soundName, x, y, baseVolume = 1.0) {
         const dist = distance(this.camera.x, this.camera.y, x, y);
         const maxHearingDistance = 2000; 
         if (dist < maxHearingDistance) {
             const falloff = 1 - (dist / maxHearingDistance);
-            const spatialVolume = baseVolume * (falloff * falloff);
-            sounds.play(soundName, category, spatialVolume, varyPitch);
+            const spatialVolume = baseVolume * (falloff * falloff) * this.getVol();
+            sounds.play(soundName, spatialVolume);
         }
     }
 
@@ -383,7 +390,7 @@ export class GameEngine {
             if (!window.gameSettings || window.gameSettings.showNotifs !== false) {
                 const notif = document.getElementById('account-level-notif');
                 if (notif) {
-                    sounds.play('level_up', 'alert');
+                    sounds.play('levelUp', 0.8 * this.getVol());
                     document.getElementById('account-notif-level-num').innerText = window.globalAccountLevel;
                     
                     // Display Notification dynamically
@@ -586,6 +593,7 @@ export class GameEngine {
             this.bots.push(new Bot(spawn.x, spawn.y, type, startingPts));
         }
         
+        // REBALANCED ORB COUNT: 3,000 total (allows for better spacing)
         for(let i = 0; i < 3000; i++) {
             const x = Math.random() * this.worldSize;
             const y = Math.random() * this.worldSize;
@@ -750,6 +758,7 @@ export class GameEngine {
             this.bots = [...this.teammates]; 
         }
 
+        // REBALANCED ORBS
         for(let i = 0; i < 3000; i++) {
             this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
         }
@@ -1064,6 +1073,7 @@ export class GameEngine {
     triggerUpgradeReady() {
         if (this.isDemo || this.isGameOver) return;
         
+        // ADDED LEVEL UP FLASH ANIMATION TO XP BAR
         const xpBarContainer = document.querySelector('.xp-bar-container');
         if (xpBarContainer) {
             xpBarContainer.classList.add('level-up-flash');
@@ -1073,7 +1083,7 @@ export class GameEngine {
         if (!window.gameSettings || window.gameSettings.showNotifs !== false) {
             const notif = document.getElementById('level-up-notif');
             if (notif) {
-                sounds.play('upgrade_ready', 'alert'); 
+                sounds.play('upgradeReady', 0.6 * this.getVol()); 
                 
                 notif.classList.add('active'); 
                 setTimeout(() => {
@@ -1104,6 +1114,8 @@ export class GameEngine {
         let p = new Projectile(owner.x, owner.y, angle, owner);
         this.projectiles.push(p);
         
+        this.playSoundAt('shoot', owner.x, owner.y, 0.25);
+        
         if (owner.rearguard > 0) {
             let rearP = new Projectile(owner.x, owner.y, angle + Math.PI, owner);
             this.projectiles.push(rearP);
@@ -1114,12 +1126,7 @@ export class GameEngine {
         if (victim.isDead) return;
         victim.isDead = true;
 
-        if (victim === this.player) {
-            this.playSoundAt('player_death', victim.x, victim.y, 1.0, 'heavy');
-        } else {
-            this.playSoundAt('enemy_death', victim.x, victim.y, 0.7, 'heavy');
-        }
-        
+        this.playSoundAt('explosion', victim.x, victim.y, 0.7);
         this.spawnParticles(victim.x, victim.y, victim.color, 30); 
         
         if (!this.isDemo && this.player && distance(this.player.x, this.player.y, victim.x, victim.y) < 500) {
@@ -1280,6 +1287,9 @@ export class GameEngine {
 
         const allPlayers = (this.isDemo || this.isGameOver) ? [...this.bots] : [this.player, ...this.bots];
 
+        // ==========================================
+        // CONTINUOUS ORB SPAWNING (TARGETED TO KEEP ACTION HIGH!)
+        // ==========================================
         let desiredOrbs = this.isDemo ? 1000 : 3000;
         if (this.orbs.length < desiredOrbs) {
             let spawnCount = Math.min(100, desiredOrbs - this.orbs.length);
@@ -1288,7 +1298,7 @@ export class GameEngine {
                 if (Math.random() < 0.60 && allPlayers.length > 0) {
                     let refPlayer = allPlayers[Math.floor(Math.random() * allPlayers.length)];
                     let ang = Math.random() * Math.PI * 2;
-                    let dist = 300 + (Math.random() * 1700); 
+                    let dist = 300 + (Math.random() * 1700); // 300 to 2000 units away
                     ox = refPlayer.x + Math.cos(ang) * dist;
                     oy = refPlayer.y + Math.sin(ang) * dist;
                     ox = Math.max(0, Math.min(this.worldSize, ox));
@@ -1315,6 +1325,9 @@ export class GameEngine {
             }
         }
 
+        // ==========================================
+        // MASSIVE NEW ABILITIES LOGIC (Explosions, Lasers, Etc)
+        // ==========================================
         allPlayers.forEach(p => {
             if (p.isDead) return;
 
@@ -1322,16 +1335,17 @@ export class GameEngine {
             if (p.abilityTriggered) {
                 p.abilityTriggered = false;
                 
-                let vol = (p.isPlayer || distance(this.camera.x, this.camera.y, p.x, p.y) < 1500) ? 1.0 : 0;
+                let vol = (p.isPlayer || distance(this.camera.x, this.camera.y, p.x, p.y) < 1500) ? 0.6 : 0;
                 
                 if (p.activeAbility === 'bullet_nova') {
+                    if (vol) this.playSoundAt('shoot', p.x, p.y, vol);
                     for(let a=0; a<Math.PI*2; a+=Math.PI/18) {
                         this.fireProjectile(p, a);
                     }
                     this.spawnParticles(p.x, p.y, '#00ffcc', 20);
                 }
                 else if (p.activeAbility === 'blink') {
-                    if (vol) this.playSoundAt('ability_blink', p.x, p.y, vol, 'ability');
+                    if (vol) this.playSoundAt('dash', p.x, p.y, vol);
                     this.spawnParticles(p.x, p.y, '#a855f7', 15);
                     p.x += Math.cos(p.angle) * 400;
                     p.y += Math.sin(p.angle) * 400;
@@ -1340,7 +1354,7 @@ export class GameEngine {
                     this.spawnParticles(p.x, p.y, '#a855f7', 15);
                 }
                 else if (p.activeAbility === 'emp') {
-                    if (vol) this.playSoundAt('ability_emp', p.x, p.y, vol, 'ability');
+                    if (vol) this.playSoundAt('explosion', p.x, p.y, vol);
                     this.spawnParticles(p.x, p.y, '#00ffff', 40);
                     if (p.isPlayer) this.screenShake = Math.max(this.screenShake, 15);
                     allPlayers.forEach(e => {
@@ -1354,13 +1368,14 @@ export class GameEngine {
                     });
                 }
                 else if (p.activeAbility === 'missile_swarm') {
-                    if (vol) this.playSoundAt('ability_missile', p.x, p.y, vol, 'ability');
+                    if (vol) this.playSoundAt('shoot', p.x, p.y, vol);
                     for(let i=-6; i<=6; i++) {
                         let proj = new Projectile(p.x, p.y, p.angle + (i * 0.15), p, true, false);
                         this.projectiles.push(proj);
                     }
                 }
                 else if (p.activeAbility === 'earthshatter') {
+                    if (vol) this.playSoundAt('explosion', p.x, p.y, vol);
                     this.spawnParticles(p.x, p.y, '#ffaa00', 50);
                     if (p.isPlayer) this.screenShake = Math.max(this.screenShake, 25);
                     allPlayers.forEach(e => {
@@ -1373,25 +1388,9 @@ export class GameEngine {
                     });
                 }
                 else if (p.activeAbility === 'tactical_nuke') {
-                    if (vol) this.playSoundAt('ability_nuke', p.x, p.y, vol, 'ability');
+                    if (vol) this.playSoundAt('shoot', p.x, p.y, vol);
                     let nuke = new Projectile(p.x, p.y, p.angle, p, false, true);
                     this.projectiles.push(nuke);
-                }
-                // === MASSIVE NEW RAILGUN ABILITY ===
-                else if (p.activeAbility === 'railgun') {
-                    if (vol) this.playSoundAt('plasma_gun', p.x, p.y, vol, 'ability');
-                    if (p.isPlayer) this.screenShake = Math.max(this.screenShake, 20);
-                    
-                    let railProj = new Projectile(p.x, p.y, p.angle, p, false, false);
-                    railProj.isRailgun = true; // Flag for drawing as a laser
-                    railProj.speed = 40;       // Extremely fast
-                    railProj.pierce = 999;     // Goes through everything
-                    railProj.damage = (p.baseDamage || 10) * 10; // Devastating damage
-                    railProj.color = '#ff00ff';// Hot pink/purple plasma
-                    railProj.sizeScale = 3.0;  // Visually large
-                    railProj.life = 100;       // Make sure it covers distance
-                    
-                    this.projectiles.push(railProj);
                 }
             }
 
@@ -1490,7 +1489,7 @@ export class GameEngine {
                     this.player.dash(dx, dy);
                     
                     if (preDashPts > this.player.points) { 
-                        sounds.play('dash', 'combat', 0.4);
+                        sounds.play('dash', 0.4 * this.getVol());
                         this.spawnParticles(this.player.x, this.player.y, '#ffffff', 8);
                         this.screenShake = Math.max(this.screenShake, 5); 
                     }
@@ -1534,11 +1533,31 @@ export class GameEngine {
 
             this.player.update();
 
+            // ==========================================
+            // NEW SAFE ZONE LOGIC WITH SOUND TRIGGERS
+            // ==========================================
             this.player.inSafeZone = false;
             for (let i = this.safeZones.length - 1; i >= 0; i--) {
                 let sz = this.safeZones[i];
+                let prevState = sz.state;
+                let prevTimer = sz.triggerTimer;
+                
                 let isInside = sz.update(this.player);
                 
+                // Play ticking sound EXACTLY when the countdown starts
+                if (prevState === 'idle' && sz.state === 'triggering') {
+                    this.playSoundAt('sz_tick', sz.x, sz.y, 0.6);
+                } 
+                // Play a ticking sound precisely every second (60 frames)
+                else if (sz.state === 'triggering' && sz.triggerTimer % 60 === 0 && sz.triggerTimer !== prevTimer) {
+                    this.playSoundAt('sz_tick', sz.x, sz.y, 0.6);
+                }
+
+                // Play the activation sound the exact moment it powers on
+                if (prevState !== 'active' && sz.state === 'active') {
+                    this.playSoundAt('sz_on', sz.x, sz.y, 1.0);
+                }
+
                 if (isInside) {
                     this.player.inSafeZone = true;
                     if (this.player.health < this.player.maxHealth) {
@@ -1548,7 +1567,7 @@ export class GameEngine {
                 
                 if (sz.state === 'active' && sz.lifeTimer <= 0) {
                     this.safeZones.splice(i, 1);
-                    this.safeZoneSpawnTimer = 1800; 
+                    this.safeZoneSpawnTimer = 1800; // 30 seconds wait!
                 }
             }
 
@@ -1577,7 +1596,7 @@ export class GameEngine {
             if (!this.isCinematicIntro) {
                 if (this.player.wantsShockwave) {
                     this.player.wantsShockwave = false;
-                    this.playSoundAt('take_damage', this.player.x, this.player.y, 0.4, 'combat'); 
+                    this.playSoundAt('explosion', this.player.x, this.player.y, 0.4); 
                     this.spawnParticles(this.player.x, this.player.y, '#ffcc00', 20); 
                     this.screenShake = Math.max(this.screenShake, 10);
                     
@@ -1685,7 +1704,7 @@ export class GameEngine {
 
             if (bot.wantsShockwave) {
                 bot.wantsShockwave = false;
-                this.playSoundAt('take_damage', bot.x, bot.y, 0.4, 'combat'); 
+                this.playSoundAt('explosion', bot.x, bot.y, 0.4); 
                 this.spawnParticles(bot.x, bot.y, '#ffcc00', 20); 
                 
                 if (!this.isDemo && this.player && distance(this.player.x, this.player.y, bot.x, bot.y) < 500) {
@@ -1784,7 +1803,6 @@ export class GameEngine {
                         if (!(p2.abilityTimer > 0 && (p2.activeAbility === 'shield' || p2.activeAbility === 'juggernaut'))) {
                             p2.health -= Math.max(1, dmg - (p2.plating * 2)); 
                             this.spawnParticles(p2.x, p2.y, '#ff4444', 5);
-                            this.playSoundAt('take_damage', p2.x, p2.y, 0.4, 'heavy');
                             if (p2 === this.player) this.screenShake = Math.max(this.screenShake, 8);
                         }
                         p1.spikeCooldown = 30; 
@@ -1798,7 +1816,6 @@ export class GameEngine {
                         if (!(p1.abilityTimer > 0 && (p1.activeAbility === 'shield' || p1.activeAbility === 'juggernaut'))) {
                             p1.health -= Math.max(1, dmg - (p1.plating * 2)); 
                             this.spawnParticles(p1.x, p1.y, '#ff4444', 5);
-                            this.playSoundAt('take_damage', p1.x, p1.y, 0.4, 'heavy');
                             if (p1 === this.player) this.screenShake = Math.max(this.screenShake, 8);
                         }
                         p2.spikeCooldown = 30;
@@ -1853,11 +1870,7 @@ export class GameEngine {
                         if (target.health < target.maxHealth * 0.5) dmg *= (1 + proj.owner.executioner);
                         target.health -= Math.max(1, dmg - (target.plating * 2));
                         
-                        this.playSoundAt('take_damage', target.x, target.y, 0.3, 'heavy');
-                        if (proj.owner === this.player) {
-                            sounds.play('hit_marker', 'combat', 1.0);
-                        }
-
+                        this.playSoundAt('hit', target.x, target.y, 0.4);
                         this.spawnParticles(proj.x, proj.y, proj.color, 4);
                         if (target === this.player) this.screenShake = Math.max(this.screenShake, 8);
                         
@@ -1866,7 +1879,7 @@ export class GameEngine {
                         }
                     } else {
                         this.spawnParticles(proj.x, proj.y, '#0096ff', 3);
-                        this.playSoundAt('take_damage', target.x, target.y, 0.1, 'combat');
+                        this.playSoundAt('hit', target.x, target.y, 0.1);
                     }
                     
                     if (proj.pierce > 0) { 
@@ -1927,7 +1940,7 @@ export class GameEngine {
             }
 
             if (collectedBy) {
-                if (collectedBy === this.player) sounds.play('xp_pickup', 'pickup', 1.0, true); 
+                if (collectedBy === this.player) sounds.play('collect', 0.4 * this.getVol()); 
                 
                 if (orb.type === 'health') {
                     if (collectedBy.health < collectedBy.maxHealth) {
