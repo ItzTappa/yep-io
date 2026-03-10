@@ -19,8 +19,6 @@ html, body {
 #gameCanvas { position: absolute; top: 0; left: 0; width: 100vw !important; height: 100dvh !important; z-index: 1; }
 
 .hidden { display: none !important; }
-.fade-out { opacity: 0 !important; pointer-events: none !important; }
-
 .text-center { text-align: center; }
 .black-text { color: #000 !important; text-shadow: none !important; }
 .accent-text { color: var(--accent) !important; }
@@ -82,7 +80,7 @@ html, body {
 /* ==========================================
    LOBBY & CLASS SELECTION
 ========================================== */
-.lobby-content { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; flex-grow: 1; }
+.lobby-content { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; flex-grow: 1;}
 .lobby-center { display: flex; flex-direction: column; align-items: center; justify-content: center; }
 h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0 0 15px rgba(255, 230, 0, 0.3); text-align: center; color: var(--accent); }
 
@@ -96,9 +94,11 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 #play-btn:active { transform: scale(0.95); }
 
 /* ==========================================
-   MULTIPLAYER LOBBY STYLES (CENTERED)
+   MULTIPLAYER LOBBY STYLES (CENTERED FIX)
 ========================================== */
-#multiplayer { display: flex; flex-direction: column; height: 100%; width: 100%; align-items: center; justify-content: flex-start; }
+
+/* FIX: Added .active so it doesn't bleed onto other tabs */
+#multiplayer.active { display: flex; flex-direction: column; height: 100%; width: 100%; align-items: center; justify-content: flex-start; }
 .multiplayer-container { display: flex; flex-direction: column; align-items: center; width: 100%; height: 100%; flex-grow: 1; }
 
 .lobby-header { display: flex; flex-direction: column; align-items: center; margin-top: 20px; margin-bottom: 0px; flex-shrink: 0; }
@@ -116,7 +116,7 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .dark-btn { background: #333; color: white; border-left: 2px solid #444; } .dark-btn:hover { background: #444; }
 .yellow-btn { background: var(--accent); color: black; border-left: 2px solid var(--accent); } .yellow-btn:hover { filter: brightness(1.1); }
 
-/* Centering the player slots vertically */
+/* FIX: flex-grow forces this container to take all empty vertical space, centering the slots perfectly */
 .player-slots { display: flex; gap: 50px; justify-content: center; align-items: center; flex-grow: 1; width: 100%; }
 .player-slot { width: 220px; background: transparent; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
 
@@ -331,27 +331,26 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 #minimap-canvas { width: 100%; height: 220px; display: block; }
 #player-count-display { text-align: center; padding: 8px; font-weight: bold; color: var(--accent); background: rgba(0,0,0,0.8); border-top: 2px solid #444; font-size: 1.2rem; letter-spacing: 2px; }
 
-/* NOTIFICATION QUEUE STYLING (RESTORED ANIMATIONS) */
+/* FIX: NOTIFICATION QUEUE STYLING */
 #notif-queue { position: absolute; bottom: 90px; left: 20px; display: flex; flex-direction: column-reverse; gap: 15px; align-items: flex-start; z-index: 150; pointer-events: none; }
 
 .notif-box { 
-    display: flex;
-    flex-direction: column;
+    display: flex; 
     padding: 12px 25px; 
     border-radius: 8px; 
     font-weight: bold; 
     text-align: left; 
+    opacity: 1; 
+    transform: translateX(0); 
     transition: opacity 0.5s ease-in-out, transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
     box-shadow: 0 5px 15px rgba(0,0,0,0.5); 
     pointer-events: auto; 
-    opacity: 1; /* Visible by default unless fade-out is applied */
-    transform: translateX(0);
 }
 
-.notif-box.fade-out {
-    opacity: 0 !important;
-    transform: translateX(-150%) !important;
-    pointer-events: none !important;
+.notif-box.fade-out { 
+    opacity: 0 !important; 
+    transform: translateX(-150%) !important; 
+    pointer-events: none !important; 
 }
 
 .notif-upgrade { background: linear-gradient(90deg, rgba(0,255,204,0.9), rgba(46,204,113,0.8)); border-left: 6px solid #00ffcc; }
