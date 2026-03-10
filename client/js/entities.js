@@ -223,8 +223,7 @@ export class Entity {
             ctx.restore();
         }
         
-        // NEW: Draw a smaller, wider subtle aim indicator for the player
-        if (this.isPlayer) {
+        if (this.isPlayer && this.name !== "") {
             ctx.save(); 
             ctx.translate(this.x, this.y); 
             ctx.rotate(this.angle);
@@ -302,7 +301,11 @@ export class Bot extends Entity {
         const names = ['OrbHunter', 'NovaStrike', 'PixelSlayer', 'GhostBlade', 'RogueBot', 'Vanguard', 'Titan', 'Apex'];
         this.name = names[Math.floor(Math.random() * names.length)] + Math.floor(Math.random() * 99);
         this.points = startingPoints; this.upgradeProgress = startingPoints; this.botPointsToNextUpgrade = 10;
+        
+        // NEW: Personality traits for AI
         this.dashTendency = Math.random();
+        this.strafeDir = Math.random() > 0.5 ? 1 : -1; 
+        this.personality = Math.random(); 
         
         while (this.upgradeProgress >= this.botPointsToNextUpgrade) {
             this.upgradeProgress -= this.botPointsToNextUpgrade;
@@ -328,15 +331,21 @@ export class Bot extends Entity {
             return;
         }
 
-        this.changeTargetTimer--; let nearestEnemy = null; let minDist = 600;
+        this.changeTargetTimer--; let nearestEnemy = null; let minDist = 800; // Increased vision range
         
         allPlayers.forEach(p => { 
             if (p === this || p.isDead) return; 
+            
+            // Teammates ignore the local player and other teammates
             if (this.isTeammate && (p.isPlayer || p.isTeammate)) return;
-            if (!this.isTeammate && !p.isPlayer && !p.isTeammate) return; 
 
+            // NEW: Enemies now see everyone! We removed the code making them ignore each other.
             const dist = distance(this.x, this.y, p.x, p.y); 
-            if (dist < minDist) { minDist = dist; nearestEnemy = p; } 
+            
+            // Add a little randomness so bots don't perfectly laser the closest person identically
+            let randomizedDist = dist + (Math.random() * 100); 
+            
+            if (randomizedDist < minDist) { minDist = randomizedDist; nearestEnemy = p; } 
         });
 
         let passiveGain = 0.15; this.points += passiveGain; this.upgradeProgress += passiveGain;
@@ -359,12 +368,51 @@ export class Bot extends Entity {
                 }
             }
         } else if (nearestEnemy) {
-            this.angle = Math.atan2(nearestEnemy.y - this.y, nearestEnemy.x - this.x);
-            const dx = nearestEnemy.x - this.x; const dy = nearestEnemy.y - this.y;
-            if (minDist > 100 && minDist < 400 && Math.random() < 0.002) this.dash(dx, dy);
-            if (minDist > 300) { this.vx += (dx / minDist) * (this.speed * 0.15); this.vy += (dy / minDist) * (this.speed * 0.15); } 
-            else if (minDist < 200) { this.vx -= (dx / minDist) * (this.speed * 0.15); this.vy -= (dy / minDist) * (this.speed * 0.15); }
+            // Re-calculate raw true distance
+            const trueDist = distance(this.x, this.y, nearestEnemy.x, nearestEnemy.y);
+            const dx = nearestEnemy.x - this.x; 
+            const dy = nearestEnemy.y - this.y;
+            
+            let fleeThreshold = 0.15 + (this.personality * 0.25); // Run away if HP drops to 15-40%
+
+            if (this.health < this.maxHealth * fleeThreshold) {
+                // FLEE MODE
+                this.angle = Math.atan2(-dy, -dx);
+                this.vx += Math.cos(this.angle) * (this.speed * 0.14);
+                this.vy += Math.sin(this.angle) * (this.speed * 0.14);
+                
+                if (this.dashCooldown <= 0 && Math.random() < 0.03) {
+                    this.dash(-dx, -dy);
+                }
+            } else {
+                // ATTACK MODE
+                this.angle = Math.atan2(dy, dx);
+                
+                if (trueDist > 150 && trueDist < 400 && Math.random() < (0.002 + this.dashTendency * 0.005)) {
+                    this.dash(dx, dy);
+                }
+                
+                // Optimal fighting distance changes depending on their class!
+                let optimalDist = this.type === 'square' ? 100 : (this.type === 'triangle' ? 300 : 200);
+                
+                if (Math.random() < 0.01) this.strafeDir *= -1; // 1% chance per frame to reverse circle-strafe
+                
+                if (trueDist > optimalDist + 50) { 
+                    // Move in
+                    this.vx += (dx / trueDist) * (this.speed * 0.12); 
+                    this.vy += (dy / trueDist) * (this.speed * 0.12); 
+                } else if (trueDist < optimalDist - 50) { 
+                    // Move away (kite)
+                    this.vx -= (dx / trueDist) * (this.speed * 0.12); 
+                    this.vy -= (dy / trueDist) * (this.speed * 0.12); 
+                } else {
+                    // Circle strafe around the player to dodge shots
+                    this.vx += (-dy / trueDist) * (this.speed * 0.08) * this.strafeDir;
+                    this.vy += (dx / trueDist) * (this.speed * 0.08) * this.strafeDir;
+                }
+            }
         } else {
+            // ROAM MODE
             if (this.changeTargetTimer <= 0) {
                 this.targetX = this.x + (Math.random() - 0.5) * 800; this.targetY = this.y + (Math.random() - 0.5) * 800; this.changeTargetTimer = 60 + Math.random() * 60; 
             }

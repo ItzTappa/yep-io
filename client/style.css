@@ -315,9 +315,26 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
     .btn-equip, .btn-claim { font-size: 0.75rem; padding: 8px 5px; margin-top: auto; }
     
     /* Stats Layout */
-    .lifetime-stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .lifetime-stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .stat-box { padding: 10px; }
+    .stat-box div:first-child { font-size: 0.7rem; }
+    .stat-val { font-size: 1.4rem; }
+    
     .match-history-header { display: none; }
-    .match-card { grid-template-columns: repeat(2, 1fr); text-align: left; }
+    .match-card { 
+        grid-template-columns: 1fr 1fr; 
+        text-align: center; 
+        padding: 15px 10px; 
+        gap: 15px; 
+    }
+    .match-card .match-detail-item:first-child {
+        grid-column: span 2;
+        border-bottom: 1px solid #333;
+        padding-bottom: 10px;
+    }
+    .match-detail-label { font-size: 0.65rem; }
+    .match-detail-val { font-size: 1.1rem; }
+    .match-rank { font-size: 1.6rem; }
     
     .settings-content { width: 90%; padding: 15px; }
 }

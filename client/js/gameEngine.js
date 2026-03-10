@@ -921,7 +921,6 @@ export class GameEngine {
                 }
 
                 if (!this.isTouchDevice) {
-                    // NEW: Calculate exactly where the player is on screen accounting for camera lag
                     let playerScreenX = this.width / 2 + (this.player.x - this.camera.x) * this.cameraZoom;
                     let playerScreenY = this.height / 2 + (this.player.y - this.camera.y) * this.cameraZoom;
                     
@@ -1073,11 +1072,13 @@ export class GameEngine {
                 this.projectiles.push(fireProj);
             }
 
+            // NEW: Simplified targeting so enemies will shoot at ANY enemy close to them
             let enemyClose = false;
             for(let p of allPlayers) {
                 if (p === bot || p.isDead) continue;
+                
+                // If I am a teammate, ignore the player and other teammates
                 if (bot.isTeammate && (p.isPlayer || p.isTeammate)) continue;
-                if (!bot.isTeammate && (p.isPlayer || p.isTeammate)) enemyClose = true; 
                 
                 if (distance(bot.x, bot.y, p.x, p.y) < 600 && !(p.ghostDash && p.dashTimer > 0)) { 
                     enemyClose = true; 
