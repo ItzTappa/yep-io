@@ -53,10 +53,11 @@ export class GameEngine {
         this.accountLevelUpTimeout = null; 
         this.animationId = null; 
         
-        // UNBREAKABLE FIXED TIMESTEP VARIABLES
+        // PERFECT FIXED TIMESTEP LOGIC
         this.fpsInterval = 1000 / 60; 
         this.lastTime = performance.now();
         this.accumulator = 0; 
+        
         this.lastFpsTime = performance.now(); 
         this.framesThisSecond = 0;
 
@@ -375,8 +376,10 @@ export class GameEngine {
     }
 
     startDemo() {
-        if (this.animationId) cancelAnimationFrame(this.animationId);
-        this.animationId = null;
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+        }
         
         const mobileControls = document.getElementById('mobile-controls');
         if (mobileControls) mobileControls.classList.add('hidden');
@@ -417,16 +420,18 @@ export class GameEngine {
         this.camera.y = this.demoTargetY;
         this.cameraZoom = 1.0;
         
-        // RESET TIME VARIABLES TO PREVENT FREEZES
+        // Setup initial time to prevent NaN crashes
         this.accumulator = 0;
         this.lastTime = performance.now(); 
         
-        this.loop();
+        this.animationId = requestAnimationFrame(() => this.loop());
     }
 
     start(playerClass) {
-        if (this.animationId) cancelAnimationFrame(this.animationId);
-        this.animationId = null;
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+        }
         
         const mobileControls = document.getElementById('mobile-controls');
         if (mobileControls && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
@@ -511,15 +516,15 @@ export class GameEngine {
         
         this.accumulator = 0;
         this.lastTime = performance.now(); 
-        this.lastFpsTime = performance.now(); 
-        this.framesThisSecond = 0;
         
-        this.loop();
+        this.animationId = requestAnimationFrame(() => this.loop());
     }
 
     startMultiplayer(players, lobbyCode, isHost) {
-        if (this.animationId) cancelAnimationFrame(this.animationId);
-        this.animationId = null;
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+        }
         
         const mobileControls = document.getElementById('mobile-controls');
         if (mobileControls && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
@@ -770,10 +775,8 @@ export class GameEngine {
         
         this.accumulator = 0;
         this.lastTime = performance.now(); 
-        this.lastFpsTime = performance.now(); 
-        this.framesThisSecond = 0;
         
-        this.loop();
+        this.animationId = requestAnimationFrame(() => this.loop());
     }
 
     updateLeaderboard() {
@@ -1824,13 +1827,18 @@ export class GameEngine {
     }
 
     loop() {
+        // ALWAYS QUEUE THE NEXT FRAME IMMEDIATELY
+        this.animationId = requestAnimationFrame(() => this.loop());
+
         const current = performance.now();
         let dt = current - this.lastTime;
         this.lastTime = current;
         
-        // Failsafe for background tabs to prevent fast-forwarding
-        if (dt > 250) {
-            dt = 250; 
+        if (dt > 100) {
+            dt = 16.666; 
+        }
+        if (dt < 0) {
+            dt = 0; 
         }
         
         this.accumulator += dt;
@@ -1838,20 +1846,21 @@ export class GameEngine {
         if (window.gameSettings.showFps) {
             this.framesThisSecond++;
             if (current - this.lastFpsTime >= 1000) {
-                document.getElementById('fps-display').innerText = `${this.framesThisSecond} FPS`;
+                const fpsDisplay = document.getElementById('fps-display');
+                if (fpsDisplay) {
+                    fpsDisplay.innerText = `${this.framesThisSecond} FPS`;
+                }
                 this.framesThisSecond = 0;
                 this.lastFpsTime = current;
             }
         }
 
-        // PERFECT FIXED TIMESTEP 
-        while (this.accumulator >= this.fpsInterval) {
+        // PERFECT FIXED TIMESTEP (Forces Game Logic to 60 FPS!)
+        while (this.accumulator >= 16.666) {
             this.update();
-            this.accumulator -= this.fpsInterval;
+            this.accumulator -= 16.666;
         }
         
         this.draw();
-        
-        this.animationId = requestAnimationFrame(() => this.loop());
     }
 }
