@@ -1,7 +1,7 @@
 import { Player, Bot, Orb, Projectile, Particle, getWeightedUpgrades } from './entities.js';
 import { distance } from './utils.js';
 import { sounds } from './soundManager.js';
-import { UPGRADE_POOL } from './upgrades.js'; // NEW: Imported to get title info for badges
+import { UPGRADE_POOL } from './upgrades.js'; 
 
 export class GameEngine {
     constructor(canvas) {
@@ -660,7 +660,6 @@ export class GameEngine {
         });
     }
 
-    // NEW: Updates the visual badges on the top left
     updateUpgradeBadges() {
         const container = document.getElementById('upgrade-badges');
         if (!container) return;
@@ -670,10 +669,12 @@ export class GameEngine {
             let tier = this.player.upgrades[upgId];
             if (tier > 0) {
                 let def = UPGRADE_POOL.find(u => u.id === upgId);
+                let title = def.title.toUpperCase();
                 let tierClass = tier === 1 ? 'badge-t1' : tier === 2 ? 'badge-t2' : tier === 3 ? 'badge-t3' : tier === 4 ? 'badge-t4' : 'badge-t5';
+                
                 container.innerHTML += `
                     <div class="upgrade-badge ${tierClass}" title="${def.title}">
-                        <div class="badge-icon">${def.id.substring(0,3).toUpperCase()}</div>
+                        <div class="badge-icon">${title}</div>
                         <div class="badge-tier">T${tier}</div>
                     </div>`;
             }
@@ -714,7 +715,7 @@ export class GameEngine {
         const choice = this.currentUpgradeChoices[index];
         this.player.applyUpgrade(choice.id); 
         this.grantAccountXP(15); 
-        this.updateUpgradeBadges(); // Refresh the visual UI
+        this.updateUpgradeBadges(); 
         
         document.getElementById('upgrade-ui').classList.add('hidden');
         this.isChoosingUpgrade = false; 
@@ -806,11 +807,16 @@ export class GameEngine {
                 }
             }
 
-            if (!this.isDemo && !this.stormActive && this.isHost) { 
-                const safePos = this.getSafeSpawnPosition();
-                let newBot = new Bot(safePos.x, safePos.y, ['triangle', 'square', 'circle'][Math.floor(Math.random()*3)]);
-                newBot.id = 'b_respawn' + Math.random();
-                this.bots.push(newBot);
+            // NEW: Respawn bots in Singleplayer so the map doesn't get empty
+            let isSinglePlayer = !this.lobbyCode;
+            if (!this.isDemo && !this.stormActive && (this.isHost || isSinglePlayer)) { 
+                setTimeout(() => {
+                    if (this.isGameOver) return;
+                    const safePos = this.getSafeSpawnPosition();
+                    let newBot = new Bot(safePos.x, safePos.y, ['triangle', 'square', 'circle'][Math.floor(Math.random()*3)], 0);
+                    newBot.id = 'b_respawn' + Math.random();
+                    this.bots.push(newBot);
+                }, 3000); // 3 seconds after dying, a new 0-point bot joins
             }
         }
     }
@@ -850,7 +856,6 @@ export class GameEngine {
             xpEl.innerText = `+${this.matchXPEarned}`;
         }
 
-        // We now deeply clone the player's upgrades so they are saved safely to match history
         window.lastMatchStats = {
             kills: this.player.kills || 0,
             time: timeAlive || 0,

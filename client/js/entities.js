@@ -83,18 +83,22 @@ export class Entity {
         this.heavyArt = 0; this.plating = 0; this.vampirism = 0;
         this.magnet = 0; this.rearguard = 0; this.efficiency = 0; this.shrapnel = 0;
         
-        // NEW: Visual upgrade trackers
+        // VISUAL UPGRADE TRACKERS
         this.frontVisual = null;
         this.bodyVisual = null;
+        this.rearVisual = null;
+        this.auraVisual = null;
     }
 
     applyUpgrade(upgradeId) {
         if (this.upgrades[upgradeId] >= this.maxUpgradeTier) return; 
         
-        // Setup visual upgrades (priority to whichever is picked first)
+        // Permanently sets physical visuals. The first picked in that slot stays forever.
         if (upgradeId === 'spikes' && !this.frontVisual) this.frontVisual = 'spikes';
-        if ((upgradeId === 'fireRate' || upgradeId === 'multiShot') && !this.frontVisual) this.frontVisual = 'gun';
-        if (upgradeId === 'maxHealth' && !this.bodyVisual) this.bodyVisual = 'armor';
+        if ((upgradeId === 'fireRate' || upgradeId === 'multiShot' || upgradeId === 'damage') && !this.frontVisual) this.frontVisual = 'gun';
+        if ((upgradeId === 'maxHealth' || upgradeId === 'plating') && !this.bodyVisual) this.bodyVisual = 'armor';
+        if ((upgradeId === 'speed' || upgradeId === 'dash') && !this.rearVisual) this.rearVisual = 'thrusters';
+        if ((upgradeId === 'regen' || upgradeId === 'vampirism') && !this.auraVisual) this.auraVisual = 'regen';
 
         const upgradeDef = UPGRADE_POOL.find(u => u.id === upgradeId);
         if (upgradeDef && upgradeDef.apply) {
@@ -182,7 +186,33 @@ export class Entity {
             ctx.restore();
         });
 
-        // VISUAL ARMOR BODY
+        // VISUAL REGEN AURA
+        if (this.auraVisual === 'regen') {
+            ctx.save(); ctx.translate(this.x, this.y);
+            ctx.beginPath(); ctx.arc(0, 0, this.size + 15, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(0, 255, 100, 0.4)';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([15, 15]);
+            ctx.lineDashOffset = -Date.now() / 30;
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // VISUAL SPEED THRUSTERS ON THE BACK
+        if (this.rearVisual === 'thrusters') {
+            ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
+            let tTier = Math.max(this.upgrades['speed'] || 0, this.upgrades['dash'] || 0);
+            let tSize = 6 + tTier * 2;
+            let tLen = 8 + tTier * 2;
+            ctx.fillStyle = '#444';
+            let backOffset = -this.size - 2;
+            if (this.type === 'triangle') backOffset = -this.size / 2 - 2;
+            ctx.fillRect(backOffset - tLen, -this.size*0.4 - tSize/2, tLen, tSize);
+            ctx.fillRect(backOffset - tLen, this.size*0.4 - tSize/2, tLen, tSize);
+            ctx.restore();
+        }
+
+        // VISUAL ARMOR BODY PLATING
         if (this.bodyVisual === 'armor') {
             ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
             ctx.strokeStyle = '#888'; ctx.lineWidth = 4;
@@ -196,13 +226,38 @@ export class Entity {
             ctx.stroke(); ctx.restore();
         }
 
-        // VISUAL GUN BARREL (Behind spikes if they somehow glitched together)
+        // VISUAL GUN BARRELS ON THE FRONT (SCALES WITH TIERS AND MULTISHOT)
         if (this.frontVisual === 'gun') {
             ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
+            
+            let gunCount = this.multiShot + 1;
+            let gunTier = Math.max(this.upgrades['fireRate'] || 0, this.upgrades['damage'] || 0, this.upgrades['multiShot'] || 0);
+            let gunLen = 12 + (gunTier * 3); 
+            let gunThickness = 6 + (gunTier * 1.5); 
+            let offsetDist = this.size - 2;
+
             ctx.fillStyle = '#555';
-            ctx.fillRect(this.size - 2, -4, 14, 8);
-            ctx.fillStyle = '#222';
-            ctx.fillRect(this.size + 10, -3, 4, 6);
+            if (gunCount === 1) {
+                ctx.fillRect(offsetDist, -gunThickness/2, gunLen, gunThickness);
+                ctx.fillStyle = '#222'; ctx.fillRect(offsetDist + gunLen - 4, -gunThickness/2 + 1, 4, gunThickness - 2);
+            } else if (gunCount === 2) {
+                let spread = this.size * 0.4;
+                ctx.fillRect(offsetDist, -gunThickness/2 - spread, gunLen, gunThickness);
+                ctx.fillRect(offsetDist, -gunThickness/2 + spread, gunLen, gunThickness);
+                ctx.fillStyle = '#222';
+                ctx.fillRect(offsetDist + gunLen - 4, -gunThickness/2 - spread + 1, 4, gunThickness - 2);
+                ctx.fillRect(offsetDist + gunLen - 4, -gunThickness/2 + spread + 1, 4, gunThickness - 2);
+            } else {
+                // 3 or more guns! (1 Center + 2 sides)
+                let spread = this.size * 0.5;
+                ctx.fillRect(offsetDist, -gunThickness/2, gunLen + 4, gunThickness); 
+                ctx.fillRect(offsetDist - 4, -gunThickness/2 - spread, gunLen, gunThickness);
+                ctx.fillRect(offsetDist - 4, -gunThickness/2 + spread, gunLen, gunThickness);
+                ctx.fillStyle = '#222';
+                ctx.fillRect(offsetDist + gunLen, -gunThickness/2 + 1, 4, gunThickness - 2);
+                ctx.fillRect(offsetDist + gunLen - 8, -gunThickness/2 - spread + 1, 4, gunThickness - 2);
+                ctx.fillRect(offsetDist + gunLen - 8, -gunThickness/2 + spread + 1, 4, gunThickness - 2);
+            }
             ctx.restore();
         }
 
@@ -260,16 +315,16 @@ export class Entity {
             ctx.restore();
         }
         
-        // Hides arrow if it's a triangle with spikes
-        let hideArrow = (this.type === 'triangle' && this.spikes > 0);
+        // HIDES ARROW IF ANY FRONT VISUAL (GUN/SPIKES) IS ON THE SHAPE
+        let hideArrow = (this.frontVisual !== null);
         
-        if (this.isPlayer && !hideArrow) {
+        if (this.isPlayer && !hideArrow && this.name !== "") {
             ctx.save(); 
             ctx.translate(this.x, this.y); 
             ctx.rotate(this.angle);
             ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
             ctx.beginPath();
-            let offset = this.size + (this.frontVisual === 'gun' ? 15 : 4);
+            let offset = this.size + 4;
             ctx.moveTo(offset, -4);
             ctx.lineTo(offset + 8, 0);
             ctx.lineTo(offset, 4);
@@ -324,7 +379,7 @@ export class Entity {
 export class Player extends Entity {
     constructor(x, y, type, name = "") {
         super(x, y, type); 
-        this.name = name; // Now defaults to an empty string so "YOU" doesn't show up
+        this.name = name; 
         this.isPlayer = true; 
         this.equipped = window.equippedItems || { Skin: null, Trail: null, Banner: null, Color: null };
         if (this.equipped.Color && ITEMS_DB && ITEMS_DB[this.equipped.Color]) {
@@ -471,9 +526,9 @@ export class Projectile {
                 if (diff > 0) this.angle += Math.min(this.turnSpeed, diff); else this.angle += Math.max(-this.turnSpeed, diff);
             }
         } 
-        // NEW: AIM ASSIST FOR THE LOCAL PLAYER
+        // PERFECT AIM ASSIST FOR THE LOCAL PLAYER
         else if (!this.isMissile && this.owner.isPlayer && targets) {
-            let nearest = null; let minDist = 350; // Small aim assist radius
+            let nearest = null; let minDist = 350; 
             targets.forEach(t => { 
                 if (t === this.owner || t.isDead || t.isTeammate) return; 
                 let d = distance(this.x, this.y, t.x, t.y); 
@@ -485,7 +540,7 @@ export class Projectile {
                 while (diff < -Math.PI) diff += Math.PI * 2; 
                 while (diff > Math.PI) diff -= Math.PI * 2;
                 
-                // Only gently curve if the player is already aiming in their general direction
+                // Only slightly curve the bullet if you are already aiming somewhat closely to them
                 if (Math.abs(diff) < 0.4) {
                     this.angle += diff * 0.05; 
                 }

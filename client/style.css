@@ -95,9 +95,9 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 
 /* UPGRADE BADGES TOP LEFT */
 .upgrade-badges-container { position: absolute; top: 60px; left: 20px; display: flex; flex-direction: column; gap: 5px; pointer-events: none; }
-.upgrade-badge { background: rgba(0,0,0,0.7); border: 2px solid #555; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; width: 100px; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
-.badge-icon { font-weight: bold; font-size: 0.8rem; color: white; letter-spacing: 1px; }
-.badge-tier { font-weight: bold; font-size: 1rem; text-shadow: 1px 1px 2px black; }
+.upgrade-badge { background: rgba(0,0,0,0.7); border: 2px solid #555; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; min-width: 150px; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+.badge-icon { font-weight: bold; font-size: 0.85rem; color: white; letter-spacing: 1px; text-transform: uppercase; }
+.badge-tier { font-weight: bold; font-size: 0.95rem; text-shadow: 1px 1px 2px black; padding-left: 10px; border-left: 2px solid rgba(255,255,255,0.3); }
 .badge-t1 { border-color: #cd7f32; } .badge-t1 .badge-tier { color: #cd7f32; }
 .badge-t2 { border-color: #c0c0c0; } .badge-t2 .badge-tier { color: #c0c0c0; }
 .badge-t3 { border-color: #ffd700; box-shadow: 0 0 10px rgba(255,215,0,0.4); } .badge-t3 .badge-tier { color: #ffd700; }
@@ -112,12 +112,11 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 #leaderboard-list { list-style: none; font-size: 0.9rem; }
 #leaderboard-list li { display: flex; justify-content: space-between; margin-bottom: 5px; }
 
-/* NOTIFICATIONS SLIDING UP FROM BOTTOM */
-#level-up-notif, #account-level-notif { position: absolute; left: 50%; bottom: -100px; transform: translateX(-50%); padding: 15px 30px; border-radius: 12px; font-weight: bold; transition: bottom 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none; z-index: 100; text-align: center; }
-#level-up-notif { background: linear-gradient(0deg, rgba(0,255,204,0.9), rgba(0,0,0,0.7)); border-bottom: 6px solid #00ffcc; box-shadow: 0 0 20px rgba(0,255,204,0.4); }
-#account-level-notif { background: linear-gradient(0deg, rgba(255,230,0,0.9), rgba(0,0,0,0.8)); border-bottom: 6px solid var(--accent); box-shadow: 0 0 20px rgba(255,230,0,0.5); }
-#level-up-notif.show { bottom: 120px; }
-#account-level-notif.show { bottom: 200px; }
+/* NOTIFICATIONS SLIDING IN FROM LEFT BOTTOM CORNER */
+#level-up-notif, #account-level-notif { position: absolute; left: -400px; padding: 15px 30px; border-radius: 0 12px 12px 0; font-weight: bold; transition: left 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none; z-index: 100; text-align: left; }
+#level-up-notif { bottom: 30px; background: linear-gradient(90deg, rgba(0,255,204,0.9), rgba(0,0,0,0.7)); border-left: 6px solid #00ffcc; box-shadow: 0 0 20px rgba(0,255,204,0.4); }
+#account-level-notif { bottom: 100px; background: linear-gradient(90deg, rgba(255,230,0,0.9), rgba(0,0,0,0.8)); border-left: 6px solid var(--accent); box-shadow: 0 0 20px rgba(255,230,0,0.5); }
+#level-up-notif.show, #account-level-notif.show { left: 0; }
 
 .notif-text { font-size: 1.1rem; color: var(--accent); text-shadow: 1px 1px 2px black; letter-spacing: 2px; }
 .notif-level { font-size: 1.4rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); }
