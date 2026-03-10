@@ -302,6 +302,13 @@ export class Entity {
             
             let pCount = isDashing ? 3 + tTier : 1 + Math.floor(tTier / 2);
             
+            // DYNAMIC THRUSTER COLORS BASED ON TIER
+            let pColor = '#ffaa00'; // Default / Tier 1 (Yellow-Orange Fire)
+            if (tTier === 2) pColor = '#ff2200'; // Tier 2 / Silver (Intense Red)
+            else if (tTier === 3) pColor = '#ffd700'; // Tier 3 / Gold (Golden)
+            else if (tTier === 4) pColor = '#00ffcc'; // Tier 4 / Cyan (Cyan)
+            else if (tTier >= 5) pColor = '#ff00ff'; // Tier 5 / Amethyst (Purple)
+            
             for (let k = 0; k < pCount; k++) {
                 let exAngle1 = this.angle + Math.PI + (Math.random() - 0.5) * 0.6;
                 let exAngle2 = this.angle + Math.PI + (Math.random() - 0.5) * 0.6;
@@ -314,7 +321,7 @@ export class Entity {
                     vx: Math.cos(exAngle1) * exSpeed, 
                     vy: Math.sin(exAngle1) * exSpeed, 
                     alpha: 1.0, 
-                    color: '#00ffcc', 
+                    color: pColor, 
                     size: 2 + Math.random() * 2 
                 });
                 
@@ -325,7 +332,7 @@ export class Entity {
                     vx: Math.cos(exAngle2) * exSpeed, 
                     vy: Math.sin(exAngle2) * exSpeed, 
                     alpha: 1.0, 
-                    color: '#00ffcc', 
+                    color: pColor, 
                     size: 2 + Math.random() * 2 
                 });
             }
