@@ -223,16 +223,16 @@ export class Entity {
             ctx.restore();
         }
         
-        // NEW: Draw a subtle aim indicator for the player so you know where you're looking
+        // NEW: Draw a smaller, wider subtle aim indicator for the player
         if (this.isPlayer) {
             ctx.save(); 
             ctx.translate(this.x, this.y); 
             ctx.rotate(this.angle);
             ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
             ctx.beginPath();
-            ctx.moveTo(this.size + 5, -6);
-            ctx.lineTo(this.size + 20, 0);
-            ctx.lineTo(this.size + 5, 6);
+            ctx.moveTo(this.size + 4, -5);
+            ctx.lineTo(this.size + 14, 0);
+            ctx.lineTo(this.size + 4, 5);
             ctx.fill();
             ctx.restore();
         }

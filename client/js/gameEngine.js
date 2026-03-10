@@ -66,7 +66,6 @@ export class GameEngine {
         this.aimOriginY = 0;
         this.isAimDragging = false; 
         
-        // NEW: This completely disables PC mouse interference once you touch the screen
         this.isTouchDevice = false; 
 
         this.initInput();
@@ -81,7 +80,6 @@ export class GameEngine {
             this.ctx.scale(dpr, dpr);
         });
         
-        // Tells the game this is a mobile device to prevent mouse snapping bugs
         window.addEventListener('touchstart', () => {
             this.isTouchDevice = true;
         }, { passive: true });
@@ -111,7 +109,6 @@ export class GameEngine {
             this.keys[e.key.toLowerCase()] = false; 
         });
 
-        // --- MAKE UPGRADES CLICKABLE/TOUCHABLE ---
         [1, 2, 3].forEach(num => {
             const card = document.getElementById(`card-${num}`);
             if (card) {
@@ -191,7 +188,6 @@ export class GameEngine {
             leftZone.addEventListener('touchcancel', endLeft);
         }
 
-        // --- RELATIVE DRAG AIMING ---
         window.addEventListener('touchstart', (e) => {
             if (this.isDemo || this.isGameOver) return;
             for (let i = 0; i < e.changedTouches.length; i++) {
@@ -204,7 +200,7 @@ export class GameEngine {
                     this.aimTouchId = t.identifier;
                     this.aimOriginX = t.clientX;
                     this.aimOriginY = t.clientY;
-                    this.isAimDragging = false; // Fresh touch, don't spin yet
+                    this.isAimDragging = false; 
                 }
             }
         }, {passive: false});
@@ -217,7 +213,6 @@ export class GameEngine {
                     let dx = t.clientX - this.aimOriginX;
                     let dy = t.clientY - this.aimOriginY;
                     
-                    // Small deadzone so pressing the screen doesn't instantly spin you
                     if (!this.isAimDragging && Math.hypot(dx, dy) > 10) { 
                         this.isAimDragging = true;
                     }
@@ -233,7 +228,7 @@ export class GameEngine {
             for (let i = 0; i < e.changedTouches.length; i++) {
                 if (e.changedTouches[i].identifier === this.aimTouchId) {
                     this.aimTouchId = null;
-                    this.isAimDragging = false; // Lets go completely cleanly
+                    this.isAimDragging = false; 
                 }
             }
         });
@@ -925,9 +920,12 @@ export class GameEngine {
                     this.player.vy += (dy / length) * (this.player.speed * 0.2);
                 }
 
-                // NEW: Permanently ignore the PC mouse cursor if this is a mobile touch device
                 if (!this.isTouchDevice) {
-                    this.player.angle = Math.atan2(this.mouseY - this.height / 2, this.mouseX - this.width / 2);
+                    // NEW: Calculate exactly where the player is on screen accounting for camera lag
+                    let playerScreenX = this.width / 2 + (this.player.x - this.camera.x) * this.cameraZoom;
+                    let playerScreenY = this.height / 2 + (this.player.y - this.camera.y) * this.cameraZoom;
+                    
+                    this.player.angle = Math.atan2(this.mouseY - playerScreenY, this.mouseX - playerScreenX);
                 }
 
             } else {
