@@ -287,7 +287,6 @@ export class Entity {
             let armorOffset = this.bodyVisual === 'armor' ? (4 + armorTier + (4 + armorTier * 1.5) / 2) : 0;
             
             let backOffset = this.type === 'circle' ? -this.size : -this.size / 2;
-            
             if (this.bodyVisual === 'armor') {
                 backOffset -= armorOffset;
             }
@@ -626,7 +625,7 @@ export class Entity {
         ctx.rotate(this.angle);
         ctx.fillStyle = this.color; 
         
-        if (window.gameSettings.highQuality) { 
+        if (window.gameSettings && window.gameSettings.highQuality) { 
             ctx.shadowBlur = 15; 
             ctx.shadowColor = this.color; 
         } else { 
@@ -667,7 +666,7 @@ export class Entity {
             ctx.rotate(this.angle); 
             
             if (['spectre', 'luminescent', 'celestial', 'voidwalker', 'inferno', 'neon', 'dark', 'glitch'].includes(skinType)) {
-                if (window.gameSettings.highQuality) { 
+                if (window.gameSettings && window.gameSettings.highQuality) { 
                     ctx.shadowBlur = 20; 
                 }
             }
@@ -1177,7 +1176,7 @@ export class Entity {
                 
                 if (skinType === 'neon') { 
                     ctx.fillStyle = '#ffffff'; 
-                    if (window.gameSettings.highQuality) { 
+                    if (window.gameSettings && window.gameSettings.highQuality) { 
                         ctx.shadowBlur = 15; 
                         ctx.shadowColor = '#ffffff'; 
                     } 
@@ -1217,7 +1216,7 @@ export class Entity {
 
         if (this.orbiters > 0) {
             ctx.fillStyle = '#a855f7';
-            if (window.gameSettings.highQuality) { 
+            if (window.gameSettings && window.gameSettings.highQuality) { 
                 ctx.shadowBlur = 10; 
                 ctx.shadowColor = '#a855f7'; 
             }
@@ -1322,6 +1321,15 @@ export class Entity {
                 }
             }
         }
+    }
+}
+
+// --- RESTORED MISSING PLAYER CLASS ---
+export class Player extends Entity {
+    constructor(x, y, type, name = "") {
+        super(x, y, type);
+        this.name = name;
+        this.isPlayer = true;
     }
 }
 
@@ -1564,7 +1572,7 @@ export class SafeZone {
             ctx.fillStyle = 'white';
             ctx.font = 'bold 24px sans-serif';
             ctx.textAlign = 'center';
-            if (window.gameSettings.highQuality) { 
+            if (window.gameSettings && window.gameSettings.highQuality) { 
                 ctx.shadowBlur = 5; 
                 ctx.shadowColor = 'black'; 
             }
@@ -1574,7 +1582,7 @@ export class SafeZone {
             ctx.fillStyle = '#ffe600';
             ctx.font = 'bold 24px sans-serif';
             ctx.textAlign = 'center';
-            if (window.gameSettings.highQuality) { 
+            if (window.gameSettings && window.gameSettings.highQuality) { 
                 ctx.shadowBlur = 5; 
                 ctx.shadowColor = 'black'; 
             }
@@ -1676,7 +1684,7 @@ export class Projectile {
         ctx.rotate(this.angle);
         ctx.scale(this.sizeScale, this.sizeScale);
         
-        if (window.gameSettings.highQuality) { 
+        if (window.gameSettings && window.gameSettings.highQuality) { 
             ctx.shadowBlur = 10; 
             ctx.shadowColor = this.color; 
         } else { 
@@ -1733,7 +1741,7 @@ export class Orb {
         if (this.lockoutTimer > 0) {
             ctx.globalAlpha = 0.6;
         }
-        if (window.gameSettings.highQuality && this.lockoutTimer <= 0) { 
+        if (window.gameSettings && window.gameSettings.highQuality && this.lockoutTimer <= 0) { 
             ctx.shadowBlur = 10; 
             ctx.shadowColor = this.color; 
         } else { 
@@ -1772,7 +1780,7 @@ export class Particle {
         ctx.globalAlpha = Math.max(0, this.life); 
         ctx.fillStyle = this.color;
         
-        if (window.gameSettings.highQuality) { 
+        if (window.gameSettings && window.gameSettings.highQuality) { 
             ctx.shadowBlur = 5; 
             ctx.shadowColor = this.color; 
         }
