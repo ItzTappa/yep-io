@@ -76,7 +76,8 @@ export class Entity {
         } else if (type === 'square') {
             this.speed = 4.2; 
             this.size = 28; 
-            this.maxHealth = 500; 
+            // Nerfed Square health to prevent unkillable late-game sponges
+            this.maxHealth = 380; 
             this.fireRate = 55; 
             this.baseDamage = 35; 
             this.dashMaxCooldown = 150; 
@@ -302,7 +303,6 @@ export class Entity {
             
             let pCount = isDashing ? 3 + tTier : 1 + Math.floor(tTier / 2);
             
-            // Dynamic Thruster Colors Based on Tier!
             let pColor = '#ffaa00'; 
             if (tTier === 2) pColor = '#ff2200'; 
             else if (tTier === 3) pColor = '#ffd700'; 
@@ -1339,8 +1339,6 @@ export class Entity {
     }
 }
 
-// --- RESTORED MISSING PLAYER CLASS ---
-// Includes logic to force #d3d3d3 if no color is equipped
 export class Player extends Entity {
     constructor(x, y, type, name = "") {
         super(x, y, type);
@@ -1369,15 +1367,25 @@ export class Bot extends Entity {
         this.changeTargetTimer = 0;
         this.isTeammate = false; 
 
-        const names = ['OrbHunter', 'NovaStrike', 'PixelSlayer', 'GhostBlade', 'RogueBot', 'Vanguard', 'Titan', 'Apex'];
-        this.name = names[Math.floor(Math.random() * names.length)] + Math.floor(Math.random() * 99);
+        // MASSIVE LIST OF REALISTIC NAMES
+        const names = [
+            'ProGamer', 'SniperKing', 'Guest', 'Alex', 'John', 'Sarah', 'bruh', 'im_lagging',
+            'Slayer', 'Ghost', 'Titan', 'Apex', 'NoobMaster', 'U_MAD_BRO', 'Player1', 'Bot_or_Not',
+            'Ninja', 'Samurai', 'Toxic', 'RageQuit', 'TryHard', 'Sweat', 'Casual', 'GG_WP',
+            'LootGoblin', 'Camper', 'Rusher', 'Faker', 'Troll', 'Alpha', 'Bravo', 'Charlie',
+            'Delta', 'Echo', 'Foxtrot', 'Mango', 'Potato', 'Kiwi', 'xX_Sniper_Xx', 'TTV_Sweat',
+            'YT_Pro', 'discord_user', 'twitch_streamer', 'anonymous', 'player_999', 'Guest_777'
+        ];
+        let baseName = names[Math.floor(Math.random() * names.length)];
+        this.name = Math.random() > 0.5 ? baseName + Math.floor(Math.random() * 9999) : baseName;
+        
         this.points = startingPoints; 
         this.upgradeProgress = startingPoints; 
         
         this.botPointsToNextUpgrade = 15;
         this.dashTendency = Math.random();
         this.strafeDir = Math.random() > 0.5 ? 1 : -1; 
-        this.personality = Math.random(); // 0.0 to 1.0 personality scalar
+        this.personality = Math.random(); 
         
         while (this.upgradeProgress >= this.botPointsToNextUpgrade) {
             this.upgradeProgress -= this.botPointsToNextUpgrade;
@@ -1430,8 +1438,7 @@ export class Bot extends Entity {
             } 
         });
 
-        // FIXED REALISTIC LEADERBOARD SPREAD! 
-        // Only bots with high personality target the #1 spot. Others stay low!
+        // FIXED REALISTIC LEADERBOARD SPREAD
         let targetScore = playerPts * (0.1 + this.personality * 1.05); 
 
         if (this.points > targetScore * 1.2) {
@@ -1440,7 +1447,8 @@ export class Bot extends Entity {
             this.upgradeProgress -= decay;
             if (this.upgradeProgress < 0) this.upgradeProgress = 0;
         } else if (this.points < targetScore) {
-            let catchUpGain = (targetScore - this.points) * 0.0005;
+            // Give 0-point bots a faster boost so they can catch up quickly
+            let catchUpGain = (targetScore - this.points) * 0.0015;
             this.points += 0.2 + catchUpGain;
             this.upgradeProgress += 0.2 + catchUpGain;
         } else {
