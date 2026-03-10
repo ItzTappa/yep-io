@@ -17,7 +17,7 @@ export class GameEngine {
         this.canvas.style.height = `${this.height}px`;
         this.ctx.scale(dpr, dpr);
 
-        this.worldSize = 15000;
+        this.worldSize = 8000;
         this.player = null; 
         this.bots = []; 
         this.orbs = []; 
@@ -210,7 +210,6 @@ export class GameEngine {
                     if (this.leftTouch.active && t.identifier === this.leftTouch.id) {
                         this.leftTouch.active = false;
                         leftBase.classList.remove('active'); 
-                        
                         leftBase.style.top = 'auto';
                         leftBase.style.bottom = '40px';
                         leftBase.style.left = '40px';
@@ -434,13 +433,13 @@ export class GameEngine {
         this.player = new Player(-10000, -10000, 'circle', ""); 
         this.player.health = 999999; 
 
-        for(let i = 0; i < 40; i++) {
+        for(let i = 0; i < 30; i++) {
             const types = ['triangle', 'square', 'circle'];
             const type = types[Math.floor(Math.random() * 3)];
             this.bots.push(new Bot(Math.random() * this.worldSize, Math.random() * this.worldSize, type, Math.random() * 5000));
         }
         
-        for(let i = 0; i < 1000; i++) {
+        for(let i = 0; i < 500; i++) {
             this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
         }
 
@@ -469,7 +468,7 @@ export class GameEngine {
         const brUi = document.getElementById('br-ui');
         if (brUi) brUi.classList.remove('hidden');
         
-        this.worldSize = 15000; 
+        this.worldSize = 8000; // REDUCED MAP SIZE FOR ACTION!
         this.stormActive = false; 
 
         this.isDemo = false; 
@@ -485,6 +484,7 @@ export class GameEngine {
         this.safeZones = [];
         this.safeZoneSpawnTimer = 0;
         
+        // Max 3 safe zones!
         for(let i = 0; i < 3; i++) {
             let pos = this.getSafeSpawnPosition();
             this.safeZones.push(new SafeZone(pos.x, pos.y));
@@ -555,7 +555,8 @@ export class GameEngine {
         
         let matchSeed = Math.random();
         
-        for(let i = 0; i < 80; i++) {
+        // Exactly 49 Bots + 1 Player = 50 Total!
+        for(let i = 0; i < 49; i++) {
             const types = ['triangle', 'square', 'circle']; 
             const type = types[Math.floor(Math.random() * 3)]; 
             const spawn = this.getSafeSpawnPosition();
@@ -568,13 +569,14 @@ export class GameEngine {
             this.bots.push(new Bot(spawn.x, spawn.y, type, startingPts));
         }
         
-        for(let i = 0; i < 5000; i++) {
+        // 2,500 Orbs on a 8k map is insane density!
+        for(let i = 0; i < 2500; i++) {
             const x = Math.random() * this.worldSize;
             const y = Math.random() * this.worldSize;
             this.orbs.push(new Orb(x, y, 'xp', 1, null, 0));
         }
         
-        for(let i = 0; i < 150; i++) { 
+        for(let i = 0; i < 75; i++) { 
             let pos = this.getSafeOrbPosition(500); 
             this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0)); 
         }
@@ -602,10 +604,10 @@ export class GameEngine {
         this.lobbyCode = lobbyCode; 
         this.isHost = isHost || false;
         
-        this.worldSize = 15000; 
+        this.worldSize = 8000; 
         this.stormActive = true; 
         this.stormCenter = { x: this.worldSize / 2, y: this.worldSize / 2 };
-        this.stormRadius = 11000; 
+        this.stormRadius = 6000; 
 
         this.isDemo = false; 
         this.isGameOver = false; 
@@ -699,7 +701,7 @@ export class GameEngine {
         }
 
         if (this.isHost) {
-            let botsToSpawn = 80 - players.length;
+            let botsToSpawn = 50 - players.length; // Max 50 players/bots
             
             for(let i = 0; i < botsToSpawn; i++) {
                 const types = ['triangle', 'square', 'circle']; 
@@ -732,11 +734,11 @@ export class GameEngine {
             this.bots = [...this.teammates]; 
         }
 
-        for(let i = 0; i < 5000; i++) {
+        for(let i = 0; i < 2500; i++) {
             this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
         }
         
-        for(let i = 0; i < 150; i++) { 
+        for(let i = 0; i < 75; i++) { 
             let pos = this.getSafeOrbPosition(500); 
             this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0));
         }
@@ -891,7 +893,7 @@ export class GameEngine {
         document.getElementById('xp-bar').style.width = '0%';
         document.getElementById('level-display').innerText = '0 PTS';
 
-        this.totalMatchPlayers = 80; 
+        this.totalMatchPlayers = 50; 
         
         this.isRunning = true;
         this.accumulator = 0;
@@ -1246,10 +1248,9 @@ export class GameEngine {
             }
         }
 
-        // CONTINUOUS ORB SPAWNING TO MAINTAIN MASSIVE SLITHER.IO DENSITY
-        let desiredOrbs = this.isDemo ? 1000 : 5000;
+        let desiredOrbs = this.isDemo ? 1000 : 2500;
         if (this.orbs.length < desiredOrbs) {
-            let spawnCount = Math.min(50, desiredOrbs - this.orbs.length);
+            let spawnCount = Math.min(25, desiredOrbs - this.orbs.length);
             for(let i = 0; i < spawnCount; i++) {
                 this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
             }
@@ -1767,7 +1768,6 @@ export class GameEngine {
             }
         }
 
-        // SMOOTHED POLYNOMIAL LEVELING CURVE & FASTER PACING
         if (pointsGainedThisFrame > 0 && !this.isDemo && !this.isGameOver && this.player) {
             while (this.player.upgradeProgress >= this.pointsToNextUpgrade) {
                 this.player.upgradeProgress -= this.pointsToNextUpgrade;
@@ -1981,12 +1981,15 @@ export class GameEngine {
         ctx.clearRect(0, 0, 220, 220);
         const scale = 220 / this.worldSize;
 
-        // RENDER SAFE ZONES ON MINIMAP
         this.safeZones.forEach(sz => {
             ctx.fillStyle = sz.state === 'active' ? 'rgba(0, 255, 204, 0.4)' : 'rgba(0, 255, 204, 0.15)';
             ctx.beginPath();
-            ctx.arc(sz.x * scale, sz.y * scale, sz.radius * scale, 0, Math.PI * 2);
+            ctx.arc(sz.x * scale, sz.y * scale, sz.radius * scale * 4, 0, Math.PI * 2);
             ctx.fill();
+            
+            ctx.strokeStyle = sz.state === 'active' ? 'rgba(0, 255, 204, 0.8)' : 'rgba(0, 255, 204, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
         });
 
         if (this.stormActive) {

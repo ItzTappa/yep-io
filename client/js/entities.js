@@ -287,6 +287,7 @@ export class Entity {
             let armorOffset = this.bodyVisual === 'armor' ? (4 + armorTier + (4 + armorTier * 1.5) / 2) : 0;
             
             let backOffset = this.type === 'circle' ? -this.size : -this.size / 2;
+            
             if (this.bodyVisual === 'armor') {
                 backOffset -= armorOffset;
             }
@@ -301,6 +302,7 @@ export class Entity {
             
             let pCount = isDashing ? 3 + tTier : 1 + Math.floor(tTier / 2);
             
+            // Dynamic Thruster Colors Based on Tier!
             let pColor = '#ffaa00'; 
             if (tTier === 2) pColor = '#ff2200'; 
             else if (tTier === 3) pColor = '#ffd700'; 
@@ -313,13 +315,25 @@ export class Entity {
                 let exSpeed = Math.random() * 3 + (isDashing ? 5 : 2);
                 
                 this.trail.push({ 
-                    type: 'fire', x: px1, y: py1, vx: Math.cos(exAngle1) * exSpeed, 
-                    vy: Math.sin(exAngle1) * exSpeed, alpha: 1.0, color: pColor, size: 2 + Math.random() * 2 
+                    type: 'fire', 
+                    x: px1, 
+                    y: py1, 
+                    vx: Math.cos(exAngle1) * exSpeed, 
+                    vy: Math.sin(exAngle1) * exSpeed, 
+                    alpha: 1.0, 
+                    color: pColor, 
+                    size: 2 + Math.random() * 2 
                 });
                 
                 this.trail.push({ 
-                    type: 'fire', x: px2, y: py2, vx: Math.cos(exAngle2) * exSpeed, 
-                    vy: Math.sin(exAngle2) * exSpeed, alpha: 1.0, color: pColor, size: 2 + Math.random() * 2 
+                    type: 'fire', 
+                    x: px2, 
+                    y: py2, 
+                    vx: Math.cos(exAngle2) * exSpeed, 
+                    vy: Math.sin(exAngle2) * exSpeed, 
+                    alpha: 1.0, 
+                    color: pColor, 
+                    size: 2 + Math.random() * 2 
                 });
             }
         }
@@ -1176,7 +1190,7 @@ export class Entity {
                 
                 if (skinType === 'neon') { 
                     ctx.fillStyle = '#ffffff'; 
-                    if (window.gameSettings.highQuality) { 
+                    if (window.gameSettings && window.gameSettings.highQuality) { 
                         ctx.shadowBlur = 15; 
                         ctx.shadowColor = '#ffffff'; 
                     } 
@@ -1200,7 +1214,7 @@ export class Entity {
             ctx.restore();
         }
         
-        // HIDE ARROW IF FRONT WEAPON EQUIPPED
+        // --- HIDE DIRECTIONAL ARROW IF FRONT WEAPON IS EQUIPPED ---
         if (this.isPlayer && this.frontVisual !== 'gun' && this.frontVisual !== 'spikes') {
             ctx.save(); 
             ctx.translate(this.x, this.y); 
@@ -1217,7 +1231,7 @@ export class Entity {
 
         if (this.orbiters > 0) {
             ctx.fillStyle = '#a855f7';
-            if (window.gameSettings.highQuality) { 
+            if (window.gameSettings && window.gameSettings.highQuality) { 
                 ctx.shadowBlur = 10; 
                 ctx.shadowColor = '#a855f7'; 
             }
@@ -1325,6 +1339,8 @@ export class Entity {
     }
 }
 
+// --- RESTORED MISSING PLAYER CLASS ---
+// Includes logic to force #d3d3d3 if no color is equipped
 export class Player extends Entity {
     constructor(x, y, type, name = "") {
         super(x, y, type);
@@ -1361,7 +1377,7 @@ export class Bot extends Entity {
         this.botPointsToNextUpgrade = 15;
         this.dashTendency = Math.random();
         this.strafeDir = Math.random() > 0.5 ? 1 : -1; 
-        this.personality = Math.random(); 
+        this.personality = Math.random(); // 0.0 to 1.0 personality scalar
         
         while (this.upgradeProgress >= this.botPointsToNextUpgrade) {
             this.upgradeProgress -= this.botPointsToNextUpgrade;
@@ -1398,7 +1414,7 @@ export class Bot extends Entity {
         let minDist = 800;
         
         let playerObj = allPlayers.find(p => p.isPlayer);
-        let targetScore = playerObj ? Math.max(100, playerObj.points * 1.1) : 100;
+        let playerPts = playerObj ? Math.max(100, playerObj.points) : 100;
 
         allPlayers.forEach(p => { 
             if (p === this || p.isDead) return; 
@@ -1414,18 +1430,22 @@ export class Bot extends Entity {
             } 
         });
 
-        if (this.points > targetScore * 1.5) {
-            let decay = (this.points - targetScore) * 0.05;
+        // FIXED REALISTIC LEADERBOARD SPREAD! 
+        // Only bots with high personality target the #1 spot. Others stay low!
+        let targetScore = playerPts * (0.1 + this.personality * 1.05); 
+
+        if (this.points > targetScore * 1.2) {
+            let decay = (this.points - targetScore) * 0.01;
             this.points -= decay;
             this.upgradeProgress -= decay;
             if (this.upgradeProgress < 0) this.upgradeProgress = 0;
         } else if (this.points < targetScore) {
-            let catchUpGain = (targetScore - this.points) * 0.002;
-            this.points += 0.5 + catchUpGain;
-            this.upgradeProgress += 0.5 + catchUpGain;
+            let catchUpGain = (targetScore - this.points) * 0.0005;
+            this.points += 0.2 + catchUpGain;
+            this.upgradeProgress += 0.2 + catchUpGain;
         } else {
-            this.points += 0.5;
-            this.upgradeProgress += 0.5;
+            this.points += 0.2;
+            this.upgradeProgress += 0.2;
         }
         
         while (this.upgradeProgress >= this.botPointsToNextUpgrade) {
@@ -1439,13 +1459,12 @@ export class Bot extends Entity {
         }
 
         if (this.isTeammate && !nearestEnemy) {
-            const player = allPlayers.find(p => p.isPlayer);
-            if (player && !player.isDead) {
-                const distToPlayer = distance(this.x, this.y, player.x, player.y);
+            if (playerObj && !playerObj.isDead) {
+                const distToPlayer = distance(this.x, this.y, playerObj.x, playerObj.y);
                 if (distToPlayer > 200) {
-                    this.angle = Math.atan2(player.y - this.y, player.x - this.x);
-                    const dx = player.x - this.x; 
-                    const dy = player.y - this.y;
+                    this.angle = Math.atan2(playerObj.y - this.y, playerObj.x - this.x);
+                    const dx = playerObj.x - this.x; 
+                    const dy = playerObj.y - this.y;
                     
                     let currentSpeed = this.speed * (this.abilityTimer > 0 && this.activeAbility === 'overdrive' ? 1.8 : 1.0);
                     this.vx += (dx / distToPlayer) * (currentSpeed * 0.12);
@@ -1461,7 +1480,10 @@ export class Bot extends Entity {
             const dy = nearestEnemy.y - this.y;
             
             let currentSpeed = this.speed * (this.abilityTimer > 0 && this.activeAbility === 'overdrive' ? 1.8 : 1.0);
-            let fleeThreshold = 0.15 + (this.personality * 0.25); 
+            
+            // 20% OF BOTS ARE BERSERKERS (Flee Threshold = 0)
+            let isBerserker = this.personality > 0.8;
+            let fleeThreshold = isBerserker ? 0 : 0.15 + (this.personality * 0.20); 
             
             if (this.activeAbility && this.abilityCooldown <= 0) {
                 if (this.health < this.maxHealth * 0.3 || (this.activeAbility === 'overdrive' && trueDist < 300)) {
