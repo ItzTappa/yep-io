@@ -53,9 +53,8 @@ export class GameEngine {
         this.accountLevelUpTimeout = null; 
         this.animationId = null; 
         
+        // BULLETPROOF FIXED TIMESTEP 
         this.fpsInterval = 1000 / 60; 
-        
-        // PERFECT TIME LOOP
         this.lastTime = performance.now();
         this.accumulator = 0; 
 
@@ -422,7 +421,7 @@ export class GameEngine {
         this.accumulator = 0;
         this.lastTime = performance.now(); 
         
-        this.loop(this.lastTime);
+        this.loop();
     }
 
     start(playerClass) {
@@ -515,7 +514,7 @@ export class GameEngine {
         this.lastFpsTime = performance.now(); 
         this.framesThisSecond = 0;
         
-        this.loop(this.lastTime);
+        this.loop();
     }
 
     startMultiplayer(players, lobbyCode, isHost) {
@@ -774,7 +773,7 @@ export class GameEngine {
         this.lastFpsTime = performance.now(); 
         this.framesThisSecond = 0;
         
-        this.loop(this.lastTime);
+        this.loop();
     }
 
     updateLeaderboard() {
@@ -1845,9 +1844,9 @@ export class GameEngine {
             }
         }
 
-        while (this.accumulator >= this.fpsInterval) {
+        while (this.accumulator >= 16.666) {
             this.update();
-            this.accumulator -= this.fpsInterval;
+            this.accumulator -= 16.666;
         }
         
         this.draw();

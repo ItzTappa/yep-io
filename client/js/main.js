@@ -83,35 +83,164 @@ try {
     console.error("Failed to start demo on load: ", e);
 }
 
-// --- BUTTON SOUNDS ---
+// ==========================================
+// BULLETPROOF GLOBAL UI HANDLER
+// ==========================================
+
+let currentLockerCategory = null;
+window.activePreviewItem = null;
+
 document.body.addEventListener('click', (e) => {
-    if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+    const target = e.target;
+
+    // 1. Play button sound
+    if (target.tagName === 'BUTTON' || target.closest('button')) {
         sounds.play('click', 0.4);
+    }
+
+    // 2. Handle 'Back to Shop' button
+    if (target.id === 'close-preview-btn' || target.closest('#close-preview-btn')) {
+        window.activePreviewItem = null;
+        document.getElementById('item-preview-screen').classList.add('hidden');
+        return;
+    }
+
+    // 3. Handle Equip buttons (works in locker AND shops!)
+    const equipBtn = target.closest('.btn-equip');
+    if (equipBtn) {
+        const itemId = equipBtn.dataset.id;
+        if (!itemId) { 
+            // Unequip current locker category
+            if (currentLockerCategory) window.equippedItems[currentLockerCategory] = null;
+        } else {
+            const item = ITEMS_DB[itemId];
+            if (item) {
+                if (window.equippedItems[item.category] === itemId) {
+                    window.equippedItems[item.category] = null; // Toggle off
+                } else {
+                    window.equippedItems[item.category] = itemId; // Toggle on
+                }
+            }
+        }
+        renderLocker();
+        renderSeasonStore();
+        renderMainStore();
+        return;
+    }
+
+    // 4. Handle clicking an item Icon to open the Preview Overlay
+    const iconBtn = target.closest('.item-icon');
+    if (iconBtn && iconBtn.dataset.id) {
+        const item = ITEMS_DB[iconBtn.dataset.id];
+        if (item && item.category !== 'Banner') {
+            window.activePreviewItem = item.id;
+            document.getElementById('preview-screen-title').innerText = `PREVIEW: ${item.name}`;
+            document.getElementById('preview-screen-category').innerText = item.category;
+            document.getElementById('item-preview-screen').classList.remove('hidden');
+        }
+        return;
+    }
+
+    // 5. Handle Locker Slot clicking
+    const lockerSlot = target.closest('.locker-slot');
+    if (lockerSlot) {
+        currentLockerCategory = lockerSlot.dataset.category;
+        window.activePreviewItem = null;
+        renderLocker();
+        return;
+    }
+
+    // 6. Handle Locker Back Button
+    if (target.id === 'locker-back-btn') {
+        currentLockerCategory = null;
+        window.activePreviewItem = null;
+        renderLocker();
+        return;
+    }
+
+    // 7. Handle top Navigation Tabs
+    if (target.classList.contains('tab-btn')) {
+        const targetTab = target.dataset.target;
+        if (targetTab === 'multiplayer' && !selectedClass) {
+            const info = document.getElementById('class-info');
+            if (info) {
+                info.innerText = "PLEASE SELECT A CLASS FIRST!";
+                info.style.color = "red";
+                info.classList.remove('fade-out', 'hidden');
+                if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
+                window.classInfoTimeout = setTimeout(() => info.classList.add('fade-out'), 2000);
+            }
+            return;
+        }
+
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        target.classList.add('active');
+        document.getElementById(targetTab).classList.add('active');
+        
+        window.activePreviewItem = null; 
+
+        const seasonLevelUI = document.querySelector('.player-level-ui');
+        if (seasonLevelUI) {
+            if (targetTab === 'locker') seasonLevelUI.classList.add('hidden');
+            else seasonLevelUI.classList.remove('hidden');
+        }
+        if (targetTab === 'season') renderSeasonStore();
+        if (targetTab === 'store') renderMainStore();
+        if (targetTab === 'locker') renderLocker();
+        if (targetTab === 'stats') renderStats(); 
     }
 });
 
-// --- FULLSCREEN ITEM PREVIEW OVERLAY LOGIC ---
-window.activePreviewItem = null;
+// ==========================================
+// BULLETPROOF HOLD-TO-CLAIM LOGIC
+// ==========================================
+const startClaim = (e) => {
+    const btn = e.target.closest('.btn-claim');
+    if (!btn) return;
+    
+    btn.classList.add('holding');
+    const storeItem = btn.closest('.store-item');
+    if (storeItem) storeItem.classList.add('shaking');
 
-window.showItemPreview = (itemId) => {
-    const item = ITEMS_DB[itemId];
-    if (!item || item.category === 'Banner') return; 
-    
-    window.activePreviewItem = itemId;
-    
-    document.getElementById('preview-screen-title').innerText = `PREVIEW: ${item.name}`;
-    const catEl = document.getElementById('preview-screen-category');
-    if(catEl) catEl.innerText = item.category;
-    
-    document.getElementById('item-preview-screen').classList.remove('hidden');
+    btn.claimTimeout = setTimeout(() => {
+        const itemId = btn.dataset.id;
+        window.claimedItems[itemId] = true;
+        sounds.play('levelUp', 0.6); 
+        
+        btn.classList.remove('holding');
+        if (storeItem) {
+            storeItem.classList.remove('shaking');
+            storeItem.classList.add('claimed-pop');
+        }
+        
+        setTimeout(() => {
+            renderSeasonStore();
+            renderMainStore();
+            renderLocker();
+        }, 300); 
+    }, 1000); 
 };
 
-document.getElementById('close-preview-btn').addEventListener('click', () => {
-    window.activePreviewItem = null;
-    document.getElementById('item-preview-screen').classList.add('hidden');
-});
+const stopClaim = (e) => {
+    document.querySelectorAll('.btn-claim.holding').forEach(btn => {
+        clearTimeout(btn.claimTimeout);
+        btn.classList.remove('holding');
+        const storeItem = btn.closest('.store-item');
+        if (storeItem) storeItem.classList.remove('shaking');
+    });
+};
 
-// --- PREVIEW CANVASES ---
+document.body.addEventListener('mousedown', startClaim);
+document.body.addEventListener('touchstart', startClaim, {passive: true});
+document.body.addEventListener('mouseup', stopClaim);
+document.body.addEventListener('mouseleave', stopClaim);
+document.body.addEventListener('touchend', stopClaim);
+
+
+// ==========================================
+// PREVIEW CANVASES & FIXED TIMESTEP LOOP
+// ==========================================
 const lockerCanvas = document.getElementById('lockerPreviewCanvas');
 const lockerCtx = lockerCanvas?.getContext('2d');
 const fsCanvas = document.getElementById('fullscreenPreviewCanvas');
@@ -131,7 +260,6 @@ let previewAngle = 0;
 let previewDummy = new Player(0, 0, 'triangle', "");
 previewDummy.isPlayer = false; 
 
-// BULLETPROOF FIXED TIMESTEP (No browser freezing!)
 let previewLastTime = performance.now();
 let previewAccumulator = 0;
 
@@ -145,37 +273,36 @@ function renderPreview() {
     
     previewAccumulator += dt;
     
+    // Process game logic at strict 60 updates per second
     while (previewAccumulator >= 16.666) {
         previewAngle += 0.015;
         
-        if (lockerCtx && document.getElementById('locker').classList.contains('active')) {
-            if (currentLockerCategory === 'Trail') {
-                previewDummy.vx = Math.cos(previewAngle) * 4;
-                previewDummy.vy = Math.sin(previewAngle) * 4;
-            } else {
-                previewDummy.vx = 0; 
-                previewDummy.vy = 0; 
-                previewDummy.trail = [];
-            }
-            previewDummy.update();
+        let needsTrail = false;
+        
+        if (document.getElementById('locker').classList.contains('active')) {
+            if (currentLockerCategory === 'Trail') needsTrail = true;
         }
 
-        if (fsCtx && !document.getElementById('item-preview-screen').classList.contains('hidden')) {
-            if (window.activePreviewItem && ITEMS_DB[window.activePreviewItem].category === 'Trail') {
-                previewDummy.vx = Math.cos(previewAngle) * 4;
-                previewDummy.vy = Math.sin(previewAngle) * 4;
-            } else {
-                previewDummy.vx = 0; 
-                previewDummy.vy = 0; 
-                previewDummy.trail = [];
+        if (!document.getElementById('item-preview-screen').classList.contains('hidden')) {
+            if (window.activePreviewItem && ITEMS_DB[window.activePreviewItem] && ITEMS_DB[window.activePreviewItem].category === 'Trail') {
+                needsTrail = true;
             }
-            previewDummy.update();
         }
         
+        if (needsTrail) {
+            previewDummy.vx = Math.cos(previewAngle) * 4;
+            previewDummy.vy = Math.sin(previewAngle) * 4;
+        } else {
+            previewDummy.vx = 0; 
+            previewDummy.vy = 0; 
+            previewDummy.trail = [];
+        }
+        
+        previewDummy.update();
         previewAccumulator -= 16.666;
     }
     
-    // RENDER LOCKER PREVIEW
+    // Draw Locker Preview
     if (lockerCtx && document.getElementById('locker').classList.contains('active')) {
         lockerCtx.clearRect(0, 0, 300, 300);
         previewDummy.type = selectedClass || 'triangle';
@@ -193,13 +320,12 @@ function renderPreview() {
         previewDummy.x = 150; 
         previewDummy.y = 150;
         
-        let tmp = window.gameSettings.showNames; 
-        window.gameSettings.showNames = false;
+        let tmp = window.gameSettings.showNames; window.gameSettings.showNames = false;
         previewDummy.draw(lockerCtx);
         window.gameSettings.showNames = tmp;
     }
 
-    // RENDER FULLSCREEN SHOP PREVIEW OVERLAY
+    // Draw Fullscreen Shop Overlay Preview
     if (fsCtx && !document.getElementById('item-preview-screen').classList.contains('hidden')) {
         fsCtx.clearRect(0, 0, 350, 350);
         previewDummy.type = selectedClass || 'triangle';
@@ -223,8 +349,7 @@ function renderPreview() {
         previewDummy.x = 175; 
         previewDummy.y = 175;
         
-        let tmp = window.gameSettings.showNames; 
-        window.gameSettings.showNames = false;
+        let tmp = window.gameSettings.showNames; window.gameSettings.showNames = false;
         previewDummy.draw(fsCtx);
         window.gameSettings.showNames = tmp;
     }
@@ -233,172 +358,9 @@ function renderPreview() {
 }
 renderPreview();
 
-// --- TABS & CLASSES ---
-document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        const targetTab = e.target.dataset.target;
-        
-        if (targetTab === 'multiplayer' && !selectedClass) {
-            const info = document.getElementById('class-info');
-            if (info) {
-                info.innerText = "PLEASE SELECT A CLASS FIRST!";
-                info.style.color = "red";
-                info.classList.remove('fade-out', 'hidden');
-                if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
-                window.classInfoTimeout = setTimeout(() => info.classList.add('fade-out'), 2000);
-            }
-            return;
-        }
-
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        e.target.classList.add('active');
-        document.getElementById(targetTab).classList.add('active');
-        
-        window.activePreviewItem = null; 
-
-        const seasonLevelUI = document.querySelector('.player-level-ui');
-        if (seasonLevelUI) {
-            if (targetTab === 'locker') seasonLevelUI.classList.add('hidden');
-            else seasonLevelUI.classList.remove('hidden');
-        }
-        if (targetTab === 'season') renderSeasonStore();
-        if (targetTab === 'store') renderMainStore();
-        if (targetTab === 'locker') renderLocker();
-        if (targetTab === 'stats') renderStats(); 
-    });
-});
-
-document.querySelectorAll('.class-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.class-btn').forEach(b => b.classList.remove('active'));
-        e.target.classList.add('active');
-        selectedClass = e.target.dataset.class;
-
-        const info = document.getElementById('class-info');
-        if (info) {
-            if (selectedClass === 'triangle') info.innerText = "JET: Fast & agile. Lower health. Good for hit-and-run.";
-            if (selectedClass === 'square') info.innerText = "TANK: High health, slow speed. Excels in close-quarters brawls.";
-            if (selectedClass === 'circle') info.innerText = "SOLDIER: Balanced speed and health. The perfect all-rounder.";
-            
-            info.style.color = "var(--accent)";
-            info.classList.remove('hidden', 'fade-out');
-            
-            if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
-            window.classInfoTimeout = setTimeout(() => {
-                info.classList.add('fade-out');
-            }, 4000);
-        }
-    });
-});
-
-// --- SETTINGS ---
-document.getElementById('settings-btn').addEventListener('click', () => { document.getElementById('settings-modal').classList.remove('hidden'); });
-document.getElementById('close-settings-btn').addEventListener('click', () => {
-    window.gameSettings.highQuality = document.getElementById('set-hq').checked;
-    window.gameSettings.particles = document.getElementById('set-particles').checked;
-    window.gameSettings.showNames = document.getElementById('set-names').checked;
-    window.gameSettings.showFps = document.getElementById('set-fps').checked;
-    const fpsDisplay = document.getElementById('fps-display');
-    if (fpsDisplay) {
-        if (window.gameSettings.showFps) fpsDisplay.classList.remove('hidden');
-        else fpsDisplay.classList.add('hidden');
-    }
-    document.getElementById('settings-modal').classList.add('hidden');
-});
-
-let listeningAction = null;
-const formatKeyName = (key) => key === ' ' ? 'SPACE' : key.toUpperCase();
-document.querySelectorAll('.keybind-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.keybind-btn').forEach(b => b.classList.remove('listening'));
-        listeningAction = e.target.dataset.action;
-        e.target.classList.add('listening');
-        e.target.innerText = "PRESS KEY";
-    });
-});
-
-document.addEventListener('keydown', (e) => {
-    if (listeningAction) {
-        e.preventDefault(); 
-        const key = e.key.toLowerCase();
-        window.gameSettings.keybinds[listeningAction] = key;
-        const btn = document.querySelector(`.keybind-btn[data-action="${listeningAction}"]`);
-        if (btn) { btn.innerText = formatKeyName(key); btn.classList.remove('listening'); }
-        listeningAction = null;
-    }
-});
-
-function updateMenuXPBar() {
-    const xpRequired = window.globalAccountLevel * 1000;
-    const progressPercent = Math.min(100, (window.globalAccountXP / xpRequired) * 100);
-    const bar = document.getElementById('menu-xp-bar');
-    const lvl = document.getElementById('menu-level');
-    if (bar) bar.style.width = `${progressPercent}%`;
-    if (lvl) lvl.innerText = window.globalAccountLevel;
-    const sBar = document.getElementById('season-progress-bar');
-    if (sBar) sBar.style.width = `${Math.min(100, (window.globalAccountLevel / 50) * 100)}%`;
-}
-
-document.getElementById('play-btn').addEventListener('click', () => {
-    if (!selectedClass) {
-        const info = document.getElementById('class-info');
-        if (info) {
-            info.innerText = "PLEASE SELECT A CLASS FIRST!";
-            info.style.color = "red";
-            info.classList.remove('fade-out', 'hidden');
-            if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
-            window.classInfoTimeout = setTimeout(() => info.classList.add('fade-out'), 2000);
-        }
-        return;
-    }
-
-    document.getElementById('main-menu').classList.add('hidden');
-    document.getElementById('game-ui').classList.remove('hidden');
-    const hud = document.querySelector('.hud');
-    if(hud) hud.classList.remove('hidden');
-    game.start(selectedClass);
-});
-
-document.getElementById('return-lobby-btn').addEventListener('click', () => {
-    document.getElementById('game-over-screen').classList.add('hidden');
-    document.getElementById('game-ui').classList.add('hidden');
-    document.getElementById('main-menu').classList.remove('hidden');
-    if (window.lastMatchStats) {
-        window.hourlyStats.kills += window.lastMatchStats.kills || 0;
-        window.hourlyStats.time += window.lastMatchStats.time || 0;
-        window.hourlyStats.points += window.lastMatchStats.points || 0;
-        window.hourlyStats.distance += window.lastMatchStats.distance || 0;
-        
-        window.lifetimeStats.matches += 1;
-        window.lifetimeStats.kills += window.lastMatchStats.kills || 0;
-        window.lifetimeStats.time += window.lastMatchStats.time || 0;
-        window.lifetimeStats.points += window.lastMatchStats.points || 0;
-        window.lifetimeStats.distance += window.lastMatchStats.distance || 0;
-        
-        window.matchHistory.unshift(window.lastMatchStats);
-        if (window.matchHistory.length > 20) window.matchHistory.pop();
-        window.lastMatchStats = null; 
-    }
-    updateMenuXPBar(); 
-    game.startDemo();
-});
-
-let currentLockerCategory = null;
-window.openLockerCategory = (cat) => { currentLockerCategory = cat; window.activePreviewItem = null; renderLocker(); };
-window.toggleEquip = (itemId, catOverride = null) => {
-    if (itemId === null && catOverride) { window.equippedItems[catOverride] = null; } 
-    else {
-        const item = ITEMS_DB[itemId];
-        if (!item) return;
-        window.equippedItems[item.category] = (window.equippedItems[item.category] === itemId) ? null : itemId;
-    }
-    renderLocker();
-};
-
-document.body.addEventListener('click', (e) => {
-    if (e.target.id === 'locker-back-btn') { currentLockerCategory = null; window.activePreviewItem = null; renderLocker(); }
-});
+// ==========================================
+// RENDER UI FUNCTIONS
+// ==========================================
 
 function renderLocker() {
     const slotsView = document.getElementById('locker-slots-view');
@@ -406,26 +368,30 @@ function renderLocker() {
     if (!slotsView || !itemsView) return;
     
     if (currentLockerCategory === null) {
-        slotsView.classList.remove('hidden'); itemsView.classList.add('hidden');
+        slotsView.classList.remove('hidden'); 
+        itemsView.classList.add('hidden');
         slotsView.innerHTML = '';
         ['Skin', 'Trail', 'Banner', 'Color'].forEach(cat => {
             const item = window.equippedItems[cat] ? ITEMS_DB[window.equippedItems[cat]] : null;
             let color = item ? (item.color || RARITY_COLORS[item.rarity]) : '#888';
-            slotsView.innerHTML += `<div class="locker-slot" onclick="openLockerCategory('${cat}')" style="--slot-color: ${color};">
+            slotsView.innerHTML += `<div class="locker-slot" data-category="${cat}" style="--slot-color: ${color};">
                 <div class="slot-header">${cat}</div><div class="slot-icon">${item?.icon || '✖'}</div><div class="slot-name">${item?.name || 'Default'}</div>
             </div>`;
         });
     } else {
-        slotsView.classList.add('hidden'); itemsView.classList.remove('hidden');
+        slotsView.classList.add('hidden'); 
+        itemsView.classList.remove('hidden');
         document.getElementById('locker-category-title').innerText = `CHOOSE ${currentLockerCategory}`;
-        const grid = document.getElementById('locker-item-grid'); grid.innerHTML = '';
+        const grid = document.getElementById('locker-item-grid'); 
+        grid.innerHTML = '';
+        
         const isDefault = !window.equippedItems[currentLockerCategory];
         
         grid.innerHTML += `<div class="store-item unlocked" style="--rarity-color: #888;">
-            <div class="item-icon" onclick="window.activePreviewItem = null" style="cursor: pointer;">✖</div>
+            <div class="item-icon" style="cursor: pointer;">✖</div>
             <div style="font-size: 0.8rem; color: #888; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px;">DEFAULT</div>
             <div class="item-name">None</div>
-            <button class="btn-equip ${isDefault ? 'equipped' : ''}" onclick="window.toggleEquip(null, '${currentLockerCategory}')">${isDefault ? '✓ EQUIPPED' : 'EQUIP'}</button></div>`;
+            <button class="btn-equip ${isDefault ? 'equipped' : ''}" data-id="">${isDefault ? '✓ EQUIPPED' : 'EQUIP'}</button></div>`;
         
         if (ITEMS_DB) {
             const sortedItems = Object.keys(window.claimedItems)
@@ -437,13 +403,100 @@ function renderLocker() {
                 let color = item.color || RARITY_COLORS[item.rarity];
                 const isEquipped = window.equippedItems[item.category] === item.id;
                 grid.innerHTML += `<div class="store-item unlocked" style="--rarity-color: ${color};">
-                    <div class="item-icon" onclick="window.activePreviewItem = '${item.id}'" style="cursor: pointer;" title="Click to Preview">${item.icon}</div>
+                    <div class="item-icon" data-id="${item.id}" style="cursor: pointer;" title="Click to Preview">${item.icon}</div>
                     <div style="font-size: 0.8rem; color: ${color}; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px;">${item.category}</div>
                     <div class="item-name">${item.name}</div>
-                    <button class="btn-equip ${isEquipped ? 'equipped' : ''}" onclick="window.toggleEquip('${item.id}')">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button></div>`;
+                    <button class="btn-equip ${isEquipped ? 'equipped' : ''}" data-id="${item.id}">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button></div>`;
             });
         }
     }
+}
+
+function renderSeasonStore() {
+    const grid = document.getElementById('season-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    
+    const progressPercent = Math.min(100, (window.globalAccountLevel / 50) * 100);
+    document.getElementById('season-progress-bar').style.width = `${progressPercent}%`;
+
+    const sItems = ['s_banner', 's_trail', 's_skin1', 's_skin2'];
+
+    sItems.forEach(id => {
+        const item = ITEMS_DB[id];
+        if (!item) return;
+        const isUnlocked = window.globalAccountLevel >= item.req;
+        const isClaimed = window.claimedItems[item.id];
+        const isEquipped = window.equippedItems[item.category] === item.id;
+        
+        let buttonHtml = '';
+        if (isUnlocked && !isClaimed) {
+            buttonHtml = `<button class="btn-claim" data-id="${item.id}"><div class="fill"></div><span>HOLD TO CLAIM</span></button>`;
+        } else if (isClaimed) {
+            buttonHtml = `<button class="btn-equip ${isEquipped ? 'equipped' : ''}" data-id="${item.id}">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button>`;
+        }
+
+        let isPreviewable = item.category !== 'Banner';
+        let cursorStyle = isPreviewable ? 'cursor: pointer;' : 'cursor: default;';
+        let titleAttr = isPreviewable ? 'title="Click to Preview"' : '';
+
+        const html = `
+            <div class="store-item ${isUnlocked ? 'unlocked' : 'locked'}" style="--rarity-color: ${item.color};">
+                <div class="item-icon" data-id="${item.id}" style="${cursorStyle}" ${titleAttr}>${item.icon}</div>
+                <div style="font-size: 0.8rem; color: ${item.color}; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px; text-shadow: 0 0 5px ${item.color}40;">${item.category}</div>
+                <div class="item-name">${item.name}</div>
+                <div class="item-req" style="color: ${item.color};">${isClaimed ? '✓ CLAIMED' : isUnlocked ? 'UNLOCKED!' : `Requires Level ${item.req}`}</div>
+                ${buttonHtml}
+            </div>
+        `;
+        grid.innerHTML += html;
+    });
+}
+
+function renderMainStore() {
+    const grid = document.getElementById('main-store-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    
+    let shopItems = [...window.currentShopItems];
+    shopItems.sort((a, b) => (ITEMS_DB[b.id]?.rarity || 1) - (ITEMS_DB[a.id]?.rarity || 1));
+
+    shopItems.forEach(shopItem => {
+        const item = ITEMS_DB[shopItem.id];
+        if (!item) return;
+        
+        const currentValue = window.hourlyStats[shopItem.type] || 0;
+        const isUnlocked = currentValue >= shopItem.req;
+        const isClaimed = window.claimedItems[item.id];
+        const isEquipped = window.equippedItems[item.category] === item.id;
+        const progressPercent = Math.min(100, (currentValue / shopItem.req) * 100);
+        
+        const color = RARITY_COLORS[item.rarity];
+        
+        let buttonHtml = '';
+        if (isUnlocked && !isClaimed) {
+            buttonHtml = `<button class="btn-claim" data-id="${item.id}"><div class="fill"></div><span>HOLD TO CLAIM</span></button>`;
+        } else if (isClaimed) {
+            buttonHtml = `<button class="btn-equip ${isEquipped ? 'equipped' : ''}" data-id="${item.id}">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button>`;
+        } else {
+            buttonHtml = `<div class="item-progress-bg"><div class="item-progress-fill" style="width: ${progressPercent}%; background: ${color}; box-shadow: 0 0 10px ${color};"></div></div>`;
+        }
+        
+        let isPreviewable = item.category !== 'Banner';
+        let cursorStyle = isPreviewable ? 'cursor: pointer;' : 'cursor: default;';
+        let titleAttr = isPreviewable ? 'title="Click to Preview"' : '';
+
+        const html = `
+            <div class="store-item ${isUnlocked ? 'unlocked' : 'locked'}" style="--rarity-color: ${color};">
+                <div class="item-icon" data-id="${item.id}" style="${cursorStyle}" ${titleAttr}>${item.icon}</div>
+                <div style="font-size: 0.8rem; color: ${color}; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px; text-shadow: 0 0 5px ${color}40;">${item.category}</div>
+                <div class="item-name">${item.name}</div>
+                <div class="item-req" style="color: ${color};">${isClaimed ? '✓ CLAIMED' : isUnlocked ? 'UNLOCKED!' : `${Math.floor(currentValue)} / ${shopItem.req} ${shopItem.label}`}</div>
+                ${buttonHtml}
+            </div>
+        `;
+        grid.innerHTML += html;
+    });
 }
 
 function renderStats() {
@@ -478,7 +531,6 @@ function renderStats() {
             else if (r % 10 === 3 && r % 100 !== 13) suffix = "rd";
         }
         let displayRank = rank === '?' ? '?' : `${rank}${suffix}`;
-        
         let pClass = match.playerClass ? match.playerClass.charAt(0).toUpperCase() + match.playerClass.slice(1) : 'Unknown';
 
         let upgradesHtml = '';
@@ -534,133 +586,109 @@ function renderStats() {
     });
 }
 
-function renderSeasonStore() {
-    const grid = document.getElementById('season-grid');
-    if (!grid) return;
-    grid.innerHTML = '';
-    
-    const progressPercent = Math.min(100, (window.globalAccountLevel / 50) * 100);
-    document.getElementById('season-progress-bar').style.width = `${progressPercent}%`;
+// --- CLASS / SETTINGS UI BINDINGS ---
+document.querySelectorAll('.class-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.class-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        selectedClass = e.target.dataset.class;
 
-    const sItems = ['s_banner', 's_trail', 's_skin1', 's_skin2'];
-
-    sItems.forEach(id => {
-        const item = ITEMS_DB[id];
-        if (!item) return;
-        const isUnlocked = window.globalAccountLevel >= item.req;
-        const isClaimed = window.claimedItems[item.id];
-        const isEquipped = window.equippedItems[item.category] === item.id;
-        
-        let buttonHtml = '';
-        if (isUnlocked && !isClaimed) {
-            buttonHtml = `<button class="btn-claim" data-id="${item.id}" onclick="event.stopPropagation();"><div class="fill"></div><span>HOLD TO CLAIM</span></button>`;
-        } else if (isClaimed) {
-            buttonHtml = `<button class="btn-equip ${isEquipped ? 'equipped' : ''}" onclick="event.stopPropagation(); window.toggleEquip('${item.id}')">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button>`;
+        const info = document.getElementById('class-info');
+        if (info) {
+            if (selectedClass === 'triangle') info.innerText = "JET: Fast & agile. Lower health. Good for hit-and-run.";
+            if (selectedClass === 'square') info.innerText = "TANK: High health, slow speed. Excels in close-quarters brawls.";
+            if (selectedClass === 'circle') info.innerText = "SOLDIER: Balanced speed and health. The perfect all-rounder.";
+            
+            info.style.color = "var(--accent)";
+            info.classList.remove('hidden', 'fade-out');
+            
+            if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
+            window.classInfoTimeout = setTimeout(() => {
+                info.classList.add('fade-out');
+            }, 4000);
         }
-
-        let isPreviewable = item.category !== 'Banner';
-        let clickAttr = isPreviewable ? `onclick="window.showItemPreview('${item.id}')"` : '';
-        let cursorStyle = isPreviewable ? 'cursor: pointer;' : 'cursor: default;';
-        let titleAttr = isPreviewable ? 'title="Click to Preview"' : '';
-
-        const html = `
-            <div class="store-item ${isUnlocked ? 'unlocked' : 'locked'}" style="--rarity-color: ${item.color};">
-                <div class="item-icon" ${clickAttr} style="${cursorStyle}" ${titleAttr}>${item.icon}</div>
-                <div style="font-size: 0.8rem; color: ${item.color}; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px; text-shadow: 0 0 5px ${item.color}40;">${item.category}</div>
-                <div class="item-name">${item.name}</div>
-                <div class="item-req" style="color: ${item.color};">${isClaimed ? '✓ CLAIMED' : isUnlocked ? 'UNLOCKED!' : `Requires Level ${item.req}`}</div>
-                ${buttonHtml}
-            </div>
-        `;
-        grid.innerHTML += html;
     });
-}
+});
 
-function renderMainStore() {
-    const grid = document.getElementById('main-store-grid');
-    if (!grid) return;
-    grid.innerHTML = '';
-    
-    let shopItems = [...window.currentShopItems];
-    shopItems.sort((a, b) => (ITEMS_DB[b.id]?.rarity || 1) - (ITEMS_DB[a.id]?.rarity || 1));
+document.getElementById('settings-btn').addEventListener('click', () => { document.getElementById('settings-modal').classList.remove('hidden'); });
+document.getElementById('close-settings-btn').addEventListener('click', () => {
+    window.gameSettings.highQuality = document.getElementById('set-hq').checked;
+    window.gameSettings.particles = document.getElementById('set-particles').checked;
+    window.gameSettings.showNames = document.getElementById('set-names').checked;
+    window.gameSettings.showFps = document.getElementById('set-fps').checked;
+    const fpsDisplay = document.getElementById('fps-display');
+    if (fpsDisplay) {
+        if (window.gameSettings.showFps) fpsDisplay.classList.remove('hidden');
+        else fpsDisplay.classList.add('hidden');
+    }
+    document.getElementById('settings-modal').classList.add('hidden');
+});
 
-    shopItems.forEach(shopItem => {
-        const item = ITEMS_DB[shopItem.id];
-        if (!item) return;
-        
-        const currentValue = window.hourlyStats[shopItem.type] || 0;
-        const isUnlocked = currentValue >= shopItem.req;
-        const isClaimed = window.claimedItems[item.id];
-        const isEquipped = window.equippedItems[item.category] === item.id;
-        const progressPercent = Math.min(100, (currentValue / shopItem.req) * 100);
-        
-        const color = RARITY_COLORS[item.rarity];
-        
-        let buttonHtml = '';
-        if (isUnlocked && !isClaimed) {
-            buttonHtml = `<button class="btn-claim" data-id="${item.id}" onclick="event.stopPropagation();"><div class="fill"></div><span>HOLD TO CLAIM</span></button>`;
-        } else if (isClaimed) {
-            buttonHtml = `<button class="btn-equip ${isEquipped ? 'equipped' : ''}" onclick="event.stopPropagation(); window.toggleEquip('${item.id}')">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button>`;
-        } else {
-            buttonHtml = `<div class="item-progress-bg"><div class="item-progress-fill" style="width: ${progressPercent}%; background: ${color}; box-shadow: 0 0 10px ${color};"></div></div>`;
+let listeningAction = null;
+const formatKeyName = (key) => key === ' ' ? 'SPACE' : key.toUpperCase();
+document.querySelectorAll('.keybind-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.keybind-btn').forEach(b => b.classList.remove('listening'));
+        listeningAction = e.target.dataset.action;
+        e.target.classList.add('listening');
+        e.target.innerText = "PRESS KEY";
+    });
+});
+
+document.addEventListener('keydown', (e) => {
+    if (listeningAction) {
+        e.preventDefault(); 
+        const key = e.key.toLowerCase();
+        window.gameSettings.keybinds[listeningAction] = key;
+        const btn = document.querySelector(`.keybind-btn[data-action="${listeningAction}"]`);
+        if (btn) { btn.innerText = formatKeyName(key); btn.classList.remove('listening'); }
+        listeningAction = null;
+    }
+});
+
+document.getElementById('play-btn').addEventListener('click', () => {
+    if (!selectedClass) {
+        const info = document.getElementById('class-info');
+        if (info) {
+            info.innerText = "PLEASE SELECT A CLASS FIRST!";
+            info.style.color = "red";
+            info.classList.remove('fade-out', 'hidden');
+            if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
+            window.classInfoTimeout = setTimeout(() => info.classList.add('fade-out'), 2000);
         }
+        return;
+    }
+
+    document.getElementById('main-menu').classList.add('hidden');
+    document.getElementById('game-ui').classList.remove('hidden');
+    const hud = document.querySelector('.hud');
+    if(hud) hud.classList.remove('hidden');
+    game.start(selectedClass);
+});
+
+document.getElementById('return-lobby-btn').addEventListener('click', () => {
+    document.getElementById('game-over-screen').classList.add('hidden');
+    document.getElementById('game-ui').classList.add('hidden');
+    document.getElementById('main-menu').classList.remove('hidden');
+    if (window.lastMatchStats) {
+        window.hourlyStats.kills += window.lastMatchStats.kills || 0;
+        window.hourlyStats.time += window.lastMatchStats.time || 0;
+        window.hourlyStats.points += window.lastMatchStats.points || 0;
+        window.hourlyStats.distance += window.lastMatchStats.distance || 0;
         
-        let isPreviewable = item.category !== 'Banner';
-        let clickAttr = isPreviewable ? `onclick="window.showItemPreview('${item.id}')"` : '';
-        let cursorStyle = isPreviewable ? 'cursor: pointer;' : 'cursor: default;';
-        let titleAttr = isPreviewable ? 'title="Click to Preview"' : '';
-
-        const html = `
-            <div class="store-item ${isUnlocked ? 'unlocked' : 'locked'}" style="--rarity-color: ${color};">
-                <div class="item-icon" ${clickAttr} style="${cursorStyle}" ${titleAttr}>${item.icon}</div>
-                <div style="font-size: 0.8rem; color: ${color}; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px; text-shadow: 0 0 5px ${color}40;">${item.category}</div>
-                <div class="item-name">${item.name}</div>
-                <div class="item-req" style="color: ${color};">${isClaimed ? '✓ CLAIMED' : isUnlocked ? 'UNLOCKED!' : `${Math.floor(currentValue)} / ${shopItem.req} ${shopItem.label}`}</div>
-                ${buttonHtml}
-            </div>
-        `;
-        grid.innerHTML += html;
-    });
-}
-
-const startClaim = (e) => {
-    const btn = e.target.closest('.btn-claim');
-    if (!btn) return;
-    
-    const itemId = btn.dataset.id;
-    const storeItem = btn.closest('.store-item');
-    
-    btn.classList.add('holding');
-    storeItem.classList.add('shaking');
-
-    btn.claimTimeout = setTimeout(() => {
-        window.claimedItems[itemId] = true;
-        sounds.play('levelUp', 0.6); 
-        btn.classList.remove('holding');
-        storeItem.classList.remove('shaking');
-        storeItem.classList.add('claimed-pop');
+        window.lifetimeStats.matches += 1;
+        window.lifetimeStats.kills += window.lastMatchStats.kills || 0;
+        window.lifetimeStats.time += window.lastMatchStats.time || 0;
+        window.lifetimeStats.points += window.lastMatchStats.points || 0;
+        window.lifetimeStats.distance += window.lastMatchStats.distance || 0;
         
-        setTimeout(() => {
-            renderSeasonStore();
-            renderMainStore();
-            renderLocker();
-        }, 500); 
-    }, 1000); 
-};
-
-const stopClaim = (e) => {
-    document.querySelectorAll('.btn-claim.holding').forEach(btn => {
-        clearTimeout(btn.claimTimeout);
-        btn.classList.remove('holding');
-        btn.closest('.store-item').classList.remove('shaking');
-    });
-};
-
-document.body.addEventListener('mousedown', startClaim);
-document.body.addEventListener('touchstart', startClaim, {passive: true});
-document.body.addEventListener('mouseup', stopClaim);
-document.body.addEventListener('mouseleave', stopClaim);
-document.body.addEventListener('touchend', stopClaim);
+        window.matchHistory.unshift(window.lastMatchStats);
+        if (window.matchHistory.length > 20) window.matchHistory.pop();
+        window.lastMatchStats = null; 
+    }
+    updateMenuXPBar(); 
+    game.startDemo();
+});
 
 // --- DYNAMIC SHOP ROTATION TIMER ---
 setInterval(() => {
@@ -678,11 +706,14 @@ setInterval(() => {
     }
 }, 1000);
 
+// Initialize UI
 renderSeasonStore();
 renderMainStore();
 updateMenuXPBar(); 
 
-// --- DEV CONSOLE & ESCAPE KEY LOGIC ---
+// ==========================================
+// DEV CONSOLE
+// ==========================================
 const devConsole = document.getElementById('dev-console');
 const devInput = document.getElementById('dev-input');
 const devLog = document.getElementById('dev-log');
