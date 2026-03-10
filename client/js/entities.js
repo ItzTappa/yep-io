@@ -139,6 +139,7 @@ export class Entity {
         let speed = Math.hypot(this.vx, this.vy);
         let hasCustomTrail = this.equipped && this.equipped.Trail !== null && ITEMS_DB[this.equipped.Trail];
         let isDashing = this.dashTimer > 0;
+        
         if (isDashing && !hasCustomTrail) {
             this.trail.push({ type: 'ghost', x: this.x, y: this.y, angle: this.angle, alpha: 0.25, color: this.color });
         } 
@@ -161,33 +162,76 @@ export class Entity {
                 alpha: sAlpha, startAlpha: sAlpha, isDashing: isDashing, color: tColor 
             });
         }
+
+        // NEW: Thruster Exhaust Particles!
+        if (this.rearVisual === 'thrusters' && (isDashing || speed > 1.0)) {
+            let tTier = Math.max(this.upgrades['speed'] || 0, this.upgrades['dash'] || 0);
+            let tLen = 8 + tTier * 3;
+            
+            let armorTier = Math.max(this.upgrades['maxHealth'] || 0, this.upgrades['plating'] || 0);
+            let armorOffset = this.bodyVisual === 'armor' ? (4 + armorTier + (4 + armorTier*1.5)/2) : 0;
+            
+            let backOffset = this.type === 'circle' ? -this.size : -this.size / 2;
+            if (this.bodyVisual === 'armor') backOffset -= armorOffset;
+            let vSpread = this.type === 'square' ? this.size * 0.35 : this.size * 0.45;
+            
+            let px1 = this.x + Math.cos(this.angle) * (backOffset - tLen) - Math.sin(this.angle) * (-vSpread);
+            let py1 = this.y + Math.sin(this.angle) * (backOffset - tLen) + Math.cos(this.angle) * (-vSpread);
+            
+            let px2 = this.x + Math.cos(this.angle) * (backOffset - tLen) - Math.sin(this.angle) * (vSpread);
+            let py2 = this.y + Math.sin(this.angle) * (backOffset - tLen) + Math.cos(this.angle) * (vSpread);
+            
+            let pCount = isDashing ? 3 + tTier : 1 + Math.floor(tTier / 2);
+            for (let k = 0; k < pCount; k++) {
+                let exAngle1 = this.angle + Math.PI + (Math.random() - 0.5) * 0.6;
+                let exAngle2 = this.angle + Math.PI + (Math.random() - 0.5) * 0.6;
+                let exSpeed = Math.random() * 3 + (isDashing ? 5 : 2);
+                
+                this.trail.push({ type: 'fire', x: px1, y: py1, vx: Math.cos(exAngle1)*exSpeed, vy: Math.sin(exAngle1)*exSpeed, alpha: 1.0, color: '#00ffcc', size: 2 + Math.random()*2 });
+                this.trail.push({ type: 'fire', x: px2, y: py2, vx: Math.cos(exAngle2)*exSpeed, vy: Math.sin(exAngle2)*exSpeed, alpha: 1.0, color: '#00ffcc', size: 2 + Math.random()*2 });
+            }
+        }
+
         for (let i = this.trail.length - 1; i >= 0; i--) {
             let t = this.trail[i];
             if (t.type === 'smoke') {
                 t.x += t.vx; t.y += t.vy; t.angle += t.rotSpeed; 
                 t.vx *= 0.9; t.vy *= 0.9; t.alpha -= 0.03; 
-            } else { t.alpha -= 0.05; }
+            } else if (t.type === 'fire') {
+                t.x += t.vx; t.y += t.vy; 
+                t.alpha -= 0.12; 
+            } else { 
+                t.alpha -= 0.05; 
+            }
             if (t.alpha <= 0) this.trail.splice(i, 1);
         }
     }
 
     draw(ctx) {
         this.trail.forEach(t => {
-            ctx.save(); ctx.translate(t.x, t.y); ctx.rotate(t.angle);
-            if (t.type === 'smoke') {
-                let baseScale = t.isDashing ? 1.5 : 1.0;
-                let scale = Math.max(0.1, (t.alpha / t.startAlpha) * baseScale);
-                ctx.scale(scale, scale);
+            if (t.type === 'fire') {
+                ctx.save(); ctx.translate(t.x, t.y);
+                ctx.fillStyle = t.color; ctx.globalAlpha = Math.max(0, t.alpha);
+                if (window.gameSettings.highQuality) { ctx.shadowBlur = 8; ctx.shadowColor = t.color; }
+                ctx.beginPath(); ctx.arc(0, 0, t.size, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            } else {
+                ctx.save(); ctx.translate(t.x, t.y); ctx.rotate(t.angle);
+                if (t.type === 'smoke') {
+                    let baseScale = t.isDashing ? 1.5 : 1.0;
+                    let scale = Math.max(0.1, (t.alpha / t.startAlpha) * baseScale);
+                    ctx.scale(scale, scale);
+                }
+                ctx.fillStyle = t.color; ctx.globalAlpha = t.alpha;
+                ctx.beginPath();
+                if (this.type === 'circle') { ctx.arc(0, 0, this.size, 0, Math.PI * 2); ctx.fill(); } 
+                else if (this.type === 'square') { ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size); } 
+                else if (this.type === 'triangle') {
+                    ctx.moveTo(this.size, 0); ctx.lineTo(-this.size / 2, -this.size * 0.866);
+                    ctx.lineTo(-this.size / 2, this.size * 0.866); ctx.closePath(); ctx.fill();
+                }
+                ctx.restore();
             }
-            ctx.fillStyle = t.color; ctx.globalAlpha = t.alpha;
-            ctx.beginPath();
-            if (this.type === 'circle') { ctx.arc(0, 0, this.size, 0, Math.PI * 2); ctx.fill(); } 
-            else if (this.type === 'square') { ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size); } 
-            else if (this.type === 'triangle') {
-                ctx.moveTo(this.size, 0); ctx.lineTo(-this.size / 2, -this.size * 0.866);
-                ctx.lineTo(-this.size / 2, this.size * 0.866); ctx.closePath(); ctx.fill();
-            }
-            ctx.restore();
         });
 
         if (this.auraVisual === 'regen') {
@@ -204,50 +248,48 @@ export class Entity {
         // Draw Armor first so it sits cleanly under the weapons and thrusters
         let armorOffset = 0;
         if (this.bodyVisual === 'armor') {
-            armorOffset = 7;
+            let armorTier = Math.max(this.upgrades['maxHealth'] || 0, this.upgrades['plating'] || 0);
+            armorOffset = 4 + armorTier;
+            let armorThickness = 4 + (armorTier * 1.5);
+            
             ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
-            ctx.strokeStyle = '#9ca3af'; ctx.lineWidth = 5; 
+            ctx.strokeStyle = '#9ca3af'; ctx.lineWidth = armorThickness; 
             ctx.beginPath();
-            if (this.type === 'circle') ctx.arc(0, 0, this.size + 5, 0, Math.PI*2);
-            else if (this.type === 'square') ctx.rect(-this.size/2-5, -this.size/2-5, this.size+10, this.size+10);
+            if (this.type === 'circle') ctx.arc(0, 0, this.size + armorOffset, 0, Math.PI*2);
+            else if (this.type === 'square') ctx.rect(-this.size/2 - armorOffset, -this.size/2 - armorOffset, this.size + armorOffset*2, this.size + armorOffset*2);
             else if (this.type === 'triangle') {
-                let S = this.size + 7;
+                let S = this.size + armorOffset + 2;
                 ctx.moveTo(S, 0); ctx.lineTo(-S / 2, -S * 0.866); ctx.lineTo(-S / 2, S * 0.866); ctx.closePath();
             }
             ctx.stroke(); ctx.restore();
+            
+            armorOffset += (armorThickness / 2);
         }
 
         if (this.rearVisual === 'thrusters') {
             ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
             let tTier = Math.max(this.upgrades['speed'] || 0, this.upgrades['dash'] || 0);
-            let tSize = 6 + tTier * 2;
-            let tLen = 8 + tTier * 2;
+            let tSize = 6 + tTier * 3;
+            let tLen = 8 + tTier * 3;
             
             let backOffset = this.type === 'circle' ? -this.size : -this.size / 2;
-            if (this.bodyVisual === 'armor') backOffset -= 4; // Push back behind armor
+            if (this.bodyVisual === 'armor') backOffset -= armorOffset; 
             
-            let vSpread = this.type === 'square' ? this.size * 0.3 : this.size * 0.4;
+            let vSpread = this.type === 'square' ? this.size * 0.35 : this.size * 0.45;
             
             ctx.fillStyle = '#444';
             ctx.fillRect(backOffset - tLen + 2, -vSpread - tSize/2, tLen, tSize);
             ctx.fillRect(backOffset - tLen + 2, vSpread - tSize/2, tLen, tSize);
-            
-            if (this.dashTimer > 0 || Math.hypot(this.vx, this.vy) > 1.0) {
-                ctx.fillStyle = '#00ffcc';
-                ctx.fillRect(backOffset - tLen - 2, -vSpread - tSize/4, 4, tSize/2);
-                ctx.fillRect(backOffset - tLen - 2, vSpread - tSize/4, 4, tSize/2);
-            }
             ctx.restore();
         }
 
-        // PERFECT ROTATING GUN BARRELS
         if (this.frontVisual === 'gun') {
             ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
             
             let gunCount = this.multiShot + 1;
             let gunTier = Math.max(this.upgrades['fireRate'] || 0, this.upgrades['damage'] || 0, this.upgrades['multiShot'] || 0);
-            let gunLen = 12 + (gunTier * 3); 
-            let gunThickness = 6 + (gunTier * 1.5); 
+            let gunLen = 12 + (gunTier * 4); 
+            let gunThickness = 6 + (gunTier * 2); 
             
             let spreadAngle = 0.2; 
             let startAngle = -(spreadAngle * (gunCount - 1)) / 2;
@@ -261,7 +303,7 @@ export class Entity {
                 if (this.type === 'triangle') baseRadius = this.size * 0.8;
                 baseRadius += armorOffset;
                 
-                let offsetDist = baseRadius - 6; // Deeply embed into the shape so they stay connected
+                let offsetDist = baseRadius - 6; 
 
                 ctx.translate(offsetDist, 0);
 
@@ -275,7 +317,6 @@ export class Entity {
             ctx.restore();
         }
 
-        // SPIKES ON THE OUTSIDE OF ARMOR
         if (this.spikes > 0 && (this.type === 'circle' || this.type === 'square')) {
             ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle); ctx.fillStyle = '#ff4444';
             if (this.type === 'circle') {
@@ -320,6 +361,7 @@ export class Entity {
             ctx.lineTo(-this.size / 2, this.size * 0.866); ctx.closePath(); ctx.fill();
         }
         ctx.restore();
+        
         if (this.equipped.Skin && ITEMS_DB) {
             const skinType = ITEMS_DB[this.equipped.Skin].value;
             ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle); ctx.beginPath();
@@ -336,7 +378,7 @@ export class Entity {
         }
         
         let hideArrow = (this.frontVisual !== null);
-        if (this.isPlayer && !hideArrow && this.name !== "") {
+        if (this.isPlayer && !hideArrow) {
             ctx.save(); 
             ctx.translate(this.x, this.y); 
             ctx.rotate(this.angle);
@@ -367,6 +409,7 @@ export class Entity {
             }
             ctx.shadowBlur = 0; 
         }
+        
         if (window.gameSettings.showNames && this.name !== "") {
             ctx.fillStyle = 'white'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
             if (window.gameSettings.highQuality) { ctx.shadowBlur = 2; ctx.shadowColor = 'black'; }
@@ -530,8 +573,11 @@ export class Projectile {
         this.pierce = owner.pierceAmmo || 0; this.hitTargets = []; 
         this.sizeScale = 1 + (owner.heavyArt * 0.5);
         if (isMissile) {
-            this.speed = (owner.bulletSpeed || 15) * 0.7; this.damage = 10 + (owner.baseDamage * 0.5); 
-            this.turnSpeed = 0.05 + (owner.missiles * 0.02); this.color = '#ff0044'; this.life = 120; 
+            this.speed = (owner.bulletSpeed || 15) * 0.45; 
+            this.damage = 10 + (owner.baseDamage * 0.5); 
+            this.turnSpeed = 0.05 + (owner.missiles * 0.02); 
+            this.color = '#ff0044'; 
+            this.life = 80; 
         } else {
             this.speed = owner.bulletSpeed || 15; this.damage = owner.baseDamage; this.color = owner.color;
             this.life = 60 + (owner.sniper * 20); 

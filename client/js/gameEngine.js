@@ -390,7 +390,9 @@ export class GameEngine {
             this.bots.push(new Bot(spawn.x, spawn.y, type, startingPts));
         }
         for(let i = 0; i < 300; i++) this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
-        for(let i = 0; i < 15; i++) { let pos = this.getSafeOrbPosition(500); this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0)); }
+        
+        // Boosted base health orb spawns 15 -> 30
+        for(let i = 0; i < 30; i++) { let pos = this.getSafeOrbPosition(500); this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0)); }
 
         this.totalMatchPlayers = this.bots.length + 1; 
         this.lastTime = performance.now(); this.lastFpsTime = performance.now(); this.framesThisSecond = 0;
@@ -497,7 +499,8 @@ export class GameEngine {
             this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
         }
         
-        for(let i = 0; i < 60; i++) { 
+        // Boosted base health orb spawns 60 -> 100
+        for(let i = 0; i < 100; i++) { 
             let pos = this.getSafeOrbPosition(500); 
             this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0));
         }
@@ -789,6 +792,11 @@ export class GameEngine {
         }
         
         if (killer && killer.medicDrop > 0 && Math.random() < (killer.medicDrop * 0.15)) {
+            this.orbs.push(new Orb(victim.x, victim.y, 'health'));
+        }
+        
+        // NEW: Base 10% chance for ANY enemy to drop a health orb just to keep health slightly higher
+        if (Math.random() < 0.10) {
             this.orbs.push(new Orb(victim.x, victim.y, 'health'));
         }
         
