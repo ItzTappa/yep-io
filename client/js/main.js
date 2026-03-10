@@ -85,34 +85,78 @@ document.body.addEventListener('click', (e) => {
     }
 });
 
-// --- LOCKER PREVIEW ---
-const lockerPreviewCanvas = document.getElementById('lockerPreviewCanvas');
-const lockerPreviewCtx = lockerPreviewCanvas?.getContext('2d');
+// --- PREVIEW CANVASES ---
+const previewCanvases = {
+    locker: document.getElementById('lockerPreviewCanvas'),
+    season: document.getElementById('seasonPreviewCanvas'),
+    store: document.getElementById('storePreviewCanvas')
+};
+const previewCtxs = {
+    locker: previewCanvases.locker?.getContext('2d'),
+    season: previewCanvases.season?.getContext('2d'),
+    store: previewCanvases.store?.getContext('2d')
+};
+
 const dpr = window.devicePixelRatio || 1;
-if (lockerPreviewCanvas) {
-    lockerPreviewCanvas.width = 300 * dpr; lockerPreviewCanvas.height = 300 * dpr; 
-    lockerPreviewCtx.scale(dpr, dpr);
-}
+Object.values(previewCanvases).forEach(c => {
+    if (c) {
+        c.width = 300 * dpr; c.height = 300 * dpr; 
+        c.getContext('2d').scale(dpr, dpr);
+    }
+});
 
 let previewAngle = 0;
+let previewDummy = new Player(150, 150, 'triangle', "");
+previewDummy.isPlayer = false; 
+window.activePreviewItem = null;
+
 function renderPreview() {
     previewAngle += 0.015;
-    if (lockerPreviewCtx) {
-        lockerPreviewCtx.clearRect(0, 0, 300, 300);
-        const dummyClass = selectedClass || 'triangle'; 
-        const dummy = new Player(150, 150, dummyClass, ""); 
-        dummy.isPlayer = false; 
-        dummy.equipped = window.equippedItems;
-        if (dummy.equipped.Color && ITEMS_DB && ITEMS_DB[dummy.equipped.Color]) {
-            const dbColor = ITEMS_DB[dummy.equipped.Color].value;
-            if (dbColor === 'gold') dummy.color = '#ffe600'; 
-            else dummy.color = dbColor; 
-        } else { dummy.color = '#d3d3d3'; }
+    
+    let activeTab = null;
+    if (document.getElementById('locker').classList.contains('active')) activeTab = 'locker';
+    else if (document.getElementById('season').classList.contains('active')) activeTab = 'season';
+    else if (document.getElementById('store').classList.contains('active')) activeTab = 'store';
+
+    if (activeTab && previewCtxs[activeTab]) {
+        let ctx = previewCtxs[activeTab];
+        ctx.clearRect(0, 0, 300, 300);
         
-        dummy.angle = previewAngle; dummy.size = 60; 
+        previewDummy.type = selectedClass || 'triangle';
+        
+        let equipState = { ...window.equippedItems };
+        if (window.activePreviewItem && ITEMS_DB[window.activePreviewItem]) {
+            let pItem = ITEMS_DB[window.activePreviewItem];
+            equipState[pItem.category] = pItem.id;
+            
+            let label = document.getElementById(`${activeTab}-preview-label`);
+            if (label) label.innerText = `PREVIEWING: ${pItem.name}`;
+        } else {
+            let label = document.getElementById(`${activeTab}-preview-label`);
+            if (label) label.innerText = `EQUIPPED`;
+        }
+        
+        previewDummy.equipped = equipState;
+        
+        if (previewDummy.equipped.Color && ITEMS_DB[previewDummy.equipped.Color]) {
+            const dbColor = ITEMS_DB[previewDummy.equipped.Color].value;
+            if (dbColor === 'gold') previewDummy.color = '#ffe600'; 
+            else previewDummy.color = dbColor; 
+        } else { previewDummy.color = '#d3d3d3'; }
+        
+        previewDummy.angle = previewAngle; 
+        previewDummy.size = 60; 
+        
+        // Simulates movement so the Trails emit cleanly in place!
+        previewDummy.vx = Math.cos(previewAngle) * 4;
+        previewDummy.vy = Math.sin(previewAngle) * 4;
+        previewDummy.update();
+        previewDummy.x = 150;
+        previewDummy.y = 150;
+        
         let tempShowNames = window.gameSettings.showNames;
         window.gameSettings.showNames = false;
-        dummy.draw(lockerPreviewCtx);
+        previewDummy.draw(ctx);
         window.gameSettings.showNames = tempShowNames;
     }
     requestAnimationFrame(renderPreview);
@@ -140,6 +184,9 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         e.target.classList.add('active');
         document.getElementById(targetTab).classList.add('active');
+        
+        window.activePreviewItem = null; // Clear previews when switching tabs
+
         const seasonLevelUI = document.querySelector('.player-level-ui');
         if (seasonLevelUI) {
             if (targetTab === 'locker') seasonLevelUI.classList.add('hidden');
@@ -212,7 +259,6 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// --- MENU PROGRESS BAR ---
 function updateMenuXPBar() {
     const xpRequired = window.globalAccountLevel * 1000;
     const progressPercent = Math.min(100, (window.globalAccountXP / xpRequired) * 100);
@@ -224,7 +270,6 @@ function updateMenuXPBar() {
     if (sBar) sBar.style.width = `${Math.min(100, (window.globalAccountLevel / 50) * 100)}%`;
 }
 
-// --- PLAY & GAME OVER ---
 document.getElementById('play-btn').addEventListener('click', () => {
     if (!selectedClass) {
         const info = document.getElementById('class-info');
@@ -269,9 +314,8 @@ document.getElementById('return-lobby-btn').addEventListener('click', () => {
     game.startDemo();
 });
 
-// --- LOCKER LOGIC ---
 let currentLockerCategory = null;
-window.openLockerCategory = (cat) => { currentLockerCategory = cat; renderLocker(); };
+window.openLockerCategory = (cat) => { currentLockerCategory = cat; window.activePreviewItem = null; renderLocker(); };
 window.toggleEquip = (itemId, catOverride = null) => {
     if (itemId === null && catOverride) { window.equippedItems[catOverride] = null; } 
     else {
@@ -283,7 +327,7 @@ window.toggleEquip = (itemId, catOverride = null) => {
 };
 
 document.body.addEventListener('click', (e) => {
-    if (e.target.id === 'locker-back-btn') { currentLockerCategory = null; renderLocker(); }
+    if (e.target.id === 'locker-back-btn') { currentLockerCategory = null; window.activePreviewItem = null; renderLocker(); }
 });
 
 function renderLocker() {
@@ -307,10 +351,11 @@ function renderLocker() {
         const grid = document.getElementById('locker-item-grid'); grid.innerHTML = '';
         const isDefault = !window.equippedItems[currentLockerCategory];
         
-        grid.innerHTML += `<div class="store-item unlocked" style="--rarity-color: #888;"><div class="item-icon">✖</div>
+        grid.innerHTML += `<div class="store-item unlocked" style="--rarity-color: #888; cursor: pointer;" onclick="window.activePreviewItem = null">
+            <div class="item-icon">✖</div>
             <div style="font-size: 0.8rem; color: #888; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px;">DEFAULT</div>
             <div class="item-name">None</div>
-            <button class="btn-equip ${isDefault ? 'equipped' : ''}" onclick="window.toggleEquip(null, '${currentLockerCategory}')">${isDefault ? '✓ EQUIPPED' : 'EQUIP'}</button></div>`;
+            <button class="btn-equip ${isDefault ? 'equipped' : ''}" onclick="event.stopPropagation(); window.toggleEquip(null, '${currentLockerCategory}')">${isDefault ? '✓ EQUIPPED' : 'EQUIP'}</button></div>`;
         
         if (ITEMS_DB) {
             const sortedItems = Object.keys(window.claimedItems)
@@ -321,16 +366,16 @@ function renderLocker() {
             sortedItems.forEach(item => {
                 let color = item.color || RARITY_COLORS[item.rarity];
                 const isEquipped = window.equippedItems[item.category] === item.id;
-                grid.innerHTML += `<div class="store-item unlocked" style="--rarity-color: ${color};"><div class="item-icon">${item.icon}</div>
+                grid.innerHTML += `<div class="store-item unlocked" style="--rarity-color: ${color}; cursor: pointer;" onclick="window.activePreviewItem = '${item.id}'">
+                    <div class="item-icon">${item.icon}</div>
                     <div style="font-size: 0.8rem; color: ${color}; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px;">${item.category}</div>
                     <div class="item-name">${item.name}</div>
-                    <button class="btn-equip ${isEquipped ? 'equipped' : ''}" onclick="window.toggleEquip('${item.id}')">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button></div>`;
+                    <button class="btn-equip ${isEquipped ? 'equipped' : ''}" onclick="event.stopPropagation(); window.toggleEquip('${item.id}')">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button></div>`;
             });
         }
     }
 }
 
-// --- STATS LOGIC ---
 function renderStats() {
     document.getElementById('stat-account-level').innerText = window.globalAccountLevel;
     document.getElementById('stat-matches').innerText = window.lifetimeStats.matches;
@@ -376,9 +421,9 @@ function renderStats() {
                     let title = def ? def.title.toUpperCase() : key.toUpperCase();
                     
                     upgradesHtml += `
-                        <div class="upgrade-badge ${tClass}" style="position: relative; top: auto; left: auto; box-shadow: none;">
-                            <div class="badge-name">${title}</div>
-                            <div class="badge-tier">T${tier}</div>
+                        <div class="upgrade-badge ${tClass}" style="position: relative; top: auto; left: auto; display: flex; height: 24px; box-shadow: none;">
+                            <div class="badge-name" style="font-size: 0.65rem; padding: 0 8px;">${title}</div>
+                            <div class="badge-tier" style="font-size: 0.75rem; padding: 0 6px;">T${tier}</div>
                         </div>`;
                 }
             }
@@ -419,7 +464,6 @@ function renderStats() {
     });
 }
 
-// --- STORE LOGIC ---
 function renderSeasonStore() {
     const grid = document.getElementById('season-grid');
     if (!grid) return;
@@ -439,13 +483,13 @@ function renderSeasonStore() {
         
         let buttonHtml = '';
         if (isUnlocked && !isClaimed) {
-            buttonHtml = `<button class="btn-claim" data-id="${item.id}"><div class="fill"></div><span>HOLD TO CLAIM</span></button>`;
+            buttonHtml = `<button class="btn-claim" data-id="${item.id}" onclick="event.stopPropagation();"><div class="fill"></div><span>HOLD TO CLAIM</span></button>`;
         } else if (isClaimed) {
-            buttonHtml = `<button class="btn-equip ${isEquipped ? 'equipped' : ''}" onclick="window.toggleEquip('${item.id}')">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button>`;
+            buttonHtml = `<button class="btn-equip ${isEquipped ? 'equipped' : ''}" onclick="event.stopPropagation(); window.toggleEquip('${item.id}')">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button>`;
         }
 
         const html = `
-            <div class="store-item ${isUnlocked ? 'unlocked' : 'locked'}" style="--rarity-color: ${item.color};">
+            <div class="store-item ${isUnlocked ? 'unlocked' : 'locked'}" style="--rarity-color: ${item.color}; cursor: pointer;" onclick="window.activePreviewItem = '${item.id}'">
                 <div class="item-icon">${item.icon}</div>
                 <div style="font-size: 0.8rem; color: ${item.color}; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px; text-shadow: 0 0 5px ${item.color}40;">${item.category}</div>
                 <div class="item-name">${item.name}</div>
@@ -479,15 +523,15 @@ function renderMainStore() {
         
         let buttonHtml = '';
         if (isUnlocked && !isClaimed) {
-            buttonHtml = `<button class="btn-claim" data-id="${item.id}"><div class="fill"></div><span>HOLD TO CLAIM</span></button>`;
+            buttonHtml = `<button class="btn-claim" data-id="${item.id}" onclick="event.stopPropagation();"><div class="fill"></div><span>HOLD TO CLAIM</span></button>`;
         } else if (isClaimed) {
-            buttonHtml = `<button class="btn-equip ${isEquipped ? 'equipped' : ''}" onclick="window.toggleEquip('${item.id}')">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button>`;
+            buttonHtml = `<button class="btn-equip ${isEquipped ? 'equipped' : ''}" onclick="event.stopPropagation(); window.toggleEquip('${item.id}')">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button>`;
         } else {
             buttonHtml = `<div class="item-progress-bg"><div class="item-progress-fill" style="width: ${progressPercent}%; background: ${color}; box-shadow: 0 0 10px ${color};"></div></div>`;
         }
         
         const html = `
-            <div class="store-item ${isUnlocked ? 'unlocked' : 'locked'}" style="--rarity-color: ${color};">
+            <div class="store-item ${isUnlocked ? 'unlocked' : 'locked'}" style="--rarity-color: ${color}; cursor: pointer;" onclick="window.activePreviewItem = '${item.id}'">
                 <div class="item-icon">${item.icon}</div>
                 <div style="font-size: 0.8rem; color: ${color}; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px; text-shadow: 0 0 5px ${color}40;">${item.category}</div>
                 <div class="item-name">${item.name}</div>

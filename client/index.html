@@ -107,32 +107,49 @@
 
                     <div class="preview-container locker-preview">
                         <canvas id="lockerPreviewCanvas" width="300" height="300"></canvas>
+                        <div id="locker-preview-label" class="preview-label">EQUIPPED</div>
                     </div>
                 </div>
             </div>
         </div>
         
         <div id="season" class="tab-content">
-            <div class="store-container">
-                <div class="store-header">
-                    <h2>SEASON 1: GENESIS</h2>
+            <div class="store-container" style="max-width: 1100px;">
+                <div class="locker-layout">
+                    <div class="locker-left">
+                        <div class="store-header">
+                            <h2>SEASON 1: GENESIS</h2>
+                        </div>
+                        <div class="season-progress">
+                            <div id="season-progress-bar"></div>
+                        </div>
+                        <p class="store-desc" style="text-align: left; margin-bottom: 20px;">Level up your account to unlock free permanent rewards.</p>
+                        <div class="store-grid" id="season-grid" style="justify-content: flex-start;"></div>
+                    </div>
+                    <div class="preview-container shop-preview">
+                        <canvas id="seasonPreviewCanvas" width="300" height="300"></canvas>
+                        <div id="season-preview-label" class="preview-label">EQUIPPED</div>
+                    </div>
                 </div>
-                <div class="season-progress">
-                    <div id="season-progress-bar"></div>
-                </div>
-                <p class="store-desc" style="text-align: center; margin-bottom: 20px;">Level up your account to unlock free permanent rewards.</p>
-                <div class="store-grid" id="season-grid"></div>
             </div>
         </div>
 
         <div id="store" class="tab-content">
-            <div class="store-container">
-                <div class="store-header">
-                    <h2>HOURLY ROTATION</h2>
-                    <div class="store-timer">Rotates in: <span id="shop-timer">59:59</span></div>
+            <div class="store-container" style="max-width: 1100px;">
+                <div class="locker-layout">
+                    <div class="locker-left">
+                        <div class="store-header">
+                            <h2>HOURLY ROTATION</h2>
+                            <div class="store-timer">Rotates in: <span id="shop-timer">59:59</span></div>
+                        </div>
+                        <p class="store-desc" style="text-align: left; margin-bottom: 20px;">Reach the required stats before the hour ends to unlock these cosmetics!</p>
+                        <div class="store-grid" id="main-store-grid" style="justify-content: flex-start;"></div>
+                    </div>
+                    <div class="preview-container shop-preview">
+                        <canvas id="storePreviewCanvas" width="300" height="300"></canvas>
+                        <div id="store-preview-label" class="preview-label">EQUIPPED</div>
+                    </div>
                 </div>
-                <p class="store-desc" style="text-align: center; margin-bottom: 20px;">Reach the required stats before the hour ends to unlock these cosmetics!</p>
-                <div class="store-grid" id="main-store-grid"></div>
             </div>
         </div>
 

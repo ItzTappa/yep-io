@@ -160,7 +160,7 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 
 .match-card.expanded .match-upgrades { display: flex !important; }
 
-/* LOCKER SECTION STYLES */
+/* LOCKER & SHOP PREVIEW STYLES */
 .locker-layout { display: flex; width: 100%; gap: 50px; align-items: flex-start; justify-content: space-between; padding-top: 10px; }
 .locker-left { flex: 0 0 55%; display: flex; flex-direction: column; min-height: 400px; width: 100%; }
 
@@ -176,9 +176,11 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 #locker-back-btn:hover { background: var(--accent); color: black; }
 #locker-category-title { color: var(--accent); font-size: 1.5rem; letter-spacing: 2px; text-transform: uppercase; }
 
-/* NEW: STICKY PREVIEW FOR LOCKER! */
-.preview-container { position: sticky; top: 100px; align-self: flex-start; flex: 1; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%); width: 350px; height: 350px; border-radius: 50%; margin-left: 20px; }
-#lockerPreviewCanvas { display: block; margin: 0 auto; }
+/* STICKY PREVIEW CONTAINER FOR ALL SHOPS */
+.preview-container { position: sticky; top: 100px; align-self: flex-start; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%); width: 350px; height: 350px; border-radius: 50%; margin-left: 20px; }
+.preview-container canvas { display: block; margin: 0 auto; position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+.preview-label { position: absolute; bottom: 20px; color: white; font-weight: bold; text-shadow: 1px 1px 3px black; text-transform: uppercase; font-size: 1.1rem; text-align: center; width: 100%; z-index: 5; }
+
 #locker-items-view { width: 100%; display: flex; flex-direction: column; }
 #locker-item-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; padding: 10px; padding-bottom: 40px; align-content: start; }
 #locker-item-grid .store-item { width: 100%; padding: 15px; }
@@ -322,9 +324,9 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 
     .locker-layout { flex-direction: column-reverse; align-items: center; gap: 20px; }
     
-    /* MOBILE STICKY LOCKER */
-    .preview-container { position: sticky; top: 60px; z-index: 50; width: 150px; height: 150px; margin: 0 auto; flex-shrink: 0; background: var(--bg-color); border-radius: 50%; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
-    #lockerPreviewCanvas { top: auto; position: relative; margin: 0 auto; width: 150px; height: 150px;}
+    .preview-container { position: sticky; top: 70px; z-index: 50; width: 150px; height: 150px; margin: 0 auto; flex-shrink: 0; background: var(--bg-color); border-radius: 50%; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
+    .preview-container canvas { width: 150px; height: 150px; }
+    .preview-label { font-size: 0.7rem; bottom: 5px; }
     
     .locker-slots-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; width: 100%; }
     .locker-slot { padding: 10px; width: 100%; }
