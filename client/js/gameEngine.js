@@ -61,6 +61,10 @@ export class GameEngine {
         this.pointsToNextUpgrade = 10; 
         
         this.leftTouch = { id: null, originX: 0, originY: 0, x: 0, y: 0, active: false };
+        this.usingTouchAim = false;
+        this.aimTouchId = null;
+        this.aimOriginX = 0;
+        this.aimOriginY = 0;
 
         this.initInput();
     }
@@ -73,7 +77,12 @@ export class GameEngine {
             this.canvas.style.width = `${this.width}px`; this.canvas.style.height = `${this.height}px`;
             this.ctx.scale(dpr, dpr);
         });
-        window.addEventListener('mousemove', (e) => { this.mouseX = e.clientX; this.mouseY = e.clientY; });
+        window.addEventListener('mousemove', (e) => { 
+            if (!this.usingTouchAim) {
+                this.mouseX = e.clientX; 
+                this.mouseY = e.clientY; 
+            }
+        });
         
         window.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'INPUT') return;
@@ -93,12 +102,23 @@ export class GameEngine {
             this.keys[e.key.toLowerCase()] = false; 
         });
 
+        // --- MAKE UPGRADES CLICKABLE/TOUCHABLE ---
+        [1, 2, 3].forEach(num => {
+            const card = document.getElementById(`card-${num}`);
+            if (card) {
+                card.addEventListener('pointerdown', (e) => {
+                    if (this.isChoosingUpgrade && !this.isDemo && !this.isGameOver) {
+                        e.stopPropagation();
+                        this.selectUpgrade(num - 1);
+                    }
+                });
+            }
+        });
+
         const leftZone = document.getElementById('joystick-left');
         const leftBase = document.getElementById('base-left');
         const leftStick = document.getElementById('stick-left');
         const dashBtn = document.getElementById('mobile-dash-btn');
-
-        this.aimTouchId = null;
 
         if (leftZone) {
             leftZone.addEventListener('touchstart', (e) => {
@@ -162,17 +182,20 @@ export class GameEngine {
             leftZone.addEventListener('touchcancel', endLeft);
         }
 
+        // --- RELATIVE DRAG AIMING ---
         window.addEventListener('touchstart', (e) => {
             if (this.isDemo || this.isGameOver) return;
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const t = e.changedTouches[i];
                 if ((!this.leftTouch.active || t.identifier !== this.leftTouch.id) && 
                     e.target.id !== 'mobile-dash-btn' && 
-                    !e.target.closest('#joystick-left')) {
+                    !e.target.closest('#joystick-left') &&
+                    !e.target.closest('.card')) { 
                     
                     this.aimTouchId = t.identifier;
-                    this.mouseX = t.clientX;
-                    this.mouseY = t.clientY;
+                    this.usingTouchAim = true;
+                    this.aimOriginX = t.clientX;
+                    this.aimOriginY = t.clientY;
                 }
             }
         }, {passive: false});
@@ -182,8 +205,12 @@ export class GameEngine {
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const t = e.changedTouches[i];
                 if (t.identifier === this.aimTouchId) {
-                    this.mouseX = t.clientX;
-                    this.mouseY = t.clientY;
+                    let dx = t.clientX - this.aimOriginX;
+                    let dy = t.clientY - this.aimOriginY;
+                    
+                    if (Math.hypot(dx, dy) > 10) { 
+                        this.player.angle = Math.atan2(dy, dx);
+                    }
                 }
             }
         }, {passive: false});
@@ -192,6 +219,7 @@ export class GameEngine {
             for (let i = 0; i < e.changedTouches.length; i++) {
                 if (e.changedTouches[i].identifier === this.aimTouchId) {
                     this.aimTouchId = null;
+                    this.usingTouchAim = false;
                 }
             }
         });
@@ -851,13 +879,11 @@ export class GameEngine {
             const binds = window.gameSettings.keybinds;
 
             if (!this.isCinematicIntro) {
-                // Keyboard Input
                 if (this.keys[binds.up]) dy -= 1; 
                 if (this.keys[binds.down]) dy += 1;
                 if (this.keys[binds.left]) dx -= 1; 
                 if (this.keys[binds.right]) dx += 1;
 
-                // Mobile Touch Left Joystick Input
                 if (this.leftTouch && this.leftTouch.active) {
                     let tdx = this.leftTouch.x - this.leftTouch.originX;
                     let tdy = this.leftTouch.y - this.leftTouch.originY;
@@ -884,7 +910,9 @@ export class GameEngine {
                     this.player.vy += (dy / length) * (this.player.speed * 0.2);
                 }
 
-                this.player.angle = Math.atan2(this.mouseY - this.height / 2, this.mouseX - this.width / 2);
+                if (!this.usingTouchAim) {
+                    this.player.angle = Math.atan2(this.mouseY - this.height / 2, this.mouseX - this.width / 2);
+                }
 
             } else {
                 this.player.angle = -Math.PI / 2;
