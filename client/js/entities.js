@@ -66,7 +66,7 @@ export class Entity {
         this.fireCooldown = 0;
         this.name = "Entity";
         this.isDead = false;
-        this.inSafeZone = false; // NEW: Safe zone tracking flag
+        this.inSafeZone = false; 
         
         this.upgrades = {};
         UPGRADE_POOL.forEach(upg => this.upgrades[upg.id] = 0);
@@ -389,30 +389,124 @@ export class Entity {
             ctx.moveTo(S + 4 + (this.spikes * 4), 0); ctx.lineTo(S * 0.3, -this.size * 0.4); ctx.lineTo(S * 0.3, this.size * 0.4); ctx.fill(); ctx.restore();
         }
 
+        // --- DRAW BASE SHAPE ---
         ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
         ctx.fillStyle = this.color; 
         if (window.gameSettings.highQuality) { ctx.shadowBlur = 15; ctx.shadowColor = this.color; } else { ctx.shadowBlur = 0; }
+        
+        // NEW: Vanta Black Special Glow Effect so it's not invisible
+        if (this.color === '#111111' || this.color === '#000000') {
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#ffffff';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.lineWidth = 2;
+        }
+
         ctx.beginPath();
-        if (this.type === 'circle') { ctx.arc(0, 0, this.size, 0, Math.PI * 2); ctx.fill(); } 
-        else if (this.type === 'square') { ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size); } 
+        if (this.type === 'circle') { ctx.arc(0, 0, this.size, 0, Math.PI * 2); ctx.fill(); if (this.color === '#111111') ctx.stroke(); } 
+        else if (this.type === 'square') { ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size); if (this.color === '#111111') ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size); } 
         else if (this.type === 'triangle') {
             ctx.moveTo(this.size, 0); ctx.lineTo(-this.size / 2, -this.size * 0.866);
-            ctx.lineTo(-this.size / 2, this.size * 0.866); ctx.closePath(); ctx.fill();
+            ctx.lineTo(-this.size / 2, this.size * 0.866); ctx.closePath(); ctx.fill(); if (this.color === '#111111') ctx.stroke();
         }
         ctx.restore();
         
-        if (this.equipped.Skin && ITEMS_DB) {
+        // --- DRAW UNIQUE SKINS ---
+        if (this.equipped.Skin && ITEMS_DB && ITEMS_DB[this.equipped.Skin]) {
             const skinType = ITEMS_DB[this.equipped.Skin].value;
-            ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle); ctx.beginPath();
-            const innerSize = this.size * 0.5; 
-            if (this.type === 'circle') { ctx.arc(0, 0, innerSize, 0, Math.PI * 2); } 
-            else if (this.type === 'square') { ctx.rect(-innerSize/2, -innerSize/2, innerSize, innerSize); } 
-            else if (this.type === 'triangle') {
-                ctx.moveTo(innerSize, 0); ctx.lineTo(-innerSize / 2, -innerSize * 0.866); ctx.lineTo(-innerSize / 2, innerSize * 0.866); ctx.closePath();
+            ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle); 
+            
+            if (['spectre', 'luminescent', 'celestial', 'voidwalker', 'inferno', 'neon', 'dark', 'glitch'].includes(skinType)) {
+                if (window.gameSettings.highQuality) { ctx.shadowBlur = 20; }
             }
-            if (skinType === 'neon') { ctx.fillStyle = '#ffffff'; if (window.gameSettings.highQuality) { ctx.shadowBlur = 15; ctx.shadowColor = '#ffffff'; } ctx.fill(); } 
-            else if (skinType === 'dark') { ctx.fillStyle = '#111111'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#a855f7'; ctx.stroke(); } 
-            else if (skinType === 'gladiator') { ctx.fillStyle = '#9ca3af'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff'; ctx.stroke(); }
+
+            if (skinType === 'ghost') {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)'; ctx.beginPath();
+                if (this.type === 'circle') ctx.arc(0, 0, this.size, 0, Math.PI*2);
+                else if (this.type === 'square') ctx.rect(-this.size/2, -this.size/2, this.size, this.size);
+                else { ctx.moveTo(this.size, 0); ctx.lineTo(-this.size/2, -this.size*0.866); ctx.lineTo(-this.size/2, this.size*0.866); ctx.closePath(); }
+                ctx.fill();
+                ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(this.size*0.4, -this.size*0.3, 3, 0, Math.PI*2); ctx.arc(this.size*0.4, this.size*0.3, 3, 0, Math.PI*2); ctx.fill();
+            }
+            else if (skinType === 'assassin') {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)'; ctx.beginPath();
+                if (this.type === 'circle') ctx.arc(0, 0, this.size*0.8, 0, Math.PI*2);
+                else if (this.type === 'square') ctx.rect(-this.size*0.4, -this.size*0.4, this.size*0.8, this.size*0.8);
+                else { ctx.moveTo(this.size*0.8, 0); ctx.lineTo(-this.size*0.4, -this.size*0.69); ctx.lineTo(-this.size*0.4, this.size*0.69); ctx.closePath(); }
+                ctx.fill();
+                ctx.fillStyle = '#ff0000'; ctx.shadowColor = '#ff0000'; ctx.shadowBlur = 10;
+                ctx.beginPath(); ctx.arc(this.size*0.3, 0, 4, 0, Math.PI*2); ctx.fill();
+            }
+            else if (skinType === 'paladin') {
+                ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 4;
+                ctx.beginPath(); ctx.moveTo(-this.size*0.8, 0); ctx.lineTo(this.size*0.8, 0); ctx.moveTo(0, -this.size*0.8); ctx.lineTo(0, this.size*0.8); ctx.stroke();
+            }
+            else if (skinType === 'hologram') {
+                ctx.fillStyle = 'transparent'; ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 2; ctx.shadowColor = '#00ffff'; ctx.shadowBlur = 10;
+                ctx.beginPath();
+                if (this.type === 'circle') ctx.arc(0, 0, this.size*0.6, 0, Math.PI*2);
+                else if (this.type === 'square') ctx.rect(-this.size*0.3, -this.size*0.3, this.size*0.6, this.size*0.6);
+                else { ctx.moveTo(this.size*0.6, 0); ctx.lineTo(-this.size*0.3, -this.size*0.5); ctx.lineTo(-this.size*0.3, this.size*0.5); ctx.closePath(); }
+                ctx.stroke();
+            }
+            else if (skinType === 'spartan') {
+                ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 6;
+                ctx.beginPath(); ctx.moveTo(-this.size*0.5, -this.size*0.8); ctx.lineTo(this.size*0.5, 0); ctx.lineTo(-this.size*0.5, this.size*0.8); ctx.stroke();
+            }
+            else if (skinType === 'luminescent') {
+                ctx.fillStyle = '#ffffff'; ctx.shadowColor = '#ffffff'; ctx.shadowBlur = 20;
+                ctx.beginPath(); ctx.arc(0, 0, this.size*0.5, 0, Math.PI*2); ctx.fill();
+            }
+            else if (skinType === 'ninja') {
+                ctx.fillStyle = '#111'; ctx.beginPath(); ctx.fillRect(-this.size, -this.size*0.3, this.size*2, this.size*0.6);
+                ctx.fillStyle = '#fff'; ctx.fillRect(-this.size*0.5, -this.size*0.1, this.size, this.size*0.2);
+            }
+            else if (skinType === 'celestial') {
+                ctx.fillStyle = '#fff'; ctx.shadowColor = '#00ffff'; ctx.shadowBlur = 15;
+                ctx.beginPath(); ctx.moveTo(0, -this.size*0.6); ctx.lineTo(this.size*0.2, -this.size*0.2); ctx.lineTo(this.size*0.6, 0); ctx.lineTo(this.size*0.2, this.size*0.2); ctx.lineTo(0, this.size*0.6); ctx.lineTo(-this.size*0.2, this.size*0.2); ctx.lineTo(-this.size*0.6, 0); ctx.lineTo(-this.size*0.2, -this.size*0.2); ctx.closePath(); ctx.fill();
+            }
+            else if (skinType === 'cyborg') {
+                ctx.fillStyle = '#9ca3af'; ctx.beginPath(); ctx.fillRect(-this.size, -this.size, this.size*2, this.size);
+                ctx.fillStyle = '#ff0000'; ctx.shadowColor = '#ff0000'; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(this.size*0.4, -this.size*0.4, 4, 0, Math.PI*2); ctx.fill();
+            }
+            else if (skinType === 'voidwalker') {
+                ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(0, 0, this.size*0.5, 0, Math.PI*2); ctx.fill(); 
+                ctx.strokeStyle = '#a855f7'; ctx.lineWidth = 3; ctx.shadowColor = '#a855f7'; ctx.shadowBlur = 15; ctx.stroke();
+            }
+            else if (skinType === 'glitch') {
+                ctx.fillStyle = 'rgba(0, 255, 255, 0.7)'; ctx.beginPath(); ctx.arc(-3, -3, this.size*0.4, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = 'rgba(255, 0, 255, 0.7)'; ctx.beginPath(); ctx.arc(3, 3, this.size*0.4, 0, Math.PI*2); ctx.fill();
+            }
+            else if (skinType === 'inferno') {
+                ctx.fillStyle = '#fbbf24'; ctx.beginPath(); ctx.arc(0, 0, this.size*0.6, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#dc2626'; ctx.shadowColor = '#dc2626'; ctx.shadowBlur = 15;
+                ctx.beginPath(); ctx.arc(0, 0, this.size*0.4, 0, Math.PI*2); ctx.fill();
+            }
+            else if (skinType === 'warlord') {
+                ctx.strokeStyle = '#444'; ctx.lineWidth = 4;
+                ctx.beginPath(); ctx.moveTo(-this.size*0.5, -this.size*0.5); ctx.lineTo(this.size*0.5, this.size*0.5); ctx.moveTo(this.size*0.5, -this.size*0.5); ctx.lineTo(-this.size*0.5, this.size*0.5); ctx.stroke();
+            }
+            else if (skinType === 'spectre') {
+                ctx.fillStyle = 'rgba(168, 85, 247, 0.8)'; ctx.shadowColor = '#a855f7'; ctx.shadowBlur = 20;
+                ctx.beginPath(); ctx.arc(0, 0, this.size*0.7, 0, Math.PI*2); ctx.fill();
+            }
+            else if (skinType === 'phantom') {
+                ctx.strokeStyle = 'rgba(59, 130, 246, 0.8)'; ctx.lineWidth = 3; ctx.shadowColor = '#3b82f6'; ctx.shadowBlur = 10;
+                ctx.beginPath(); ctx.arc(0, 0, this.size*0.8, 0, Math.PI*2); ctx.stroke();
+                ctx.beginPath(); ctx.arc(0, 0, this.size*0.4, 0, Math.PI*2); ctx.stroke();
+            }
+            else {
+                ctx.beginPath();
+                const innerSize = this.size * 0.5;
+                if (this.type === 'circle') { ctx.arc(0, 0, innerSize, 0, Math.PI * 2); } 
+                else if (this.type === 'square') { ctx.rect(-innerSize/2, -innerSize/2, innerSize, innerSize); } 
+                else if (this.type === 'triangle') {
+                    ctx.moveTo(innerSize, 0); ctx.lineTo(-innerSize / 2, -innerSize * 0.866); ctx.lineTo(-innerSize / 2, innerSize * 0.866); ctx.closePath();
+                }
+                if (skinType === 'neon') { ctx.fillStyle = '#ffffff'; if (window.gameSettings.highQuality) { ctx.shadowBlur = 15; ctx.shadowColor = '#ffffff'; } ctx.fill(); } 
+                else if (skinType === 'dark') { ctx.fillStyle = '#111111'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#a855f7'; ctx.stroke(); } 
+                else if (skinType === 'gladiator') { ctx.fillStyle = '#9ca3af'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#ffffff'; ctx.stroke(); }
+            }
             ctx.restore();
         }
         
@@ -449,41 +543,41 @@ export class Entity {
             ctx.shadowBlur = 0; 
         }
         
-        if (window.gameSettings.showNames && this.name !== "") {
-            ctx.fillStyle = 'white'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
-            if (window.gameSettings.highQuality) { ctx.shadowBlur = 2; ctx.shadowColor = 'black'; }
-            let displayName = this.name;
-            if (this.equipped.Banner && ITEMS_DB) displayName = `${ITEMS_DB[this.equipped.Banner].value} ${this.name}`;
-            ctx.fillText(displayName, this.x, this.y - this.size - 20); ctx.shadowBlur = 0; 
-        }
-        
         let isMenuDummy = (!this.isPlayer && this.name === "");
         if (!isMenuDummy) {
+            if (window.gameSettings.showNames && this.name !== "") {
+                ctx.fillStyle = 'white'; ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center';
+                if (window.gameSettings.highQuality) { ctx.shadowBlur = 2; ctx.shadowColor = 'black'; }
+                let displayName = this.name;
+                if (this.equipped.Banner && ITEMS_DB) displayName = `${ITEMS_DB[this.equipped.Banner].value} ${this.name}`;
+                ctx.fillText(displayName, this.x, this.y - this.size - 20 - armorOffset); ctx.shadowBlur = 0; 
+            }
+
             if (this.health < this.maxHealth || this.isPlayer) {
-                ctx.fillStyle = 'rgba(255, 0, 0, 0.7)'; ctx.fillRect(this.x - 20, this.y + this.size + 15, 40, 5);
-                ctx.fillStyle = '#00ffcc'; ctx.fillRect(this.x - 20, this.y + this.size + 15, 40 * (this.health / this.maxHealth), 5);
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.7)'; ctx.fillRect(this.x - 20, this.y + this.size + 15 + armorOffset, 40, 5);
+                ctx.fillStyle = '#00ffcc'; ctx.fillRect(this.x - 20, this.y + this.size + 15 + armorOffset, 40 * (this.health / this.maxHealth), 5);
             }
             
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'; ctx.fillRect(this.x - 20, this.y + this.size + 22, 40, 3);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'; ctx.fillRect(this.x - 20, this.y + this.size + 22 + armorOffset, 40, 3);
             let dashCost = Math.max(0, 2 - this.efficiency); 
             if (this.dashCooldown <= 0) {
-                if (this.points >= dashCost) { ctx.fillStyle = '#ffe600'; ctx.fillRect(this.x - 20, this.y + this.size + 22, 40, 3); } 
-                else { ctx.fillStyle = '#888888'; ctx.fillRect(this.x - 20, this.y + this.size + 22, 40, 3); }
+                if (this.points >= dashCost) { ctx.fillStyle = '#ffe600'; ctx.fillRect(this.x - 20, this.y + this.size + 22 + armorOffset, 40, 3); } 
+                else { ctx.fillStyle = '#888888'; ctx.fillRect(this.x - 20, this.y + this.size + 22 + armorOffset, 40, 3); }
             } else {
                 ctx.fillStyle = '#ffffff'; 
                 const pct = Math.max(0, 1 - (this.dashCooldown / this.dashMaxCooldown));
                 const visualWidth = Math.min(40 * pct, 38);
-                ctx.fillRect(this.x - 20, this.y + this.size + 22, visualWidth, 3);
+                ctx.fillRect(this.x - 20, this.y + this.size + 22 + armorOffset, visualWidth, 3);
             }
 
             if (this.activeAbility) {
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'; ctx.fillRect(this.x - 20, this.y + this.size + 28, 40, 3);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'; ctx.fillRect(this.x - 20, this.y + this.size + 28 + armorOffset, 40, 3);
                 if (this.abilityCooldown <= 0) {
-                    ctx.fillStyle = '#ff00ff'; ctx.fillRect(this.x - 20, this.y + this.size + 28, 40, 3); 
+                    ctx.fillStyle = '#ff00ff'; ctx.fillRect(this.x - 20, this.y + this.size + 28 + armorOffset, 40, 3); 
                 } else {
                     ctx.fillStyle = '#ffffff'; 
                     const aPct = Math.max(0, 1 - (this.abilityCooldown / this.abilityMaxCooldown));
-                    ctx.fillRect(this.x - 20, this.y + this.size + 28, Math.min(40 * aPct, 38), 3);
+                    ctx.fillRect(this.x - 20, this.y + this.size + 28 + armorOffset, Math.min(40 * aPct, 38), 3);
                 }
             }
         }
@@ -552,8 +646,6 @@ export class Bot extends Entity {
 
             if (p === this || p.isDead) return; 
             if (this.isTeammate && (p.isPlayer || p.isTeammate)) return;
-            
-            // NEW: Enemy bots completely drop targeting on you if you are hiding inside a Safe Zone
             if (p.inSafeZone) return; 
 
             const dist = distance(this.x, this.y, p.x, p.y); 
@@ -645,14 +737,13 @@ export class Bot extends Entity {
     }
 }
 
-// NEW: The SafeZone class!
 export class SafeZone {
     constructor(x, y) {
         this.x = x;
         this.y = y;
         this.radius = 250; 
         this.state = 'idle'; 
-        this.triggerTimer = 180; // 3 seconds at 60fps
+        this.triggerTimer = 180; 
         this.lifeTimer = 0;
         this.maxLifeTimer = 0;
     }
@@ -671,7 +762,7 @@ export class SafeZone {
                 this.triggerTimer--;
                 if (this.triggerTimer <= 0) {
                     this.state = 'active';
-                    this.maxLifeTimer = Math.floor((Math.random() * 15 + 5) * 60); // 5 to 20 seconds random lifespan
+                    this.maxLifeTimer = Math.floor((Math.random() * 15 + 5) * 60); 
                     this.lifeTimer = this.maxLifeTimer;
                 }
             } else {
@@ -693,7 +784,7 @@ export class SafeZone {
         ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
         
         if (this.state === 'active') {
-            ctx.fillStyle = 'rgba(0, 255, 204, 0.25)'; // Glowing brighter when fully activated
+            ctx.fillStyle = 'rgba(0, 255, 204, 0.25)'; 
         } else {
             ctx.fillStyle = 'rgba(0, 255, 204, 0.1)';
         }
