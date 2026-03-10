@@ -376,9 +376,9 @@ function renderStats() {
                     let title = def ? def.title.toUpperCase() : key.toUpperCase();
                     
                     upgradesHtml += `
-                        <div class="upgrade-badge ${tClass}" style="position: relative; top: auto; left: auto; display: flex; height: 24px; box-shadow: none;">
-                            <div class="badge-name" style="font-size: 0.65rem; padding: 0 8px;">${title}</div>
-                            <div class="badge-tier" style="font-size: 0.75rem; padding: 0 6px;">T${tier}</div>
+                        <div class="upgrade-badge ${tClass}" style="position: relative; top: auto; left: auto; box-shadow: none;">
+                            <div class="badge-name">${title}</div>
+                            <div class="badge-tier">T${tier}</div>
                         </div>`;
                 }
             }
@@ -582,7 +582,6 @@ window.addEventListener('keydown', (e) => {
             devConsole.classList.add('hidden');
             devInput.blur();
         } 
-        // NEW: Quits the game completely and takes you to the death screen
         else if (window.game && !window.game.isDemo && !window.game.isGameOver) {
             window.game.handleGameOver({ name: "SURRENDERED" });
         }
