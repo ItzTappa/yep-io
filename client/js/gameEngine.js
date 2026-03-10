@@ -53,11 +53,10 @@ export class GameEngine {
         this.accountLevelUpTimeout = null; 
         this.animationId = null; 
         
-        // BULLETPROOF FIXED TIMESTEP 
+        // UNBREAKABLE FIXED TIMESTEP VARIABLES
         this.fpsInterval = 1000 / 60; 
         this.lastTime = performance.now();
         this.accumulator = 0; 
-
         this.lastFpsTime = performance.now(); 
         this.framesThisSecond = 0;
 
@@ -418,6 +417,7 @@ export class GameEngine {
         this.camera.y = this.demoTargetY;
         this.cameraZoom = 1.0;
         
+        // RESET TIME VARIABLES TO PREVENT FREEZES
         this.accumulator = 0;
         this.lastTime = performance.now(); 
         
@@ -1823,34 +1823,35 @@ export class GameEngine {
         pointersContainer.innerHTML = html;
     }
 
-    loop(timestamp) {
-        if (!timestamp) timestamp = performance.now();
-        if (!this.lastTime) this.lastTime = timestamp;
+    loop() {
+        const current = performance.now();
+        let dt = current - this.lastTime;
+        this.lastTime = current;
         
-        let dt = timestamp - this.lastTime;
-        this.lastTime = timestamp;
-        
-        if (dt > 100) dt = 16.666; 
-        if (dt < 0) dt = 0; 
+        // Failsafe for background tabs to prevent fast-forwarding
+        if (dt > 250) {
+            dt = 250; 
+        }
         
         this.accumulator += dt;
 
         if (window.gameSettings.showFps) {
             this.framesThisSecond++;
-            if (timestamp - this.lastFpsTime >= 1000) {
+            if (current - this.lastFpsTime >= 1000) {
                 document.getElementById('fps-display').innerText = `${this.framesThisSecond} FPS`;
                 this.framesThisSecond = 0;
-                this.lastFpsTime = timestamp;
+                this.lastFpsTime = current;
             }
         }
 
-        while (this.accumulator >= 16.666) {
+        // PERFECT FIXED TIMESTEP 
+        while (this.accumulator >= this.fpsInterval) {
             this.update();
-            this.accumulator -= 16.666;
+            this.accumulator -= this.fpsInterval;
         }
         
         this.draw();
         
-        this.animationId = requestAnimationFrame((t) => this.loop(t));
+        this.animationId = requestAnimationFrame(() => this.loop());
     }
 }

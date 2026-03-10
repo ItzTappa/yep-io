@@ -21,9 +21,6 @@ window.equippedItems = { Skin: null, Trail: null, Banner: null, Color: null };
 window.lifetimeStats = { matches: 0, kills: 0, time: 0, points: 0, distance: 0 };
 window.matchHistory = [];
 
-// ==========================================
-// DYNAMIC SHOP GENERATOR
-// ==========================================
 function generateShop() {
     const rotatingItems = Object.values(ITEMS_DB).filter(item => item.isRotating);
     const shuffled = rotatingItems.sort(() => 0.5 - Math.random());
@@ -44,7 +41,6 @@ function generateShop() {
         
         if (stat.type === 'distance' || stat.type === 'points') req = Math.ceil(req / 100) * 100;
         if (stat.type === 'time') req = Math.ceil(req / 10) * 10;
-        
         return { id: item.id, type: stat.type, req: req, label: stat.label };
     });
 
@@ -76,49 +72,39 @@ function formatTime(secs) {
 const canvas = document.getElementById('gameCanvas');
 const game = new GameEngine(canvas);
 window.game = game; 
-
-try {
-    game.startDemo();
-} catch(e) {
-    console.error("Failed to start demo on load: ", e);
-}
+game.startDemo();
 
 // ==========================================
 // BULLETPROOF GLOBAL UI HANDLER
 // ==========================================
-
 let currentLockerCategory = null;
 window.activePreviewItem = null;
 
-document.body.addEventListener('click', (e) => {
+document.addEventListener('click', (e) => {
     const target = e.target;
 
-    // 1. Play button sound
     if (target.tagName === 'BUTTON' || target.closest('button')) {
         sounds.play('click', 0.4);
     }
 
-    // 2. Handle 'Back to Shop' button
     if (target.id === 'close-preview-btn' || target.closest('#close-preview-btn')) {
         window.activePreviewItem = null;
         document.getElementById('item-preview-screen').classList.add('hidden');
         return;
     }
 
-    // 3. Handle Equip buttons (works in locker AND shops!)
     const equipBtn = target.closest('.btn-equip');
     if (equipBtn) {
         const itemId = equipBtn.dataset.id;
         if (!itemId) { 
-            // Unequip current locker category
             if (currentLockerCategory) window.equippedItems[currentLockerCategory] = null;
         } else {
             const item = ITEMS_DB[itemId];
             if (item) {
                 if (window.equippedItems[item.category] === itemId) {
-                    window.equippedItems[item.category] = null; // Toggle off
+                    window.equippedItems[item.category] = null; 
                 } else {
-                    window.equippedItems[item.category] = itemId; // Toggle on
+                    window.equippedItems[item.category] = itemId; 
                 }
             }
         }
@@ -128,7 +114,6 @@ document.body.addEventListener('click', (e) => {
         return;
     }
 
-    // 4. Handle clicking an item Icon to open the Preview Overlay
     const iconBtn = target.closest('.item-icon');
     if (iconBtn && iconBtn.dataset.id) {
         const item = ITEMS_DB[iconBtn.dataset.id];
@@ -141,7 +126,6 @@ document.body.addEventListener('click', (e) => {
         return;
     }
 
-    // 5. Handle Locker Slot clicking
     const lockerSlot = target.closest('.locker-slot');
     if (lockerSlot) {
         currentLockerCategory = lockerSlot.dataset.category;
@@ -150,7 +134,6 @@ document.body.addEventListener('click', (e) => {
         return;
     }
 
-    // 6. Handle Locker Back Button
     if (target.id === 'locker-back-btn') {
         currentLockerCategory = null;
         window.activePreviewItem = null;
@@ -158,7 +141,6 @@ document.body.addEventListener('click', (e) => {
         return;
     }
 
-    // 7. Handle top Navigation Tabs
     if (target.classList.contains('tab-btn')) {
         const targetTab = target.dataset.target;
         if (targetTab === 'multiplayer' && !selectedClass) {
@@ -193,13 +175,15 @@ document.body.addEventListener('click', (e) => {
 });
 
 // ==========================================
-// BULLETPROOF HOLD-TO-CLAIM LOGIC
+// BULLETPROOF HOLD-TO-CLAIM
 // ==========================================
 const startClaim = (e) => {
     const btn = e.target.closest('.btn-claim');
     if (!btn) return;
     
+    e.preventDefault(); 
     btn.classList.add('holding');
+    
     const storeItem = btn.closest('.store-item');
     if (storeItem) storeItem.classList.add('shaking');
 
@@ -213,7 +197,6 @@ const startClaim = (e) => {
             storeItem.classList.remove('shaking');
             storeItem.classList.add('claimed-pop');
         }
-        
         setTimeout(() => {
             renderSeasonStore();
             renderMainStore();
@@ -231,15 +214,14 @@ const stopClaim = (e) => {
     });
 };
 
-document.body.addEventListener('mousedown', startClaim);
-document.body.addEventListener('touchstart', startClaim, {passive: true});
-document.body.addEventListener('mouseup', stopClaim);
-document.body.addEventListener('mouseleave', stopClaim);
-document.body.addEventListener('touchend', stopClaim);
-
+document.addEventListener('mousedown', startClaim);
+document.addEventListener('touchstart', startClaim, {passive: false});
+document.addEventListener('mouseup', stopClaim);
+document.addEventListener('mouseleave', stopClaim);
+document.addEventListener('touchend', stopClaim);
 
 // ==========================================
-// PREVIEW CANVASES & FIXED TIMESTEP LOOP
+// FIXED TIMESTEP PREVIEW RENDERER
 // ==========================================
 const lockerCanvas = document.getElementById('lockerPreviewCanvas');
 const lockerCtx = lockerCanvas?.getContext('2d');
@@ -268,21 +250,16 @@ function renderPreview() {
     let dt = current - previewLastTime;
     previewLastTime = current;
     
-    if (dt > 100) dt = 16.666; 
+    if (dt > 250) dt = 250; 
     if (dt < 0) dt = 0; 
     
     previewAccumulator += dt;
     
-    // Process game logic at strict 60 updates per second
     while (previewAccumulator >= 16.666) {
         previewAngle += 0.015;
         
         let needsTrail = false;
-        
-        if (document.getElementById('locker').classList.contains('active')) {
-            if (currentLockerCategory === 'Trail') needsTrail = true;
-        }
-
+        if (document.getElementById('locker').classList.contains('active') && currentLockerCategory === 'Trail') needsTrail = true;
         if (!document.getElementById('item-preview-screen').classList.contains('hidden')) {
             if (window.activePreviewItem && ITEMS_DB[window.activePreviewItem] && ITEMS_DB[window.activePreviewItem].category === 'Trail') {
                 needsTrail = true;
@@ -293,27 +270,21 @@ function renderPreview() {
             previewDummy.vx = Math.cos(previewAngle) * 4;
             previewDummy.vy = Math.sin(previewAngle) * 4;
         } else {
-            previewDummy.vx = 0; 
-            previewDummy.vy = 0; 
-            previewDummy.trail = [];
+            previewDummy.vx = 0; previewDummy.vy = 0; previewDummy.trail = [];
         }
         
         previewDummy.update();
         previewAccumulator -= 16.666;
     }
     
-    // Draw Locker Preview
     if (lockerCtx && document.getElementById('locker').classList.contains('active')) {
         lockerCtx.clearRect(0, 0, 300, 300);
         previewDummy.type = selectedClass || 'triangle';
         previewDummy.equipped = { ...window.equippedItems };
-        
         if (previewDummy.equipped.Color && ITEMS_DB[previewDummy.equipped.Color]) {
             const dbColor = ITEMS_DB[previewDummy.equipped.Color].value;
             previewDummy.color = dbColor === 'gold' ? '#ffe600' : dbColor; 
-        } else { 
-            previewDummy.color = '#d3d3d3'; 
-        }
+        } else { previewDummy.color = '#d3d3d3'; }
         
         previewDummy.angle = previewAngle; 
         previewDummy.size = 60; 
@@ -325,24 +296,19 @@ function renderPreview() {
         window.gameSettings.showNames = tmp;
     }
 
-    // Draw Fullscreen Shop Overlay Preview
     if (fsCtx && !document.getElementById('item-preview-screen').classList.contains('hidden')) {
         fsCtx.clearRect(0, 0, 350, 350);
         previewDummy.type = selectedClass || 'triangle';
         
         let equipState = { ...window.equippedItems };
         if (window.activePreviewItem && ITEMS_DB[window.activePreviewItem]) {
-            let pItem = ITEMS_DB[window.activePreviewItem];
-            equipState[pItem.category] = pItem.id;
+            equipState[ITEMS_DB[window.activePreviewItem].category] = window.activePreviewItem;
         }
         previewDummy.equipped = equipState;
-        
         if (previewDummy.equipped.Color && ITEMS_DB[previewDummy.equipped.Color]) {
             const dbColor = ITEMS_DB[previewDummy.equipped.Color].value;
             previewDummy.color = dbColor === 'gold' ? '#ffe600' : dbColor; 
-        } else { 
-            previewDummy.color = '#d3d3d3'; 
-        }
+        } else { previewDummy.color = '#d3d3d3'; }
         
         previewDummy.angle = previewAngle; 
         previewDummy.size = 70; 
@@ -358,9 +324,119 @@ function renderPreview() {
 }
 renderPreview();
 
-// ==========================================
-// RENDER UI FUNCTIONS
-// ==========================================
+document.querySelectorAll('.class-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.class-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        selectedClass = e.target.dataset.class;
+
+        const info = document.getElementById('class-info');
+        if (info) {
+            if (selectedClass === 'triangle') info.innerText = "JET: Fast & agile. Lower health. Good for hit-and-run.";
+            if (selectedClass === 'square') info.innerText = "TANK: High health, slow speed. Excels in close-quarters brawls.";
+            if (selectedClass === 'circle') info.innerText = "SOLDIER: Balanced speed and health. The perfect all-rounder.";
+            
+            info.style.color = "var(--accent)";
+            info.classList.remove('hidden', 'fade-out');
+            
+            if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
+            window.classInfoTimeout = setTimeout(() => {
+                info.classList.add('fade-out');
+            }, 4000);
+        }
+    });
+});
+
+document.getElementById('settings-btn').addEventListener('click', () => { document.getElementById('settings-modal').classList.remove('hidden'); });
+document.getElementById('close-settings-btn').addEventListener('click', () => {
+    window.gameSettings.highQuality = document.getElementById('set-hq').checked;
+    window.gameSettings.particles = document.getElementById('set-particles').checked;
+    window.gameSettings.showNames = document.getElementById('set-names').checked;
+    window.gameSettings.showFps = document.getElementById('set-fps').checked;
+    const fpsDisplay = document.getElementById('fps-display');
+    if (fpsDisplay) {
+        if (window.gameSettings.showFps) fpsDisplay.classList.remove('hidden');
+        else fpsDisplay.classList.add('hidden');
+    }
+    document.getElementById('settings-modal').classList.add('hidden');
+});
+
+let listeningAction = null;
+const formatKeyName = (key) => key === ' ' ? 'SPACE' : key.toUpperCase();
+document.querySelectorAll('.keybind-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.keybind-btn').forEach(b => b.classList.remove('listening'));
+        listeningAction = e.target.dataset.action;
+        e.target.classList.add('listening');
+        e.target.innerText = "PRESS KEY";
+    });
+});
+
+document.addEventListener('keydown', (e) => {
+    if (listeningAction) {
+        e.preventDefault(); 
+        const key = e.key.toLowerCase();
+        window.gameSettings.keybinds[listeningAction] = key;
+        const btn = document.querySelector(`.keybind-btn[data-action="${listeningAction}"]`);
+        if (btn) { btn.innerText = formatKeyName(key); btn.classList.remove('listening'); }
+        listeningAction = null;
+    }
+});
+
+function updateMenuXPBar() {
+    const xpRequired = window.globalAccountLevel * 1000;
+    const progressPercent = Math.min(100, (window.globalAccountXP / xpRequired) * 100);
+    const bar = document.getElementById('menu-xp-bar');
+    const lvl = document.getElementById('menu-level');
+    if (bar) bar.style.width = `${progressPercent}%`;
+    if (lvl) lvl.innerText = window.globalAccountLevel;
+    const sBar = document.getElementById('season-progress-bar');
+    if (sBar) sBar.style.width = `${Math.min(100, (window.globalAccountLevel / 50) * 100)}%`;
+}
+
+document.getElementById('play-btn').addEventListener('click', () => {
+    if (!selectedClass) {
+        const info = document.getElementById('class-info');
+        if (info) {
+            info.innerText = "PLEASE SELECT A CLASS FIRST!";
+            info.style.color = "red";
+            info.classList.remove('fade-out', 'hidden');
+            if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
+            window.classInfoTimeout = setTimeout(() => info.classList.add('fade-out'), 2000);
+        }
+        return;
+    }
+
+    document.getElementById('main-menu').classList.add('hidden');
+    document.getElementById('game-ui').classList.remove('hidden');
+    const hud = document.querySelector('.hud');
+    if(hud) hud.classList.remove('hidden');
+    game.start(selectedClass);
+});
+
+document.getElementById('return-lobby-btn').addEventListener('click', () => {
+    document.getElementById('game-over-screen').classList.add('hidden');
+    document.getElementById('game-ui').classList.add('hidden');
+    document.getElementById('main-menu').classList.remove('hidden');
+    if (window.lastMatchStats) {
+        window.hourlyStats.kills += window.lastMatchStats.kills || 0;
+        window.hourlyStats.time += window.lastMatchStats.time || 0;
+        window.hourlyStats.points += window.lastMatchStats.points || 0;
+        window.hourlyStats.distance += window.lastMatchStats.distance || 0;
+        
+        window.lifetimeStats.matches += 1;
+        window.lifetimeStats.kills += window.lastMatchStats.kills || 0;
+        window.lifetimeStats.time += window.lastMatchStats.time || 0;
+        window.lifetimeStats.points += window.lastMatchStats.points || 0;
+        window.lifetimeStats.distance += window.lastMatchStats.distance || 0;
+        
+        window.matchHistory.unshift(window.lastMatchStats);
+        if (window.matchHistory.length > 20) window.matchHistory.pop();
+        window.lastMatchStats = null; 
+    }
+    updateMenuXPBar(); 
+    game.startDemo();
+});
 
 function renderLocker() {
     const slotsView = document.getElementById('locker-slots-view');
@@ -368,8 +444,7 @@ function renderLocker() {
     if (!slotsView || !itemsView) return;
     
     if (currentLockerCategory === null) {
-        slotsView.classList.remove('hidden'); 
-        itemsView.classList.add('hidden');
+        slotsView.classList.remove('hidden'); itemsView.classList.add('hidden');
         slotsView.innerHTML = '';
         ['Skin', 'Trail', 'Banner', 'Color'].forEach(cat => {
             const item = window.equippedItems[cat] ? ITEMS_DB[window.equippedItems[cat]] : null;
@@ -379,12 +454,9 @@ function renderLocker() {
             </div>`;
         });
     } else {
-        slotsView.classList.add('hidden'); 
-        itemsView.classList.remove('hidden');
+        slotsView.classList.add('hidden'); itemsView.classList.remove('hidden');
         document.getElementById('locker-category-title').innerText = `CHOOSE ${currentLockerCategory}`;
-        const grid = document.getElementById('locker-item-grid'); 
-        grid.innerHTML = '';
-        
+        const grid = document.getElementById('locker-item-grid'); grid.innerHTML = '';
         const isDefault = !window.equippedItems[currentLockerCategory];
         
         grid.innerHTML += `<div class="store-item unlocked" style="--rarity-color: #888;">
@@ -410,6 +482,94 @@ function renderLocker() {
             });
         }
     }
+}
+
+function renderStats() {
+    document.getElementById('stat-account-level').innerText = window.globalAccountLevel;
+    document.getElementById('stat-matches').innerText = window.lifetimeStats.matches;
+    document.getElementById('stat-kills').innerText = window.lifetimeStats.kills;
+    document.getElementById('stat-points').innerText = Math.floor(window.lifetimeStats.points);
+    document.getElementById('stat-time').innerText = formatTime(window.lifetimeStats.time);
+    
+    const historyList = document.getElementById('match-history-list');
+    if (!historyList) return;
+    
+    if (window.matchHistory.length === 0) {
+        historyList.innerHTML = '<p style="color: #aaa; text-align: center; padding: 20px; grid-column: span 5;">Play a match to see your history!</p>';
+        return;
+    }
+    
+    historyList.innerHTML = '';
+    
+    window.matchHistory.forEach(match => {
+        let rankColor = '#a0a0a0'; 
+        let rank = match.rank ? match.rank : '?';
+        
+        if (rank === 1) rankColor = '#ffe600'; 
+        else if (rank !== '?' && rank <= 5) rankColor = '#00ffcc'; 
+        
+        let suffix = "th";
+        if (rank !== '?') {
+            let r = parseInt(rank);
+            if (r % 10 === 1 && r % 100 !== 11) suffix = "st";
+            else if (r % 10 === 2 && r % 100 !== 12) suffix = "nd";
+            else if (r % 10 === 3 && r % 100 !== 13) suffix = "rd";
+        }
+        let displayRank = rank === '?' ? '?' : `${rank}${suffix}`;
+        
+        let pClass = match.playerClass ? match.playerClass.charAt(0).toUpperCase() + match.playerClass.slice(1) : 'Unknown';
+
+        let upgradesHtml = '';
+        if (match.upgrades) {
+            for(let key in match.upgrades) {
+                let tier = match.upgrades[key];
+                if (tier > 0) {
+                    let tClass = tier === 1 ? 'badge-t1' : tier === 2 ? 'badge-t2' : tier === 3 ? 'badge-t3' : tier === 4 ? 'badge-t4' : 'badge-t5';
+                    let def = UPGRADE_POOL.find(u => u && u.id === key);
+                    let title = def ? def.title.toUpperCase() : key.toUpperCase();
+                    
+                    upgradesHtml += `
+                        <div class="upgrade-badge ${tClass}" style="position: relative; top: auto; left: auto; display: flex; height: 24px; box-shadow: none;">
+                            <div class="badge-name" style="font-size: 0.65rem; padding: 0 8px;">${title}</div>
+                            <div class="badge-tier" style="font-size: 0.75rem; padding: 0 6px;">T${tier}</div>
+                        </div>`;
+                }
+            }
+        }
+
+        const html = `
+            <div class="match-card" onclick="this.classList.toggle('expanded')" style="border-left-color: ${rankColor};">
+                <div class="match-card-main">
+                    <div class="match-detail-item">
+                        <span class="match-detail-label">RANK</span>
+                        <div class="match-rank" style="color: ${rankColor};">
+                            ${displayRank}
+                        </div>
+                    </div>
+                    <div class="match-detail-item">
+                        <span class="match-detail-label">CLASS</span>
+                        <span class="match-detail-val" style="color: #bbb;">${pClass}</span>
+                    </div>
+                    <div class="match-detail-item">
+                        <span class="match-detail-label">KILLS</span>
+                        <span class="match-detail-val">${match.kills || 0}</span>
+                    </div>
+                    <div class="match-detail-item">
+                        <span class="match-detail-label">POINTS</span>
+                        <span class="match-detail-val">${Math.floor(match.points || 0)}</span>
+                    </div>
+                    <div class="match-detail-item">
+                        <span class="match-detail-label">TIME ALIVE</span>
+                        <span class="match-detail-val">${formatTime(match.time || 0)}</span>
+                    </div>
+                </div>
+                <div class="match-upgrades" style="grid-column: span 5; display:none; flex-wrap:wrap; justify-content:center; gap:5px; padding-top:15px; border-top:1px solid #333; margin-top:5px;">
+                    ${upgradesHtml || '<span style="color:#666; font-size:0.8rem; font-style:italic;">No upgrades acquired.</span>'}
+                </div>
+            </div>
+        `;
+        historyList.innerHTML += html;
+    });
 }
 
 function renderSeasonStore() {
@@ -499,197 +659,6 @@ function renderMainStore() {
     });
 }
 
-function renderStats() {
-    document.getElementById('stat-account-level').innerText = window.globalAccountLevel;
-    document.getElementById('stat-matches').innerText = window.lifetimeStats.matches;
-    document.getElementById('stat-kills').innerText = window.lifetimeStats.kills;
-    document.getElementById('stat-points').innerText = Math.floor(window.lifetimeStats.points);
-    document.getElementById('stat-time').innerText = formatTime(window.lifetimeStats.time);
-    
-    const historyList = document.getElementById('match-history-list');
-    if (!historyList) return;
-    
-    if (window.matchHistory.length === 0) {
-        historyList.innerHTML = '<p style="color: #aaa; text-align: center; padding: 20px; grid-column: span 5;">Play a match to see your history!</p>';
-        return;
-    }
-    
-    historyList.innerHTML = '';
-    
-    window.matchHistory.forEach(match => {
-        let rankColor = '#a0a0a0'; 
-        let rank = match.rank ? match.rank : '?';
-        
-        if (rank === 1) rankColor = '#ffe600'; 
-        else if (rank !== '?' && rank <= 5) rankColor = '#00ffcc'; 
-        
-        let suffix = "th";
-        if (rank !== '?') {
-            let r = parseInt(rank);
-            if (r % 10 === 1 && r % 100 !== 11) suffix = "st";
-            else if (r % 10 === 2 && r % 100 !== 12) suffix = "nd";
-            else if (r % 10 === 3 && r % 100 !== 13) suffix = "rd";
-        }
-        let displayRank = rank === '?' ? '?' : `${rank}${suffix}`;
-        let pClass = match.playerClass ? match.playerClass.charAt(0).toUpperCase() + match.playerClass.slice(1) : 'Unknown';
-
-        let upgradesHtml = '';
-        if (match.upgrades) {
-            for(let key in match.upgrades) {
-                let tier = match.upgrades[key];
-                if (tier > 0) {
-                    let tClass = tier === 1 ? 'badge-t1' : tier === 2 ? 'badge-t2' : tier === 3 ? 'badge-t3' : tier === 4 ? 'badge-t4' : 'badge-t5';
-                    let def = UPGRADE_POOL.find(u => u && u.id === key);
-                    let title = def ? def.title.toUpperCase() : key.toUpperCase();
-                    
-                    upgradesHtml += `
-                        <div class="upgrade-badge ${tClass}" style="position: relative; top: auto; left: auto; display: flex; height: 24px; box-shadow: none;">
-                            <div class="badge-name" style="font-size: 0.65rem; padding: 0 8px;">${title}</div>
-                            <div class="badge-tier" style="font-size: 0.75rem; padding: 0 6px;">T${tier}</div>
-                        </div>`;
-                }
-            }
-        }
-
-        const html = `
-            <div class="match-card" onclick="this.classList.toggle('expanded')" style="border-left-color: ${rankColor};">
-                <div class="match-card-main">
-                    <div class="match-detail-item">
-                        <span class="match-detail-label">RANK</span>
-                        <div class="match-rank" style="color: ${rankColor};">
-                            ${displayRank}
-                        </div>
-                    </div>
-                    <div class="match-detail-item">
-                        <span class="match-detail-label">CLASS</span>
-                        <span class="match-detail-val" style="color: #bbb;">${pClass}</span>
-                    </div>
-                    <div class="match-detail-item">
-                        <span class="match-detail-label">KILLS</span>
-                        <span class="match-detail-val">${match.kills || 0}</span>
-                    </div>
-                    <div class="match-detail-item">
-                        <span class="match-detail-label">POINTS</span>
-                        <span class="match-detail-val">${Math.floor(match.points || 0)}</span>
-                    </div>
-                    <div class="match-detail-item">
-                        <span class="match-detail-label">TIME ALIVE</span>
-                        <span class="match-detail-val">${formatTime(match.time || 0)}</span>
-                    </div>
-                </div>
-                <div class="match-upgrades" style="grid-column: span 5; display:none; flex-wrap:wrap; justify-content:center; gap:5px; padding-top:15px; border-top:1px solid #333; margin-top:5px;">
-                    ${upgradesHtml || '<span style="color:#666; font-size:0.8rem; font-style:italic;">No upgrades acquired.</span>'}
-                </div>
-            </div>
-        `;
-        historyList.innerHTML += html;
-    });
-}
-
-// --- CLASS / SETTINGS UI BINDINGS ---
-document.querySelectorAll('.class-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.class-btn').forEach(b => b.classList.remove('active'));
-        e.target.classList.add('active');
-        selectedClass = e.target.dataset.class;
-
-        const info = document.getElementById('class-info');
-        if (info) {
-            if (selectedClass === 'triangle') info.innerText = "JET: Fast & agile. Lower health. Good for hit-and-run.";
-            if (selectedClass === 'square') info.innerText = "TANK: High health, slow speed. Excels in close-quarters brawls.";
-            if (selectedClass === 'circle') info.innerText = "SOLDIER: Balanced speed and health. The perfect all-rounder.";
-            
-            info.style.color = "var(--accent)";
-            info.classList.remove('hidden', 'fade-out');
-            
-            if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
-            window.classInfoTimeout = setTimeout(() => {
-                info.classList.add('fade-out');
-            }, 4000);
-        }
-    });
-});
-
-document.getElementById('settings-btn').addEventListener('click', () => { document.getElementById('settings-modal').classList.remove('hidden'); });
-document.getElementById('close-settings-btn').addEventListener('click', () => {
-    window.gameSettings.highQuality = document.getElementById('set-hq').checked;
-    window.gameSettings.particles = document.getElementById('set-particles').checked;
-    window.gameSettings.showNames = document.getElementById('set-names').checked;
-    window.gameSettings.showFps = document.getElementById('set-fps').checked;
-    const fpsDisplay = document.getElementById('fps-display');
-    if (fpsDisplay) {
-        if (window.gameSettings.showFps) fpsDisplay.classList.remove('hidden');
-        else fpsDisplay.classList.add('hidden');
-    }
-    document.getElementById('settings-modal').classList.add('hidden');
-});
-
-let listeningAction = null;
-const formatKeyName = (key) => key === ' ' ? 'SPACE' : key.toUpperCase();
-document.querySelectorAll('.keybind-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.keybind-btn').forEach(b => b.classList.remove('listening'));
-        listeningAction = e.target.dataset.action;
-        e.target.classList.add('listening');
-        e.target.innerText = "PRESS KEY";
-    });
-});
-
-document.addEventListener('keydown', (e) => {
-    if (listeningAction) {
-        e.preventDefault(); 
-        const key = e.key.toLowerCase();
-        window.gameSettings.keybinds[listeningAction] = key;
-        const btn = document.querySelector(`.keybind-btn[data-action="${listeningAction}"]`);
-        if (btn) { btn.innerText = formatKeyName(key); btn.classList.remove('listening'); }
-        listeningAction = null;
-    }
-});
-
-document.getElementById('play-btn').addEventListener('click', () => {
-    if (!selectedClass) {
-        const info = document.getElementById('class-info');
-        if (info) {
-            info.innerText = "PLEASE SELECT A CLASS FIRST!";
-            info.style.color = "red";
-            info.classList.remove('fade-out', 'hidden');
-            if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
-            window.classInfoTimeout = setTimeout(() => info.classList.add('fade-out'), 2000);
-        }
-        return;
-    }
-
-    document.getElementById('main-menu').classList.add('hidden');
-    document.getElementById('game-ui').classList.remove('hidden');
-    const hud = document.querySelector('.hud');
-    if(hud) hud.classList.remove('hidden');
-    game.start(selectedClass);
-});
-
-document.getElementById('return-lobby-btn').addEventListener('click', () => {
-    document.getElementById('game-over-screen').classList.add('hidden');
-    document.getElementById('game-ui').classList.add('hidden');
-    document.getElementById('main-menu').classList.remove('hidden');
-    if (window.lastMatchStats) {
-        window.hourlyStats.kills += window.lastMatchStats.kills || 0;
-        window.hourlyStats.time += window.lastMatchStats.time || 0;
-        window.hourlyStats.points += window.lastMatchStats.points || 0;
-        window.hourlyStats.distance += window.lastMatchStats.distance || 0;
-        
-        window.lifetimeStats.matches += 1;
-        window.lifetimeStats.kills += window.lastMatchStats.kills || 0;
-        window.lifetimeStats.time += window.lastMatchStats.time || 0;
-        window.lifetimeStats.points += window.lastMatchStats.points || 0;
-        window.lifetimeStats.distance += window.lastMatchStats.distance || 0;
-        
-        window.matchHistory.unshift(window.lastMatchStats);
-        if (window.matchHistory.length > 20) window.matchHistory.pop();
-        window.lastMatchStats = null; 
-    }
-    updateMenuXPBar(); 
-    game.startDemo();
-});
-
 // --- DYNAMIC SHOP ROTATION TIMER ---
 setInterval(() => {
     const now = new Date();
@@ -706,14 +675,11 @@ setInterval(() => {
     }
 }, 1000);
 
-// Initialize UI
 renderSeasonStore();
 renderMainStore();
 updateMenuXPBar(); 
 
-// ==========================================
-// DEV CONSOLE
-// ==========================================
+// --- DEV CONSOLE & ESCAPE KEY LOGIC ---
 const devConsole = document.getElementById('dev-console');
 const devInput = document.getElementById('dev-input');
 const devLog = document.getElementById('dev-log');
@@ -725,12 +691,12 @@ function logDev(msg) {
 }
 
 window.addEventListener('keydown', (e) => {
-    if (e.key === '/' && document.activeElement !== devInput) {
+    if ((e.key === '/' || e.key === '`') && document.activeElement !== devInput) {
         e.preventDefault(); 
         if (devConsole) {
             devConsole.classList.remove('hidden');
             devInput.focus();
-            devInput.value = '/'; 
+            setTimeout(() => devInput.value = '', 10);
         }
     } else if (e.key === 'Escape') {
         if (devConsole && !devConsole.classList.contains('hidden')) {
