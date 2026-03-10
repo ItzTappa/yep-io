@@ -152,6 +152,7 @@ export class Entity {
 
     applyUpgrade(upgradeId) {
         if (!UPGRADE_POOL) return;
+        
         const upgradeDef = UPGRADE_POOL.find(u => u && u.id === upgradeId);
         if (!upgradeDef) return;
 
@@ -192,6 +193,7 @@ export class Entity {
 
     dash(dx, dy) {
         let dashCost = Math.max(0, 2 - this.efficiency); 
+        
         if (this.dashCooldown <= 0 && this.points >= dashCost) {
             this.points -= dashCost;
             this.upgradeProgress = Math.max(0, this.upgradeProgress - dashCost); 
@@ -218,6 +220,7 @@ export class Entity {
     update() {
         this.x += this.vx; 
         this.y += this.vy;
+        
         this.vx *= 0.85; 
         this.vy *= 0.85; 
         
@@ -242,8 +245,12 @@ export class Entity {
         
         if (isDashing && !hasCustomTrail) {
             this.trail.push({ 
-                type: 'ghost', x: this.x, y: this.y, 
-                angle: this.angle, alpha: 0.25, color: this.color 
+                type: 'ghost', 
+                x: this.x, 
+                y: this.y, 
+                angle: this.angle, 
+                alpha: 0.25, 
+                color: this.color 
             });
         } 
         else if (hasCustomTrail && (isDashing || speed > 1.0)) {
@@ -279,9 +286,10 @@ export class Entity {
             let tLen = 8 + tTier * 3;
             
             let armorTier = Math.max(this.upgrades['maxHealth'] || 0, this.upgrades['plating'] || 0);
-            let armorOffset = this.bodyVisual === 'armor' ? (4 + armorTier + (4 + armorTier*1.5)/2) : 0;
+            let armorOffset = this.bodyVisual === 'armor' ? (4 + armorTier + (4 + armorTier * 1.5) / 2) : 0;
             
             let backOffset = this.type === 'circle' ? -this.size : -this.size / 2;
+            
             if (this.bodyVisual === 'armor') {
                 backOffset -= armorOffset;
             }
@@ -295,21 +303,32 @@ export class Entity {
             let py2 = this.y + Math.sin(this.angle) * (backOffset - tLen) + Math.cos(this.angle) * (vSpread);
             
             let pCount = isDashing ? 3 + tTier : 1 + Math.floor(tTier / 2);
+            
             for (let k = 0; k < pCount; k++) {
                 let exAngle1 = this.angle + Math.PI + (Math.random() - 0.5) * 0.6;
                 let exAngle2 = this.angle + Math.PI + (Math.random() - 0.5) * 0.6;
                 let exSpeed = Math.random() * 3 + (isDashing ? 5 : 2);
                 
                 this.trail.push({ 
-                    type: 'fire', x: px1, y: py1, 
-                    vx: Math.cos(exAngle1)*exSpeed, vy: Math.sin(exAngle1)*exSpeed, 
-                    alpha: 1.0, color: '#00ffcc', size: 2 + Math.random()*2 
+                    type: 'fire', 
+                    x: px1, 
+                    y: py1, 
+                    vx: Math.cos(exAngle1) * exSpeed, 
+                    vy: Math.sin(exAngle1) * exSpeed, 
+                    alpha: 1.0, 
+                    color: '#00ffcc', 
+                    size: 2 + Math.random() * 2 
                 });
                 
                 this.trail.push({ 
-                    type: 'fire', x: px2, y: py2, 
-                    vx: Math.cos(exAngle2)*exSpeed, vy: Math.sin(exAngle2)*exSpeed, 
-                    alpha: 1.0, color: '#00ffcc', size: 2 + Math.random()*2 
+                    type: 'fire', 
+                    x: px2, 
+                    y: py2, 
+                    vx: Math.cos(exAngle2) * exSpeed, 
+                    vy: Math.sin(exAngle2) * exSpeed, 
+                    alpha: 1.0, 
+                    color: '#00ffcc', 
+                    size: 2 + Math.random() * 2 
                 });
             }
         }
@@ -376,7 +395,7 @@ export class Entity {
                     ctx.fill(); 
                 } 
                 else if (this.type === 'square') { 
-                    ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size); 
+                    ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size); 
                 } 
                 else if (this.type === 'triangle') {
                     ctx.moveTo(this.size, 0); 
@@ -443,10 +462,10 @@ export class Entity {
             ctx.beginPath();
             
             if (this.type === 'circle') {
-                ctx.arc(0, 0, this.size + armorOffset, 0, Math.PI*2);
+                ctx.arc(0, 0, this.size + armorOffset, 0, Math.PI * 2);
             }
             else if (this.type === 'square') {
-                ctx.rect(-this.size/2 - armorOffset, -this.size/2 - armorOffset, this.size + armorOffset*2, this.size + armorOffset*2);
+                ctx.rect(-this.size / 2 - armorOffset, -this.size / 2 - armorOffset, this.size + armorOffset * 2, this.size + armorOffset * 2);
             }
             else if (this.type === 'triangle') {
                 let S = this.size + armorOffset + 2;
@@ -466,6 +485,7 @@ export class Entity {
             ctx.save(); 
             ctx.translate(this.x, this.y); 
             ctx.rotate(this.angle);
+            
             let tTier = Math.max(this.upgrades['speed'] || 0, this.upgrades['dash'] || 0);
             let tSize = 6 + tTier * 3;
             let tLen = 8 + tTier * 3;
@@ -479,8 +499,9 @@ export class Entity {
             let vSpread = this.type === 'square' ? this.size * 0.35 : this.size * 0.45;
             
             ctx.fillStyle = '#444';
-            ctx.fillRect(backOffset - tLen + 2, -vSpread - tSize/2, tLen, tSize);
-            ctx.fillRect(backOffset - tLen + 2, vSpread - tSize/2, tLen, tSize);
+            ctx.fillRect(backOffset - tLen + 2, -vSpread - tSize / 2, tLen, tSize);
+            ctx.fillRect(backOffset - tLen + 2, vSpread - tSize / 2, tLen, tSize);
+            
             ctx.restore();
         }
 
@@ -510,10 +531,10 @@ export class Entity {
                 ctx.translate(offsetDist, 0);
 
                 ctx.fillStyle = '#555';
-                ctx.fillRect(0, -gunThickness/2, gunLen, gunThickness);
+                ctx.fillRect(0, -gunThickness / 2, gunLen, gunThickness);
                 
                 ctx.fillStyle = '#222';
-                ctx.fillRect(gunLen - 4, -gunThickness/2 + 1, 4, gunThickness - 2);
+                ctx.fillRect(gunLen - 4, -gunThickness / 2 + 1, 4, gunThickness - 2);
 
                 ctx.restore();
             }
@@ -536,6 +557,7 @@ export class Entity {
                     let angle = (i / spikeCount) * Math.PI * 2; 
                     let px = Math.cos(angle) * r; 
                     let py = Math.sin(angle) * r;
+                    
                     ctx.save(); 
                     ctx.translate(px, py); 
                     ctx.rotate(angle); 
@@ -559,21 +581,21 @@ export class Entity {
                         
                         if (side === 0) { 
                             px = s2; 
-                            py = -this.size/2 + f * this.size; 
+                            py = -this.size / 2 + f * this.size; 
                             normalAngle = 0; 
                         } 
                         else if (side === 1) { 
-                            px = this.size/2 - f * this.size; 
+                            px = this.size / 2 - f * this.size; 
                             py = s2; 
                             normalAngle = Math.PI / 2; 
                         } 
                         else if (side === 2) { 
                             px = -s2; 
-                            py = this.size/2 - f * this.size; 
+                            py = this.size / 2 - f * this.size; 
                             normalAngle = Math.PI; 
                         } 
                         else { 
-                            px = -this.size/2 + f * this.size; 
+                            px = -this.size / 2 + f * this.size; 
                             py = -s2; 
                             normalAngle = 3 * Math.PI / 2; 
                         }
@@ -634,8 +656,8 @@ export class Entity {
             if (this.color === '#111111') ctx.stroke(); 
         } 
         else if (this.type === 'square') { 
-            ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size); 
-            if (this.color === '#111111') ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size); 
+            ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size); 
+            if (this.color === '#111111') ctx.strokeRect(-this.size / 2, -this.size / 2, this.size, this.size); 
         } 
         else if (this.type === 'triangle') {
             ctx.moveTo(this.size, 0); 
@@ -664,51 +686,53 @@ export class Entity {
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.6)'; 
                 ctx.beginPath();
                 if (this.type === 'circle') {
-                    ctx.arc(0, 0, this.size, 0, Math.PI*2);
+                    ctx.arc(0, 0, this.size, 0, Math.PI * 2);
                 } else if (this.type === 'square') {
-                    ctx.rect(-this.size/2, -this.size/2, this.size, this.size);
+                    ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size);
                 } else { 
                     ctx.moveTo(this.size, 0); 
-                    ctx.lineTo(-this.size/2, -this.size*0.866); 
-                    ctx.lineTo(-this.size/2, this.size*0.866); 
+                    ctx.lineTo(-this.size / 2, -this.size * 0.866); 
+                    ctx.lineTo(-this.size / 2, this.size * 0.866); 
                     ctx.closePath(); 
                 }
                 ctx.fill();
+                
                 ctx.fillStyle = '#000'; 
                 ctx.beginPath(); 
-                ctx.arc(this.size*0.4, -this.size*0.3, 3, 0, Math.PI*2); 
-                ctx.arc(this.size*0.4, this.size*0.3, 3, 0, Math.PI*2); 
+                ctx.arc(this.size * 0.4, -this.size * 0.3, 3, 0, Math.PI * 2); 
+                ctx.arc(this.size * 0.4, this.size * 0.3, 3, 0, Math.PI * 2); 
                 ctx.fill();
             }
             else if (skinType === 'assassin') {
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.8)'; 
                 ctx.beginPath();
                 if (this.type === 'circle') {
-                    ctx.arc(0, 0, this.size*0.8, 0, Math.PI*2);
+                    ctx.arc(0, 0, this.size * 0.8, 0, Math.PI * 2);
                 } else if (this.type === 'square') {
-                    ctx.rect(-this.size*0.4, -this.size*0.4, this.size*0.8, this.size*0.8);
+                    ctx.rect(-this.size * 0.4, -this.size * 0.4, this.size * 0.8, this.size * 0.8);
                 } else { 
-                    ctx.moveTo(this.size*0.8, 0); 
-                    ctx.lineTo(-this.size*0.4, -this.size*0.69); 
-                    ctx.lineTo(-this.size*0.4, this.size*0.69); 
+                    ctx.moveTo(this.size * 0.8, 0); 
+                    ctx.lineTo(-this.size * 0.4, -this.size * 0.69); 
+                    ctx.lineTo(-this.size * 0.4, this.size * 0.69); 
                     ctx.closePath(); 
                 }
                 ctx.fill();
+                
                 ctx.fillStyle = '#ff0000'; 
                 ctx.shadowColor = '#ff0000'; 
                 ctx.shadowBlur = 10;
                 ctx.beginPath(); 
-                ctx.arc(this.size*0.3, 0, 4, 0, Math.PI*2); 
+                ctx.arc(this.size * 0.3, 0, 4, 0, Math.PI * 2); 
                 ctx.fill();
             }
             else if (skinType === 'paladin') {
                 ctx.strokeStyle = '#fbbf24'; 
                 ctx.lineWidth = 4;
                 ctx.beginPath(); 
-                ctx.moveTo(-this.size*0.8, 0); 
-                ctx.lineTo(this.size*0.8, 0); 
-                ctx.moveTo(0, -this.size*0.8); 
-                ctx.lineTo(0, this.size*0.8); 
+                ctx.moveTo(-this.size * 0.8, 0); 
+                ctx.lineTo(this.size * 0.8, 0); 
+                ctx.moveTo(0, -this.size * 0.8); 
+                ctx.lineTo(0, this.size * 0.8); 
                 ctx.stroke();
             }
             else if (skinType === 'hologram') {
@@ -719,13 +743,13 @@ export class Entity {
                 ctx.shadowBlur = 10;
                 ctx.beginPath();
                 if (this.type === 'circle') {
-                    ctx.arc(0, 0, this.size*0.6, 0, Math.PI*2);
+                    ctx.arc(0, 0, this.size * 0.6, 0, Math.PI * 2);
                 } else if (this.type === 'square') {
-                    ctx.rect(-this.size*0.3, -this.size*0.3, this.size*0.6, this.size*0.6);
+                    ctx.rect(-this.size * 0.3, -this.size * 0.3, this.size * 0.6, this.size * 0.6);
                 } else { 
-                    ctx.moveTo(this.size*0.6, 0); 
-                    ctx.lineTo(-this.size*0.3, -this.size*0.5); 
-                    ctx.lineTo(-this.size*0.3, this.size*0.5); 
+                    ctx.moveTo(this.size * 0.6, 0); 
+                    ctx.lineTo(-this.size * 0.3, -this.size * 0.5); 
+                    ctx.lineTo(-this.size * 0.3, this.size * 0.5); 
                     ctx.closePath(); 
                 }
                 ctx.stroke();
@@ -734,9 +758,9 @@ export class Entity {
                 ctx.strokeStyle = '#dc2626'; 
                 ctx.lineWidth = 6;
                 ctx.beginPath(); 
-                ctx.moveTo(-this.size*0.5, -this.size*0.8); 
-                ctx.lineTo(this.size*0.5, 0); 
-                ctx.lineTo(-this.size*0.5, this.size*0.8); 
+                ctx.moveTo(-this.size * 0.5, -this.size * 0.8); 
+                ctx.lineTo(this.size * 0.5, 0); 
+                ctx.lineTo(-this.size * 0.5, this.size * 0.8); 
                 ctx.stroke();
             }
             else if (skinType === 'luminescent') {
@@ -746,29 +770,30 @@ export class Entity {
                 ctx.shadowColor = rainbowColor; 
                 ctx.shadowBlur = 25;
                 ctx.beginPath(); 
-                ctx.arc(0, 0, this.size*0.5, 0, Math.PI*2); 
+                ctx.arc(0, 0, this.size * 0.5, 0, Math.PI * 2); 
                 ctx.fill();
             }
             else if (skinType === 'ninja') {
                 ctx.fillStyle = '#111'; 
                 ctx.beginPath(); 
-                ctx.fillRect(-this.size, -this.size*0.3, this.size*2, this.size*0.6);
+                ctx.fillRect(-this.size, -this.size * 0.3, this.size * 2, this.size * 0.6);
+                
                 ctx.fillStyle = '#fff'; 
-                ctx.fillRect(-this.size*0.5, -this.size*0.1, this.size, this.size*0.2);
+                ctx.fillRect(-this.size * 0.5, -this.size * 0.1, this.size, this.size * 0.2);
             }
             else if (skinType === 'celestial') {
                 ctx.fillStyle = '#fff'; 
                 ctx.shadowColor = '#00ffff'; 
                 ctx.shadowBlur = 15;
                 ctx.beginPath(); 
-                ctx.moveTo(0, -this.size*0.6); 
-                ctx.lineTo(this.size*0.2, -this.size*0.2); 
-                ctx.lineTo(this.size*0.6, 0); 
-                ctx.lineTo(this.size*0.2, this.size*0.2); 
-                ctx.lineTo(0, this.size*0.6); 
-                ctx.lineTo(-this.size*0.2, this.size*0.2); 
-                ctx.lineTo(-this.size*0.6, 0); 
-                ctx.lineTo(-this.size*0.2, -this.size*0.2); 
+                ctx.moveTo(0, -this.size * 0.6); 
+                ctx.lineTo(this.size * 0.2, -this.size * 0.2); 
+                ctx.lineTo(this.size * 0.6, 0); 
+                ctx.lineTo(this.size * 0.2, this.size * 0.2); 
+                ctx.lineTo(0, this.size * 0.6); 
+                ctx.lineTo(-this.size * 0.2, this.size * 0.2); 
+                ctx.lineTo(-this.size * 0.6, 0); 
+                ctx.lineTo(-this.size * 0.2, -this.size * 0.2); 
                 ctx.closePath(); 
                 ctx.fill();
             }
@@ -778,7 +803,7 @@ export class Entity {
                 if (this.type === 'circle') {
                     ctx.arc(0, 0, this.size, 0, Math.PI * 2);
                 } else if (this.type === 'square') {
-                    ctx.rect(-this.size/2, -this.size/2, this.size, this.size);
+                    ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size);
                 } else { 
                     ctx.moveTo(this.size, 0); 
                     ctx.lineTo(-this.size / 2, -this.size * 0.866); 
@@ -786,21 +811,24 @@ export class Entity {
                     ctx.closePath(); 
                 }
                 ctx.clip();
+                
                 ctx.fillStyle = '#9ca3af'; 
-                ctx.fillRect(-this.size, -this.size, this.size*2, this.size);
+                ctx.fillRect(-this.size, -this.size, this.size * 2, this.size);
+                
                 ctx.fillStyle = '#ff0000'; 
                 ctx.shadowColor = '#ff0000'; 
                 ctx.shadowBlur = 10; 
                 ctx.beginPath(); 
-                ctx.arc(this.size*0.4, -this.size*0.4, 5, 0, Math.PI*2); 
+                ctx.arc(this.size * 0.4, -this.size * 0.4, 5, 0, Math.PI * 2); 
                 ctx.fill();
                 ctx.restore();
             }
             else if (skinType === 'voidwalker') {
                 ctx.fillStyle = '#000'; 
                 ctx.beginPath(); 
-                ctx.arc(0, 0, this.size*0.5, 0, Math.PI*2); 
+                ctx.arc(0, 0, this.size * 0.5, 0, Math.PI * 2); 
                 ctx.fill(); 
+                
                 ctx.strokeStyle = '#a855f7'; 
                 ctx.lineWidth = 3; 
                 ctx.shadowColor = '#a855f7'; 
@@ -810,35 +838,35 @@ export class Entity {
             else if (skinType === 'glitch') {
                 ctx.fillStyle = 'rgba(0, 255, 255, 0.7)'; 
                 ctx.beginPath(); 
-                ctx.arc(-3, -3, this.size*0.4, 0, Math.PI*2); 
+                ctx.arc(-3, -3, this.size * 0.4, 0, Math.PI * 2); 
                 ctx.fill();
                 
                 ctx.fillStyle = 'rgba(255, 0, 255, 0.7)'; 
                 ctx.beginPath(); 
-                ctx.arc(3, 3, this.size*0.4, 0, Math.PI*2); 
+                ctx.arc(3, 3, this.size * 0.4, 0, Math.PI * 2); 
                 ctx.fill();
             }
             else if (skinType === 'inferno') {
                 ctx.fillStyle = '#fbbf24'; 
                 ctx.beginPath(); 
-                ctx.arc(0, 0, this.size*0.6, 0, Math.PI*2); 
+                ctx.arc(0, 0, this.size * 0.6, 0, Math.PI * 2); 
                 ctx.fill();
                 
                 ctx.fillStyle = '#dc2626'; 
                 ctx.shadowColor = '#dc2626'; 
                 ctx.shadowBlur = 15;
                 ctx.beginPath(); 
-                ctx.arc(0, 0, this.size*0.4, 0, Math.PI*2); 
+                ctx.arc(0, 0, this.size * 0.4, 0, Math.PI * 2); 
                 ctx.fill();
             }
             else if (skinType === 'warlord') {
                 ctx.strokeStyle = '#444'; 
                 ctx.lineWidth = 4;
                 ctx.beginPath(); 
-                ctx.moveTo(-this.size*0.5, -this.size*0.5); 
-                ctx.lineTo(this.size*0.5, this.size*0.5); 
-                ctx.moveTo(this.size*0.5, -this.size*0.5); 
-                ctx.lineTo(-this.size*0.5, this.size*0.5); 
+                ctx.moveTo(-this.size * 0.5, -this.size * 0.5); 
+                ctx.lineTo(this.size * 0.5, this.size * 0.5); 
+                ctx.moveTo(this.size * 0.5, -this.size * 0.5); 
+                ctx.lineTo(-this.size * 0.5, this.size * 0.5); 
                 ctx.stroke();
             }
             else if (skinType === 'spectre') {
@@ -846,7 +874,7 @@ export class Entity {
                 ctx.shadowColor = '#a855f7'; 
                 ctx.shadowBlur = 20;
                 ctx.beginPath(); 
-                ctx.arc(0, 0, this.size*0.7, 0, Math.PI*2); 
+                ctx.arc(0, 0, this.size * 0.7, 0, Math.PI * 2); 
                 ctx.fill();
             }
             else if (skinType === 'phantom') {
@@ -855,10 +883,11 @@ export class Entity {
                 ctx.shadowColor = '#3b82f6'; 
                 ctx.shadowBlur = 10;
                 ctx.beginPath(); 
-                ctx.arc(0, 0, this.size*0.8, 0, Math.PI*2); 
+                ctx.arc(0, 0, this.size * 0.8, 0, Math.PI * 2); 
                 ctx.stroke();
+                
                 ctx.beginPath(); 
-                ctx.arc(0, 0, this.size*0.4, 0, Math.PI*2); 
+                ctx.arc(0, 0, this.size * 0.4, 0, Math.PI * 2); 
                 ctx.stroke();
             }
             else if (skinType === 'target') {
@@ -867,7 +896,7 @@ export class Entity {
                 if (this.type === 'circle') {
                     ctx.arc(0, 0, this.size, 0, Math.PI * 2);
                 } else if (this.type === 'square') {
-                    ctx.rect(-this.size/2, -this.size/2, this.size, this.size);
+                    ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size);
                 } else { 
                     ctx.moveTo(this.size, 0); 
                     ctx.lineTo(-this.size / 2, -this.size * 0.866); 
@@ -875,13 +904,15 @@ export class Entity {
                     ctx.closePath(); 
                 }
                 ctx.clip();
+                
                 ctx.strokeStyle = 'rgba(255,255,255,0.6)'; 
                 ctx.lineWidth = 4;
                 ctx.beginPath(); 
-                ctx.arc(0, 0, this.size*0.6, 0, Math.PI*2); 
+                ctx.arc(0, 0, this.size * 0.6, 0, Math.PI * 2); 
                 ctx.stroke();
+                
                 ctx.beginPath(); 
-                ctx.arc(0, 0, this.size*0.2, 0, Math.PI*2); 
+                ctx.arc(0, 0, this.size * 0.2, 0, Math.PI * 2); 
                 ctx.stroke();
                 ctx.restore();
             }
@@ -891,7 +922,7 @@ export class Entity {
                 if (this.type === 'circle') {
                     ctx.arc(0, 0, this.size, 0, Math.PI * 2);
                 } else if (this.type === 'square') {
-                    ctx.rect(-this.size/2, -this.size/2, this.size, this.size);
+                    ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size);
                 } else { 
                     ctx.moveTo(this.size, 0); 
                     ctx.lineTo(-this.size / 2, -this.size * 0.866); 
@@ -899,9 +930,10 @@ export class Entity {
                     ctx.closePath(); 
                 }
                 ctx.clip();
+                
                 ctx.fillStyle = 'rgba(255,255,255,0.3)';
                 for(let i = -this.size; i < this.size; i += 10) { 
-                    ctx.fillRect(i, -this.size, 5, this.size*2); 
+                    ctx.fillRect(i, -this.size, 5, this.size * 2); 
                 }
                 ctx.restore();
             }
@@ -911,7 +943,7 @@ export class Entity {
                 if (this.type === 'circle') {
                     ctx.arc(0, 0, this.size, 0, Math.PI * 2);
                 } else if (this.type === 'square') {
-                    ctx.rect(-this.size/2, -this.size/2, this.size, this.size);
+                    ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size);
                 } else { 
                     ctx.moveTo(this.size, 0); 
                     ctx.lineTo(-this.size / 2, -this.size * 0.866); 
@@ -919,11 +951,12 @@ export class Entity {
                     ctx.closePath(); 
                 }
                 ctx.clip();
+                
                 ctx.fillStyle = 'rgba(0,0,0,0.3)';
                 let sq = this.size * 0.25; 
                 for(let x = -this.size; x <= this.size; x += sq) {
                     for(let y = -this.size; y <= this.size; y += sq) {
-                        if (Math.abs(Math.round(x/sq) + Math.round(y/sq)) % 2 === 0) {
+                        if (Math.abs(Math.round(x / sq) + Math.round(y / sq)) % 2 === 0) {
                             ctx.fillRect(x, y, sq, sq);
                         }
                     }
@@ -936,7 +969,7 @@ export class Entity {
                 if (this.type === 'circle') {
                     ctx.arc(0, 0, this.size, 0, Math.PI * 2);
                 } else if (this.type === 'square') {
-                    ctx.rect(-this.size/2, -this.size/2, this.size, this.size);
+                    ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size);
                 } else { 
                     ctx.moveTo(this.size, 0); 
                     ctx.lineTo(-this.size / 2, -this.size * 0.866); 
@@ -944,6 +977,7 @@ export class Entity {
                     ctx.closePath(); 
                 }
                 ctx.clip();
+                
                 ctx.fillStyle = '#111';
                 for(let i = -this.size; i < this.size; i += 15) {
                     ctx.beginPath(); 
@@ -963,7 +997,7 @@ export class Entity {
                 if (this.type === 'circle') {
                     ctx.arc(0, 0, this.size, 0, Math.PI * 2);
                 } else if (this.type === 'square') {
-                    ctx.rect(-this.size/2, -this.size/2, this.size, this.size);
+                    ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size);
                 } else { 
                     ctx.moveTo(this.size, 0); 
                     ctx.lineTo(-this.size / 2, -this.size * 0.866); 
@@ -973,24 +1007,24 @@ export class Entity {
                 ctx.clip();
                 
                 ctx.fillStyle = '#4b5320'; 
-                ctx.fillRect(-this.size, -this.size, this.size*2, this.size*2);
+                ctx.fillRect(-this.size, -this.size, this.size * 2, this.size * 2);
                 
                 ctx.fillStyle = '#556b2f'; 
                 ctx.beginPath(); 
-                ctx.arc(-this.size*0.4, -this.size*0.3, this.size*0.5, 0, Math.PI*2); 
-                ctx.arc(this.size*0.3, this.size*0.5, this.size*0.4, 0, Math.PI*2); 
+                ctx.arc(-this.size * 0.4, -this.size * 0.3, this.size * 0.5, 0, Math.PI * 2); 
+                ctx.arc(this.size * 0.3, this.size * 0.5, this.size * 0.4, 0, Math.PI * 2); 
                 ctx.fill();
                 
                 ctx.fillStyle = '#8b7355'; 
                 ctx.beginPath(); 
-                ctx.arc(this.size*0.5, -this.size*0.4, this.size*0.4, 0, Math.PI*2); 
-                ctx.arc(-this.size*0.2, this.size*0.4, this.size*0.5, 0, Math.PI*2); 
+                ctx.arc(this.size * 0.5, -this.size * 0.4, this.size * 0.4, 0, Math.PI * 2); 
+                ctx.arc(-this.size * 0.2, this.size * 0.4, this.size * 0.5, 0, Math.PI * 2); 
                 ctx.fill();
                 
                 ctx.fillStyle = '#2f4f4f'; 
                 ctx.beginPath(); 
-                ctx.arc(-this.size*0.6, 0.1, this.size*0.3, 0, Math.PI*2); 
-                ctx.arc(this.size*0.1, -this.size*0.1, this.size*0.3, 0, Math.PI*2); 
+                ctx.arc(-this.size * 0.6, 0.1, this.size * 0.3, 0, Math.PI * 2); 
+                ctx.arc(this.size * 0.1, -this.size * 0.1, this.size * 0.3, 0, Math.PI * 2); 
                 ctx.fill();
                 
                 ctx.restore();
@@ -998,15 +1032,15 @@ export class Entity {
             else if (skinType === 'demon') {
                 ctx.fillStyle = '#111';
                 ctx.beginPath(); 
-                ctx.moveTo(-this.size*0.2, -this.size*0.5); 
-                ctx.lineTo(-this.size*0.5, -this.size*0.8); 
-                ctx.lineTo(0, -this.size*0.6); 
+                ctx.moveTo(-this.size * 0.2, -this.size * 0.5); 
+                ctx.lineTo(-this.size * 0.5, -this.size * 0.8); 
+                ctx.lineTo(0, -this.size * 0.6); 
                 ctx.fill(); 
                 
                 ctx.beginPath(); 
-                ctx.moveTo(-this.size*0.2, this.size*0.5); 
-                ctx.lineTo(-this.size*0.5, this.size*0.8); 
-                ctx.lineTo(0, this.size*0.6); 
+                ctx.moveTo(-this.size * 0.2, this.size * 0.5); 
+                ctx.lineTo(-this.size * 0.5, this.size * 0.8); 
+                ctx.lineTo(0, this.size * 0.6); 
                 ctx.fill(); 
                 
                 ctx.fillStyle = '#ff0000'; 
@@ -1014,15 +1048,15 @@ export class Entity {
                 ctx.shadowBlur = 10;
                 
                 ctx.beginPath(); 
-                ctx.moveTo(this.size*0.3, -this.size*0.3); 
-                ctx.lineTo(this.size*0.6, -this.size*0.1); 
-                ctx.lineTo(this.size*0.3, -this.size*0.1); 
+                ctx.moveTo(this.size * 0.3, -this.size * 0.3); 
+                ctx.lineTo(this.size * 0.6, -this.size * 0.1); 
+                ctx.lineTo(this.size * 0.3, -this.size * 0.1); 
                 ctx.fill();
                 
                 ctx.beginPath(); 
-                ctx.moveTo(this.size*0.3, this.size*0.3); 
-                ctx.lineTo(this.size*0.6, this.size*0.1); 
-                ctx.lineTo(this.size*0.3, this.size*0.1); 
+                ctx.moveTo(this.size * 0.3, this.size * 0.3); 
+                ctx.lineTo(this.size * 0.6, this.size * 0.1); 
+                ctx.lineTo(this.size * 0.3, this.size * 0.1); 
                 ctx.fill();
             }
             else if (skinType === 'angel') {
@@ -1031,7 +1065,7 @@ export class Entity {
                 ctx.shadowColor = '#ffe600'; 
                 ctx.shadowBlur = 10;
                 ctx.beginPath(); 
-                ctx.ellipse(-this.size*0.2, 0, this.size*0.2, this.size*0.6, 0, 0, Math.PI*2); 
+                ctx.ellipse(-this.size * 0.2, 0, this.size * 0.2, this.size * 0.6, 0, 0, Math.PI * 2); 
                 ctx.stroke();
             }
             else if (skinType === 'pirate') {
@@ -1040,7 +1074,7 @@ export class Entity {
                 if (this.type === 'circle') {
                     ctx.arc(0, 0, this.size, 0, Math.PI * 2);
                 } else if (this.type === 'square') {
-                    ctx.rect(-this.size/2, -this.size/2, this.size, this.size);
+                    ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size);
                 } else { 
                     ctx.moveTo(this.size, 0); 
                     ctx.lineTo(-this.size / 2, -this.size * 0.866); 
@@ -1058,7 +1092,7 @@ export class Entity {
                 
                 ctx.fillStyle = '#111';
                 ctx.beginPath(); 
-                ctx.arc(this.size*0.2, this.size*0.2, this.size*0.3, 0, Math.PI*2); 
+                ctx.arc(this.size * 0.2, this.size * 0.2, this.size * 0.3, 0, Math.PI * 2); 
                 ctx.fill(); 
                 
                 ctx.restore();
@@ -1069,7 +1103,7 @@ export class Entity {
                 if (this.type === 'circle') {
                     ctx.arc(0, 0, this.size, 0, Math.PI * 2);
                 } else if (this.type === 'square') {
-                    ctx.rect(-this.size/2, -this.size/2, this.size, this.size);
+                    ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size);
                 } else { 
                     ctx.moveTo(this.size, 0); 
                     ctx.lineTo(-this.size / 2, -this.size * 0.866); 
@@ -1079,11 +1113,11 @@ export class Entity {
                 ctx.clip();
                 
                 ctx.fillStyle = '#111'; 
-                ctx.fillRect(0, -this.size, this.size*0.6, this.size*2); 
+                ctx.fillRect(0, -this.size, this.size * 0.6, this.size * 2); 
                 
                 ctx.fillStyle = '#fff';
-                ctx.fillRect(this.size*0.2, -this.size*0.4, this.size*0.2, this.size*0.2); 
-                ctx.fillRect(this.size*0.2, this.size*0.2, this.size*0.2, this.size*0.2); 
+                ctx.fillRect(this.size * 0.2, -this.size * 0.4, this.size * 0.2, this.size * 0.2); 
+                ctx.fillRect(this.size * 0.2, this.size * 0.2, this.size * 0.2, this.size * 0.2); 
                 
                 ctx.restore();
             }
@@ -1093,7 +1127,7 @@ export class Entity {
                 if (this.type === 'circle') {
                     ctx.arc(0, 0, this.size, 0, Math.PI * 2);
                 } else if (this.type === 'square') {
-                    ctx.rect(-this.size/2, -this.size/2, this.size, this.size);
+                    ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size);
                 } else { 
                     ctx.moveTo(this.size, 0); 
                     ctx.lineTo(-this.size / 2, -this.size * 0.866); 
@@ -1107,29 +1141,29 @@ export class Entity {
                 ctx.shadowColor = '#00ffcc'; 
                 ctx.shadowBlur = 5;
                 ctx.beginPath();
-                ctx.moveTo(-this.size*0.8, -this.size*0.2); 
-                ctx.lineTo(0, -this.size*0.2); 
-                ctx.lineTo(this.size*0.2, -this.size*0.6);
+                ctx.moveTo(-this.size * 0.8, -this.size * 0.2); 
+                ctx.lineTo(0, -this.size * 0.2); 
+                ctx.lineTo(this.size * 0.2, -this.size * 0.6);
                 
-                ctx.moveTo(-this.size*0.8, this.size*0.2); 
-                ctx.lineTo(0, this.size*0.2); 
-                ctx.lineTo(this.size*0.2, this.size*0.6);
+                ctx.moveTo(-this.size * 0.8, this.size * 0.2); 
+                ctx.lineTo(0, this.size * 0.2); 
+                ctx.lineTo(this.size * 0.2, this.size * 0.6);
                 
-                ctx.moveTo(this.size*0.4, -this.size*0.8); 
-                ctx.lineTo(this.size*0.4, this.size*0.8);
+                ctx.moveTo(this.size * 0.4, -this.size * 0.8); 
+                ctx.lineTo(this.size * 0.4, this.size * 0.8);
                 ctx.stroke();
                 
                 ctx.fillStyle = '#fff';
                 ctx.beginPath(); 
-                ctx.arc(0, -this.size*0.2, 3, 0, Math.PI*2); 
+                ctx.arc(0, -this.size * 0.2, 3, 0, Math.PI * 2); 
                 ctx.fill();
                 
                 ctx.beginPath(); 
-                ctx.arc(0, this.size*0.2, 3, 0, Math.PI*2); 
+                ctx.arc(0, this.size * 0.2, 3, 0, Math.PI * 2); 
                 ctx.fill();
                 
                 ctx.beginPath(); 
-                ctx.arc(this.size*0.4, 0, 3, 0, Math.PI*2); 
+                ctx.arc(this.size * 0.4, 0, 3, 0, Math.PI * 2); 
                 ctx.fill();
                 
                 ctx.restore();
@@ -1142,7 +1176,7 @@ export class Entity {
                     ctx.arc(0, 0, innerSize, 0, Math.PI * 2); 
                 } 
                 else if (this.type === 'square') { 
-                    ctx.rect(-innerSize/2, -innerSize/2, innerSize, innerSize); 
+                    ctx.rect(-innerSize / 2, -innerSize / 2, innerSize, innerSize); 
                 } 
                 else if (this.type === 'triangle') {
                     ctx.moveTo(innerSize, 0); 
@@ -1177,8 +1211,9 @@ export class Entity {
             ctx.restore();
         }
         
+        // FIX: Removed the buggy 'this.name !== ""' check! The arrow ALWAYS shows for the player now!
         let hideArrow = (this.frontVisual !== null);
-        if (this.isPlayer && !hideArrow && this.name !== "") {
+        if (this.isPlayer && !hideArrow) {
             ctx.save(); 
             ctx.translate(this.x, this.y); 
             ctx.rotate(this.angle);
@@ -1226,6 +1261,7 @@ export class Entity {
                 
                 ctx.closePath(); 
                 ctx.fill(); 
+                
                 ctx.fillStyle = '#111'; 
                 ctx.shadowBlur = 0; 
                 ctx.beginPath(); 
@@ -1238,18 +1274,21 @@ export class Entity {
         
         let isMenuDummy = (!this.isPlayer && this.name === "");
         if (!isMenuDummy) {
-            if (window.gameSettings.showNames && this.name !== "") {
+            if (window.gameSettings && window.gameSettings.showNames && this.name !== "") {
                 ctx.fillStyle = 'white'; 
                 ctx.font = 'bold 12px sans-serif'; 
                 ctx.textAlign = 'center';
+                
                 if (window.gameSettings.highQuality) { 
                     ctx.shadowBlur = 2; 
                     ctx.shadowColor = 'black'; 
                 }
+                
                 let displayName = this.name;
                 if (this.equipped.Banner && ITEMS_DB && ITEMS_DB[this.equipped.Banner]) {
                     displayName = `${ITEMS_DB[this.equipped.Banner].value} ${this.name}`;
                 }
+                
                 ctx.fillText(displayName, this.x, this.y - this.size - 20 - armorOffset); 
                 ctx.shadowBlur = 0; 
             }
@@ -1344,11 +1383,11 @@ export class Bot extends Entity {
             const items = Object.values(ITEMS_DB);
             if (Math.random() < 0.2) {
                 let skins = items.filter(i => i.category === 'Skin'); 
-                if (skins.length) this.equipped.Skin = skins[Math.floor(Math.random()*skins.length)].id;
+                if (skins.length) this.equipped.Skin = skins[Math.floor(Math.random() * skins.length)].id;
             }
             if (Math.random() < 0.2) {
                 let trails = items.filter(i => i.category === 'Trail'); 
-                if (trails.length) this.equipped.Trail = trails[Math.floor(Math.random()*trails.length)].id;
+                if (trails.length) this.equipped.Trail = trails[Math.floor(Math.random() * trails.length)].id;
             }
         }
     }
@@ -1364,6 +1403,7 @@ export class Bot extends Entity {
         let nearestEnemy = null; 
         let minDist = 800;
         
+        // FIX: The bots perfectly scale off YOUR score. They cannot run away to 7 Million!
         let playerObj = allPlayers.find(p => p.isPlayer);
         let targetScore = playerObj ? Math.max(100, playerObj.points * 1.1) : 100;
 
@@ -1381,20 +1421,21 @@ export class Bot extends Entity {
             } 
         });
 
-        // NEW: STRICT BOT SCALING (Prevents 7 Million Point economies!)
-        let catchUpGain = 0;
-        if (this.points < targetScore) {
-            catchUpGain = (targetScore - this.points) * 0.001; 
-        }
-
+        // DYNAMIC RUBBER-BANDING (Decay logic)
         if (this.points > targetScore * 1.5) {
-            this.points -= (this.points - (targetScore * 1.5)) * 0.01;
+            // If bot gets too high, gracefully decay it down fast!
+            this.points -= (this.points - targetScore) * 0.05;
+            this.upgradeProgress = this.points; 
+        } else if (this.points < targetScore) {
+            // Catch up slowly
+            let catchUpGain = (targetScore - this.points) * 0.002;
+            this.points += 0.5 + catchUpGain;
+            this.upgradeProgress += 0.5 + catchUpGain;
+        } else {
+            // Normal passive gain
+            this.points += 0.5;
+            this.upgradeProgress += 0.5;
         }
-
-        let passiveGain = 0.2 + catchUpGain; 
-        
-        this.points += passiveGain; 
-        this.upgradeProgress += passiveGain;
         
         while (this.upgradeProgress >= this.botPointsToNextUpgrade) {
             this.upgradeProgress -= this.botPointsToNextUpgrade; 
@@ -1450,7 +1491,9 @@ export class Bot extends Entity {
                 if (trueDist > 150 && trueDist < 400 && Math.random() < (0.002 + this.dashTendency * 0.005)) {
                     this.dash(dx, dy);
                 }
+                
                 let optimalDist = this.type === 'square' ? 100 : (this.type === 'triangle' ? 300 : 200);
+                
                 if (Math.random() < 0.01) {
                     this.strafeDir *= -1; 
                 }
@@ -1472,6 +1515,7 @@ export class Bot extends Entity {
                 this.targetY = this.y + (Math.random() - 0.5) * 800; 
                 this.changeTargetTimer = 60 + Math.random() * 60; 
             }
+            
             this.angle = Math.atan2(this.targetY - this.y, this.targetX - this.x);
             const dx = this.targetX - this.x; 
             const dy = this.targetY - this.y; 
