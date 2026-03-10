@@ -76,10 +76,6 @@ class SoundManager {
         this.load('enemy_death', 'assets/sounds/enemy_death.mp3');
         this.load('player_death', 'assets/sounds/player_death.mp3');
 
-        // --- SAFE ZONES ---
-        this.load('sz_tick', 'assets/sounds/sz_tick.mp3');
-        this.load('sz_on', 'assets/sounds/sz_on.mp3');
-
         // --- ABILITIES ---
         this.load('ability_shield', 'assets/sounds/ability_shield.mp3');
         this.load('ability_blink', 'assets/sounds/ability_blink.mp3');
