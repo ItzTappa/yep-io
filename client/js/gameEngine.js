@@ -1,4 +1,4 @@
-import { Player, Bot, Orb, Projectile, Particle, getWeightedUpgrades } from './entities.js';
+import { Player, Bot, Orb, Projectile, Particle, SafeZone, getWeightedUpgrades } from './entities.js';
 import { distance } from './utils.js';
 import { sounds } from './soundManager.js';
 import { UPGRADE_POOL } from './upgrades.js'; 
@@ -15,6 +15,8 @@ export class GameEngine {
         this.worldSize = 4000;
         this.player = null; this.bots = []; this.orbs = []; this.projectiles = []; this.particles = [];
         this.teammates = []; 
+        this.safeZones = [];
+        this.safeZoneSpawnTimer = 0;
         
         this.lobbyCode = null; 
         this.isHost = false; 
@@ -69,7 +71,6 @@ export class GameEngine {
         
         this.isTouchDevice = false; 
         
-        // NEW: Base Screen Shake factor
         this.screenShake = 0;
 
         this.initInput();
@@ -348,7 +349,7 @@ export class GameEngine {
         this.stormActive = false;
         this.isDemo = true; this.isGameOver = false; this.spectateTarget = null;
         this.bots = []; this.orbs = []; this.projectiles = []; this.particles = [];
-        this.teammates = []; this.isCinematicIntro = false;
+        this.teammates = []; this.safeZones = []; this.isCinematicIntro = false;
         
         this.player = new Player(-10000, -10000, 'circle', ""); this.player.health = 999999; 
 
@@ -376,12 +377,20 @@ export class GameEngine {
         const brUi = document.getElementById('br-ui');
         if (brUi) brUi.classList.add('hidden');
         
-        this.worldSize = 4000; 
+        // NEW: Increased map size and Safe Zone spawns!
+        this.worldSize = 6000; 
         this.stormActive = false; 
 
         this.isDemo = false; this.isGameOver = false; this.spectateTarget = null;
         this.bots = []; this.orbs = []; this.projectiles = []; this.particles = []; this.teammates = [];
         this.screenShake = 0;
+        
+        this.safeZones = [];
+        this.safeZoneSpawnTimer = 0;
+        for(let i = 0; i < 2; i++) {
+            let pos = this.getSafeSpawnPosition();
+            this.safeZones.push(new SafeZone(pos.x, pos.y));
+        }
         
         this.player = new Player(this.worldSize / 2, this.worldSize / 2, playerClass, "");
 
@@ -399,7 +408,7 @@ export class GameEngine {
         if (badgeUI) badgeUI.innerHTML = '';
         
         let matchSeed = Math.random();
-        for(let i = 0; i < 35; i++) {
+        for(let i = 0; i < 60; i++) {
             const types = ['triangle', 'square', 'circle']; const type = types[Math.floor(Math.random()*3)]; const spawn = this.getSafeSpawnPosition();
             
             let startingPts = 0;
@@ -442,6 +451,13 @@ export class GameEngine {
         this.particles = [];
         this.teammates = [];
         this.screenShake = 0;
+        
+        this.safeZones = [];
+        this.safeZoneSpawnTimer = 0;
+        for(let i = 0; i < 2; i++) {
+            let pos = this.getSafeSpawnPosition();
+            this.safeZones.push(new SafeZone(pos.x, pos.y));
+        }
 
         document.getElementById('game-ui').classList.remove('hidden');
         document.querySelector('.hud').classList.remove('hidden');
@@ -780,7 +796,6 @@ export class GameEngine {
         this.playSoundAt('explosion', victim.x, victim.y, 0.7);
         this.spawnParticles(victim.x, victim.y, victim.color, 30); 
         
-        // Massive explosion shake if it happens near you
         if (!this.isDemo && this.player && distance(this.player.x, this.player.y, victim.x, victim.y) < 500) {
             this.screenShake = Math.max(this.screenShake, 15);
         }
@@ -822,7 +837,7 @@ export class GameEngine {
         }
         
         if (victim === this.player) {
-            this.screenShake = 25; // Huge death shake
+            this.screenShake = 25; 
             this.handleGameOver(killer);
         } else {
             const botIndex = this.bots.indexOf(victim);
@@ -986,7 +1001,6 @@ export class GameEngine {
                     this.keys[binds.dash] = false; 
                 }
 
-                // NEW: Use Ability Input Logic
                 if (this.keys[binds.ability]) {
                     if (this.player.activeAbility && this.player.abilityCooldown <= 0) {
                         this.player.useAbility();
@@ -1023,6 +1037,35 @@ export class GameEngine {
             this.lastPlayerPos.y = this.player.y;
 
             this.player.update();
+
+            // NEW: Safe Zone Processing
+            this.player.inSafeZone = false;
+            for (let i = this.safeZones.length - 1; i >= 0; i--) {
+                let sz = this.safeZones[i];
+                let isInside = sz.update(this.player);
+                
+                if (isInside) {
+                    this.player.inSafeZone = true;
+                    if (this.player.health < this.player.maxHealth) {
+                        this.player.health = Math.min(this.player.maxHealth, this.player.health + (this.player.maxHealth * 0.05 / 60));
+                    }
+                }
+                
+                if (sz.state === 'active' && sz.lifeTimer <= 0) {
+                    this.safeZones.splice(i, 1);
+                    this.safeZoneSpawnTimer = 600; // 10 seconds respawn
+                }
+            }
+
+            if (this.safeZones.length < 2) {
+                if (this.safeZoneSpawnTimer > 0) {
+                    this.safeZoneSpawnTimer--;
+                } else {
+                    let pos = this.getSafeSpawnPosition();
+                    this.safeZones.push(new SafeZone(pos.x, pos.y));
+                    this.safeZoneSpawnTimer = 600; 
+                }
+            }
 
             if (window.gameSocket && this.lobbyCode) {
                 window.gameSocket.emit('playerMove', {
@@ -1168,6 +1211,7 @@ export class GameEngine {
             for(let p of allPlayers) {
                 if (p === bot || p.isDead) continue;
                 if (bot.isTeammate && (p.isPlayer || p.isTeammate)) continue;
+                if (p.inSafeZone) continue;
                 
                 if (distance(bot.x, bot.y, p.x, p.y) < 600 && !(p.ghostDash && p.dashTimer > 0)) { 
                     enemyClose = true; 
@@ -1250,6 +1294,22 @@ export class GameEngine {
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             const proj = this.projectiles[i];
             proj.update(allPlayers); 
+            
+            // NEW: Safe Zone Bullet Block Logic
+            let hitSafeZone = false;
+            for (let sz of this.safeZones) {
+                if (distance(proj.x, proj.y, sz.x, sz.y) < sz.radius) {
+                    if (!proj.owner.inSafeZone) {
+                        hitSafeZone = true;
+                        this.spawnParticles(proj.x, proj.y, proj.color, 3);
+                    }
+                    break;
+                }
+            }
+            if (hitSafeZone) {
+                this.projectiles.splice(i, 1);
+                continue; 
+            }
             
             let hit = false;
             for (let j = allPlayers.length - 1; j >= 0; j--) {
@@ -1440,7 +1500,6 @@ export class GameEngine {
         let camX = this.width / 2 - this.camera.x * this.cameraZoom;
         let camY = this.height / 2 - this.camera.y * this.cameraZoom;
         
-        // NEW: Screen Shake Applied Directly to the Camera Offset!
         if (this.screenShake > 0) {
             camX += (Math.random() - 0.5) * this.screenShake;
             camY += (Math.random() - 0.5) * this.screenShake;
@@ -1488,6 +1547,9 @@ export class GameEngine {
             this.ctx.lineTo(endX, y);
         }
         this.ctx.stroke();
+
+        // NEW: Draw Safe Zones
+        this.safeZones.forEach(sz => sz.draw(this.ctx));
 
         this.orbs.forEach(orb => orb.draw(this.ctx));
         this.particles.forEach(p => p.draw(this.ctx));

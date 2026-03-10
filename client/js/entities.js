@@ -66,6 +66,7 @@ export class Entity {
         this.fireCooldown = 0;
         this.name = "Entity";
         this.isDead = false;
+        this.inSafeZone = false; // NEW: Safe zone tracking flag
         
         this.upgrades = {};
         UPGRADE_POOL.forEach(upg => this.upgrades[upg.id] = 0);
@@ -88,11 +89,10 @@ export class Entity {
         this.rearVisual = null;
         this.auraVisual = null;
         
-        // NEW: Active Ability properties
         this.activeAbility = null;
         this.abilityCooldown = 0;
         this.abilityTimer = 0;
-        this.abilityMaxCooldown = 450; // 7.5 Seconds between ability uses
+        this.abilityMaxCooldown = 450; 
     }
 
     applyUpgrade(upgradeId) {
@@ -117,7 +117,7 @@ export class Entity {
     useAbility() {
         if (this.abilityCooldown <= 0 && this.activeAbility) {
             this.abilityCooldown = this.abilityMaxCooldown;
-            this.abilityTimer = 180; // 3 seconds of active duration
+            this.abilityTimer = 180; 
         }
     }
 
@@ -143,14 +143,12 @@ export class Entity {
         this.x += this.vx; this.y += this.vy;
         this.vx *= 0.85; this.vy *= 0.85; 
         
-        // NEW: If Overdrive is active, double the cooldown recovery rate to shoot faster
         if (this.fireCooldown > 0) this.fireCooldown -= (this.abilityTimer > 0 && this.activeAbility === 'overdrive' ? 2 : 1);
         
         if (this.dashCooldown > 0) this.dashCooldown--;
         if (this.spikeCooldown > 0) this.spikeCooldown--;
         if (this.dashTimer > 0) this.dashTimer--;
         
-        // NEW: Tick ability timers
         if (this.abilityCooldown > 0) this.abilityCooldown--;
         if (this.abilityTimer > 0) this.abilityTimer--;
 
@@ -254,7 +252,6 @@ export class Entity {
             }
         });
 
-        // SHIELD ABILITY GLOW
         if (this.abilityTimer > 0 && this.activeAbility === 'shield') {
             ctx.save(); ctx.translate(this.x, this.y);
             ctx.beginPath(); ctx.arc(0, 0, this.size + 15, 0, Math.PI * 2);
@@ -266,7 +263,6 @@ export class Entity {
             ctx.restore();
         }
 
-        // OVERDRIVE ABILITY LIGHTNING
         if (this.abilityTimer > 0 && this.activeAbility === 'overdrive') {
             ctx.save(); ctx.translate(this.x, this.y);
             ctx.beginPath(); ctx.arc(0, 0, this.size + 8, 0, Math.PI * 2);
@@ -480,7 +476,6 @@ export class Entity {
                 ctx.fillRect(this.x - 20, this.y + this.size + 22, visualWidth, 3);
             }
 
-            // NEW: Ability Cooldown Bar (Pink)
             if (this.activeAbility) {
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'; ctx.fillRect(this.x - 20, this.y + this.size + 28, 40, 3);
                 if (this.abilityCooldown <= 0) {
@@ -557,6 +552,9 @@ export class Bot extends Entity {
 
             if (p === this || p.isDead) return; 
             if (this.isTeammate && (p.isPlayer || p.isTeammate)) return;
+            
+            // NEW: Enemy bots completely drop targeting on you if you are hiding inside a Safe Zone
+            if (p.inSafeZone) return; 
 
             const dist = distance(this.x, this.y, p.x, p.y); 
             let randomizedDist = dist + (Math.random() * 100); 
@@ -600,7 +598,6 @@ export class Bot extends Entity {
             let currentSpeed = this.speed * (this.abilityTimer > 0 && this.activeAbility === 'overdrive' ? 1.8 : 1.0);
             let fleeThreshold = 0.15 + (this.personality * 0.25); 
             
-            // Bot AI using its ability to survive/engage
             if (this.activeAbility && this.abilityCooldown <= 0) {
                 if (this.health < this.maxHealth * 0.3 || (this.activeAbility === 'overdrive' && trueDist < 300)) {
                     this.useAbility();
@@ -648,6 +645,86 @@ export class Bot extends Entity {
     }
 }
 
+// NEW: The SafeZone class!
+export class SafeZone {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.radius = 250; 
+        this.state = 'idle'; 
+        this.triggerTimer = 180; // 3 seconds at 60fps
+        this.lifeTimer = 0;
+        this.maxLifeTimer = 0;
+    }
+    
+    update(player) {
+        let dist = distance(this.x, this.y, player.x, player.y);
+        let isInside = dist < this.radius;
+
+        if (this.state === 'idle') {
+            if (isInside) {
+                this.state = 'triggering';
+                this.triggerTimer = 180;
+            }
+        } else if (this.state === 'triggering') {
+            if (isInside) {
+                this.triggerTimer--;
+                if (this.triggerTimer <= 0) {
+                    this.state = 'active';
+                    this.maxLifeTimer = Math.floor((Math.random() * 15 + 5) * 60); // 5 to 20 seconds random lifespan
+                    this.lifeTimer = this.maxLifeTimer;
+                }
+            } else {
+                this.state = 'idle';
+                this.triggerTimer = 180;
+            }
+        } else if (this.state === 'active') {
+            this.lifeTimer--;
+        }
+        
+        return isInside;
+    }
+    
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+        
+        if (this.state === 'active') {
+            ctx.fillStyle = 'rgba(0, 255, 204, 0.25)'; // Glowing brighter when fully activated
+        } else {
+            ctx.fillStyle = 'rgba(0, 255, 204, 0.1)';
+        }
+        ctx.fill();
+        
+        ctx.strokeStyle = 'rgba(0, 255, 204, 0.6)';
+        ctx.lineWidth = 4;
+        ctx.setLineDash([20, 20]);
+        ctx.lineDashOffset = -Date.now() / 20;
+        ctx.stroke();
+
+        if (this.state === 'triggering') {
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 24px sans-serif';
+            ctx.textAlign = 'center';
+            if (window.gameSettings.highQuality) { ctx.shadowBlur = 5; ctx.shadowColor = 'black'; }
+            let secs = Math.ceil(this.triggerTimer / 60);
+            ctx.fillText(`ACTIVATING IN ${secs}`, 0, -this.radius - 20);
+        } else if (this.state === 'active') {
+            ctx.fillStyle = '#ffe600';
+            ctx.font = 'bold 24px sans-serif';
+            ctx.textAlign = 'center';
+            if (window.gameSettings.highQuality) { ctx.shadowBlur = 5; ctx.shadowColor = 'black'; }
+            let secs = Math.ceil(this.lifeTimer / 60);
+            ctx.fillText(`SAFE: ${secs}s`, 0, -this.radius - 20);
+        }
+
+        ctx.restore();
+    }
+}
+
 export class Projectile {
     constructor(x, y, angle, owner, isMissile = false) {
         this.x = x + Math.cos(angle) * (owner.size + 5); this.y = y + Math.sin(angle) * (owner.size + 5); 
@@ -668,7 +745,7 @@ export class Projectile {
     update(targets) { 
         if (this.isMissile && targets) {
             let nearest = null; let minDist = Infinity;
-            targets.forEach(t => { if (t === this.owner || t.isDead) return; let d = distance(this.x, this.y, t.x, t.y); if (d < minDist && d < 600) { minDist = d; nearest = t; } });
+            targets.forEach(t => { if (t === this.owner || t.isDead || t.inSafeZone) return; let d = distance(this.x, this.y, t.x, t.y); if (d < minDist && d < 600) { minDist = d; nearest = t; } });
             if (nearest) {
                 let targetAngle = Math.atan2(nearest.y - this.y, nearest.x - this.x);
                 let diff = targetAngle - this.angle; while (diff < -Math.PI) diff += Math.PI * 2; while (diff > Math.PI) diff -= Math.PI * 2;
@@ -678,7 +755,7 @@ export class Projectile {
         else if (!this.isMissile && this.owner.isPlayer && targets) {
             let nearest = null; let minDist = 350; 
             targets.forEach(t => { 
-                if (t === this.owner || t.isDead || t.isTeammate) return; 
+                if (t === this.owner || t.isDead || t.isTeammate || t.inSafeZone) return; 
                 let d = distance(this.x, this.y, t.x, t.y); 
                 if (d < minDist) { minDist = d; nearest = t; } 
             });
