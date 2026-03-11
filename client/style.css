@@ -96,10 +96,13 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .settings-content { background: #222; border: 2px solid var(--accent); padding: 30px; border-radius: 12px; width: 400px; max-height: 90vh; overflow-y: auto; box-shadow: 0 0 20px rgba(255, 230, 0, 0.2); pointer-events: auto; }
 .settings-content h2 { text-align: center; margin-bottom: 25px; color: var(--accent); letter-spacing: 2px; }
 
-/* FIX: Wide Settings Layout for 2 Columns */
+/* Settings Layout for 2 Columns */
 .settings-content.wide-settings { width: 750px; max-width: 95vw; overflow-y: hidden; }
-.settings-layout { display: flex; gap: 40px; width: 100%; }
+.settings-layout { display: flex; gap: 30px; width: 100%; }
 .settings-col { flex: 1; display: flex; flex-direction: column; }
+
+/* FIX: Added Separator Line */
+.settings-col:first-child { border-right: 2px solid #444; padding-right: 30px; }
 
 .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 1.1rem; }
 .setting-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer; }
@@ -151,21 +154,21 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .btn-claim.holding .fill { width: 100%; transition: width 1s linear; }
 .btn-claim.holding span { color: #000; text-shadow: none; }
 
-/* FIX: ADDED CLAIM ANIMATION KEYFRAMES BACK */
+/* FIX: Toned down, much subtler Claim Animations */
 @keyframes itemShake {
     0% { transform: rotate(0deg); }
-    25% { transform: rotate(-5deg); }
-    50% { transform: rotate(5deg); }
-    75% { transform: rotate(-5deg); }
+    25% { transform: rotate(-1.5deg); }
+    50% { transform: rotate(1.5deg); }
+    75% { transform: rotate(-1.5deg); }
     100% { transform: rotate(0deg); }
 }
 .store-item.shaking {
-    animation: itemShake 0.1s infinite;
+    animation: itemShake 0.2s infinite;
     border-color: white !important;
 }
 @keyframes itemPop {
     0% { transform: scale(1); }
-    50% { transform: scale(1.15); box-shadow: 0 0 30px white; border-color: white; }
+    50% { transform: scale(1.05); box-shadow: 0 0 15px white; border-color: white; }
     100% { transform: scale(1); }
 }
 .store-item.claimed-pop {
@@ -458,6 +461,7 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
     
     /* MOBILE WIDE SETTINGS FIX */
     .settings-layout { flex-direction: column; gap: 10px; }
+    .settings-col:first-child { border-right: none; padding-right: 0; } /* Removes separator on mobile */
     .settings-content.wide-settings { overflow-y: auto; max-height: 90vh; width: 90%; }
     .mobile-controls-col h3.controls-title { margin-top: 15px !important; border-top: 2px solid #444; padding-top: 15px; }
 
