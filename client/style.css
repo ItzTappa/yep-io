@@ -16,10 +16,8 @@ html, body {
     overflow: hidden; user-select: none; touch-action: none; overscroll-behavior: none; 
 }
 
-/* Layer 1: Game Canvas in the far back */
 #gameCanvas { position: absolute; top: 0; left: 0; width: 100vw !important; height: 100dvh !important; z-index: 1; }
 
-/* UTILITY CLASSES */
 .hidden { display: none !important; }
 .text-center { text-align: center; }
 .black-text { color: #000 !important; text-shadow: none !important; }
@@ -57,8 +55,13 @@ html, body {
 .menu-xp-bar-container { width: 100%; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-top: 10px; border: 1px solid #444; box-shadow: inset 0 0 5px black; }
 #menu-xp-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #3b82f6, #00ffcc); transition: width 0.3s ease; }
 
+.menu-footer-buttons { display: flex; gap: 15px; align-items: center; }
+
 #settings-btn { position: relative; background: rgba(0,0,0,0.5); border: 2px solid #555; border-radius: 50%; width: 60px; height: 60px; font-size: 1.8rem; cursor: pointer; transition: transform 0.2s, border-color 0.2s; color: white; display: flex; align-items: center; justify-content: center; }
 #settings-btn:hover { transform: rotate(45deg); border-color: var(--accent); }
+
+#account-btn { position: relative; background: rgba(0,0,0,0.5); border: 2px solid #555; border-radius: 50%; width: 60px; height: 60px; font-size: 1.8rem; cursor: pointer; transition: transform 0.2s, border-color 0.2s; color: white; display: flex; align-items: center; justify-content: center; }
+#account-btn:hover { transform: translateY(-5px); border-color: var(--accent); } /* Bounce up hover for profile */
 
 /* ==========================================
    LOBBY & CLASS SELECTION
@@ -87,13 +90,18 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .mode-card:hover { border-color: var(--accent); transform: translateY(-5px); box-shadow: 0 10px 20px rgba(255,230,0,0.2); }
 
 /* ==========================================
-   SETTINGS MODAL
+   SETTINGS & ACCOUNT MODAL
 ========================================== */
-#settings-modal { position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 300; pointer-events: auto;}
+#settings-modal, #account-modal { position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 300; pointer-events: auto;}
 .settings-content { background: #222; border: 2px solid var(--accent); padding: 30px; border-radius: 12px; width: 400px; max-height: 90vh; overflow-y: auto; box-shadow: 0 0 20px rgba(255, 230, 0, 0.2); pointer-events: auto; }
 .settings-content h2 { text-align: center; margin-bottom: 25px; color: var(--accent); letter-spacing: 2px; }
+
 .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 1.1rem; }
 .setting-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer; }
+
+/* ACCOUNT INPUTS */
+.acc-input { width: 100%; padding: 12px; border-radius: 5px; background: #111; color: white; border: 2px solid #444; outline: none; font-size: 1.1rem; text-align: center; transition: border-color 0.2s; }
+.acc-input:focus { border-color: var(--accent); }
 
 .slider { -webkit-appearance: none; appearance: none; width: 150px; height: 8px; border-radius: 4px; background: #444; outline: none; border: 1px solid #222; }
 .slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 5px rgba(255, 230, 0, 0.8); }
@@ -102,9 +110,6 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .controls-title { color: var(--accent); margin-bottom: 15px; text-align: center; letter-spacing: 1px; }
 .keybind-btn { background: #333; border: 2px solid #555; color: white; padding: 5px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; min-width: 80px; text-transform: uppercase; transition: border-color 0.2s; }
 .ability-bind { color: #ff00ff; border-color: #ff00ff; }
-
-#close-settings-btn { width: 100%; padding: 12px; margin-top: 10px; background: var(--accent); color: black; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; font-size: 1.1rem; transition: background 0.2s; }
-#close-settings-btn:hover { background: #ffcc00; }
 
 /* ==========================================
    STORE, SEASON & STATS
