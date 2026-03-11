@@ -42,6 +42,9 @@ function resetLocalStats() {
     window.lifetimeStats = { matches: 0, kills: 0, time: 0, points: 0, distance: 0 };
 }
 
+// 🚨 FIX: We run this immediately on boot so the UI never crashes looking for a missing 'Skin'
+resetLocalStats();
+
 // Fetch stats securely from the Cloud Database
 async function loadUserData(uid) {
     try {
@@ -174,7 +177,7 @@ function refreshAllUIs() {
     updateMenuXPBar();
 }
 
-document.addEventListener('click', async (e) => {
+document.addEventListener('click', (e) => {
     const target = e.target;
 
     if (target.tagName === 'BUTTON' || target.closest('button')) {
@@ -278,21 +281,21 @@ document.addEventListener('click', async (e) => {
         return;
     }
 
-    // Firebase Logout (FIXED - using modern async/await to guarantee it fires)
+    // Firebase Logout (🚨 FIX: Fire-and-forget save prevents freezing)
     const logoutBtn = target.closest('#acc-logout-btn');
     if (logoutBtn) {
         logoutBtn.innerText = "LOGGING OUT...";
         
-        try {
-            await saveUserData(); // push final stats
-            await signOut(auth);  // clear auth state
+        saveUserData(); // Sends the save in the background
+        
+        signOut(auth).then(() => {
             document.getElementById('account-modal').classList.add('hidden');
-        } catch (error) {
-            console.error("Logout Error:", error);
-            document.getElementById('account-modal').classList.add('hidden');
-        } finally {
             logoutBtn.innerText = "LOG OUT";
-        }
+        }).catch(e => {
+            console.error("Logout Error:", e);
+            document.getElementById('account-modal').classList.add('hidden');
+            logoutBtn.innerText = "LOG OUT";
+        });
         return;
     }
 
