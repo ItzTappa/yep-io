@@ -58,11 +58,13 @@ function setInGameStatus(isIngame) {
     if (auth.currentUser) {
         updateDoc(doc(db, "users", auth.currentUser.uid), {
             inGame: isIngame
-        }).catch(e => console.error(e));
+        }).catch(e => {
+            console.error(e);
+        });
     }
 }
 
-// Clean out the old local testing logic
+// Clean out old local testing
 localStorage.removeItem('yepio_accounts');
 localStorage.removeItem('yepio_current_user');
 
@@ -85,7 +87,7 @@ let unsubUser = null;
 let handledInvites = {};
 let friendCache = {};
 
-// Fetch stats securely from the Cloud Database & Start Listening for Live Updates
+// Fetch stats & Start Listening for Live Updates
 async function listenToUserData(uid) {
     if (unsubUser) {
         unsubUser();
@@ -95,20 +97,24 @@ async function listenToUserData(uid) {
         if (docSnap.exists()) {
             let data = docSnap.data();
             
-            // Base Stats
             window.globalAccountXP = data.xp || 0;
             window.globalAccountLevel = data.level || 1;
-            window.equippedItems = data.equipped || { Skin: null, Trail: null, Banner: null, Color: null };
+            
+            // 🚨 SAFEGUARD: Ensure equippedItems is always a valid object, even if database is corrupted
+            if (data.equipped && typeof data.equipped === 'object') {
+                window.equippedItems = data.equipped;
+            } else {
+                window.equippedItems = { Skin: null, Trail: null, Banner: null, Color: null };
+            }
+            
             window.claimedItems = data.unlocked || {};
             window.matchHistory = data.history || [];
             window.lifetimeStats = data.stats || { matches: 0, kills: 0, time: 0, points: 0, distance: 0 };
             
-            // Friends & Requests
             window.myFriends = data.friends || [];
             window.myRequests = data.requestsIn || [];
             window.myInvites = data.invites || [];
             
-            // Process Live Invites
             const now = Date.now();
             window.myInvites.forEach(inv => {
                 if (now - inv.timestamp < 60000 && !handledInvites[inv.timestamp]) {
@@ -117,18 +123,17 @@ async function listenToUserData(uid) {
                 }
             });
 
-            // Re-render UI
             refreshAllUIs();
             renderFriendsUI(); 
             
         } else {
-            resetLocalStats(); // Brand new account
+            resetLocalStats(); 
             refreshAllUIs();
         }
     });
 }
 
-// Save stats securely to the Cloud Database
+// Save stats securely to the Cloud
 async function saveUserData() {
     if (auth.currentUser) {
         try {
@@ -148,17 +153,16 @@ async function saveUserData() {
     }
 }
 
-// Keep "Online" status alive every 30 seconds
+// Keep "Online" status alive every 30s
 setInterval(() => {
     if (auth.currentUser) {
         saveUserData();
     }
 }, 30000);
 
-// Listen for Login/Logout events
 onAuthStateChanged(auth, (user) => {
     if (user) {
-        currentUser = user.email.split('@')[0]; // Pulls the username out of the fake email
+        currentUser = user.email.split('@')[0];
         setInGameStatus(false); // Reset inGame flag on fresh load
         listenToUserData(user.uid);
     } else {
@@ -171,8 +175,6 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-
-// Initialize all default device settings (These stay local)
 window.gameSettings = JSON.parse(localStorage.getItem('yepio_settings')) || { 
     highQuality: true, particles: true, showNames: true, showFps: false,
     volume: 1.0, showLeaderboard: true, showBadges: true, showNotifs: true, showMinimap: true,
@@ -205,7 +207,6 @@ function generateShop() {
         if (stat.type === 'time') {
             req = Math.ceil(req / 10) * 10;
         }
-        
         return { id: item.id, type: stat.type, req: req, label: stat.label };
     });
 
@@ -260,22 +261,44 @@ function renderLobbySlots(hostName = null) {
     let count = currentLobbyMode === 'duos' ? 2 : currentLobbyMode === 'trios' ? 3 : 4;
     container.innerHTML = '';
     
-    for(let i=0; i<count; i++) {
-        const p = window.lobbyPlayers[i];
-        if (p) {
-            const isMe = p.uid === getMyUid();
-            container.innerHTML += `
-                <div class="player-slot ${p.ready ? 'ready' : ''}">
-                    <canvas class="lobby-preview-canvas" id="lobby-canvas-${i}"></canvas>
-                    <div class="name">${p.name} ${isMe ? '(YOU)' : ''}</div>
-                    <div class="status" style="color: ${p.ready ? '#00ffcc' : 'gray'}">${p.ready ? 'READY' : 'NOT READY'}</div>
-                </div>`;
-        } else {
+    // If joining someone else's lobby
+    if (hostName) {
+        container.innerHTML += `
+            <div class="player-slot ready">
+                <div class="lobby-preview-canvas" style="display:flex; align-items:center; justify-content:center;">(HOST)</div>
+                <div class="name">${hostName}</div>
+                <div class="status">READY</div>
+            </div>`;
+            
+        container.innerHTML += `
+            <div class="player-slot ready">
+                <div class="lobby-preview-canvas" style="display:flex; align-items:center; justify-content:center;">(YOU)</div>
+                <div class="name">${currentUser || 'GUEST'}</div>
+                <div class="status">READY</div>
+            </div>`;
+            
+        for(let i = 2; i < count; i++) {
             container.innerHTML += `
                 <div class="player-slot empty">
-                    <div class="lobby-preview-canvas" style="display:flex; align-items:center; justify-content:center; font-size:3rem; border: 2px dashed #555; border-radius:50%; color:#555;">+</div>
+                    <div class="lobby-preview-canvas">+</div>
                     <div class="name" style="color:gray;">WAITING...</div>
-                    <div class="status"></div>
+                </div>`;
+        }
+    } 
+    // If it's your own lobby
+    else {
+        container.innerHTML += `
+            <div class="player-slot ready">
+                <div class="lobby-preview-canvas" style="display:flex; align-items:center; justify-content:center;">(YOU)</div>
+                <div class="name">${currentUser || 'GUEST'}</div>
+                <div class="status">READY</div>
+            </div>`;
+            
+        for(let i = 1; i < count; i++) {
+            container.innerHTML += `
+                <div class="player-slot empty">
+                    <div class="lobby-preview-canvas">+</div>
+                    <div class="name" style="color:gray;">WAITING...</div>
                 </div>`;
         }
     }
@@ -319,8 +342,12 @@ function listenToLobby(code) {
                 window.isInMatch = true;
                 document.getElementById('main-menu').classList.add('hidden');
                 document.getElementById('game-ui').classList.remove('hidden');
+                
                 const hud = document.querySelector('.hud');
-                if(hud) hud.classList.remove('hidden');
+                if(hud) {
+                    hud.classList.remove('hidden');
+                }
+                
                 setInGameStatus(true);
                 game.start(selectedClass);
             }
@@ -338,18 +365,23 @@ function broadcastLobbyUpdate() {
         const newPlayers = window.lobbyPlayers.map(p => 
             p.uid === getMyUid() ? { ...p, class: selectedClass || p.class, equipped: window.equippedItems || {} } : p
         );
-        updateDoc(doc(db, "lobbies", window.currentLobbyCode), { players: newPlayers }).catch(e=>{});
+        updateDoc(doc(db, "lobbies", window.currentLobbyCode), { players: newPlayers }).catch(e => {
+            console.error(e);
+        });
     }
 }
 
 async function leaveCurrentLobby() {
     if (!window.currentLobbyCode) return;
+    
     try {
         const code = window.currentLobbyCode;
         const snap = await getDoc(doc(db, "lobbies", code));
+        
         if (snap.exists()) {
             const data = snap.data();
             const me = data.players.find(p => p.uid === getMyUid());
+            
             if (me) {
                 await updateDoc(doc(db, "lobbies", code), { players: arrayRemove(me) });
             }
@@ -360,6 +392,7 @@ async function leaveCurrentLobby() {
     
     window.currentLobbyCode = null;
     window.lobbyPlayers = [];
+    
     if (lobbyUnsub) { 
         lobbyUnsub(); 
         lobbyUnsub = null; 
@@ -372,9 +405,12 @@ async function joinLobbyByCode(code, sourceBtn) {
     
     try {
         const snap = await getDoc(doc(db, "lobbies", code));
+        
         if (!snap.exists()) {
             sourceBtn.innerText = "NOT FOUND!";
-            setTimeout(() => sourceBtn.innerText = originalText, 2000);
+            setTimeout(() => {
+                sourceBtn.innerText = originalText;
+            }, 2000);
             return false;
         }
         
@@ -383,12 +419,17 @@ async function joinLobbyByCode(code, sourceBtn) {
         
         if (data.players.length >= max) {
             sourceBtn.innerText = "LOBBY FULL!";
-            setTimeout(() => sourceBtn.innerText = originalText, 2000);
+            setTimeout(() => {
+                sourceBtn.innerText = originalText;
+            }, 2000);
             return false;
         }
+        
         if (data.inGame) {
             sourceBtn.innerText = "IN MATCH!";
-            setTimeout(() => sourceBtn.innerText = originalText, 2000);
+            setTimeout(() => {
+                sourceBtn.innerText = originalText;
+            }, 2000);
             return false;
         }
 
@@ -411,10 +452,13 @@ async function joinLobbyByCode(code, sourceBtn) {
         sourceBtn.innerText = originalText;
         document.querySelector('.tab-btn[data-target="multiplayer"]').click();
         return true;
+        
     } catch(e) {
         console.error(e);
         sourceBtn.innerText = "ERROR!";
-        setTimeout(() => sourceBtn.innerText = originalText, 2000);
+        setTimeout(() => {
+            sourceBtn.innerText = originalText;
+        }, 2000);
         return false;
     }
 }
@@ -426,6 +470,11 @@ let currentLockerCategory = null;
 window.activePreviewItem = null;
 
 function refreshAllUIs() {
+    // 🚨 FAILSAFE: Guarantee equippedItems exists before rendering so UI never crashes
+    if (!window.equippedItems) {
+        window.equippedItems = { Skin: null, Trail: null, Banner: null, Color: null };
+    }
+    
     renderLocker();
     renderSeasonStore();
     renderMainStore();
@@ -467,7 +516,7 @@ document.addEventListener('click', async (e) => {
         document.getElementById('friend-profile-view').classList.add('hidden');
         return;
     }
-
+    
     // Back to Friends list from Friend Profile
     if (target.id === 'back-to-friends-btn') {
         document.getElementById('friend-profile-view').classList.add('hidden');
@@ -499,9 +548,12 @@ document.addEventListener('click', async (e) => {
             info.innerText = "PLEASE SELECT A CLASS FIRST!";
             info.style.color = "red";
             info.classList.remove('fade-out', 'hidden');
-            setTimeout(() => info.classList.add('fade-out'), 2000);
+            setTimeout(() => {
+                info.classList.add('fade-out');
+            }, 2000);
             return;
         }
+        
         const codeInput = document.getElementById('join-code-input').value.trim();
         if (codeInput.length === 5) {
             joinLobbyByCode(codeInput.toUpperCase(), target);
@@ -512,6 +564,7 @@ document.addEventListener('click', async (e) => {
     // Ready Up / Start Match
     if (target.id === 'ready-btn') {
         if (!window.currentLobbyCode) return;
+        
         const myUid = getMyUid();
         const me = window.lobbyPlayers.find(p => p.uid === myUid);
         
@@ -705,7 +758,9 @@ document.addEventListener('click', async (e) => {
             await updateDoc(doc(db, "users", friendUid), {
                 friends: arrayUnion(auth.currentUser.uid)
             });
-        } catch(e) { console.error(e); }
+        } catch(e) { 
+            console.error(e); 
+        }
         return;
     }
 
@@ -716,12 +771,15 @@ document.addEventListener('click', async (e) => {
             await updateDoc(doc(db, "users", auth.currentUser.uid), {
                 requestsIn: arrayRemove(friendUid)
             });
-        } catch(e) { console.error(e); }
+        } catch(e) { 
+            console.error(e); 
+        }
         return;
     }
 
     // Accept Live Invite
     if (target.classList.contains('accept-invite-btn') || target.classList.contains('join-invite-btn')) {
+        
         // Protect from joining without a class
         if (!selectedClass) {
             document.querySelector('.tab-btn[data-target="lobby"]').click();
@@ -730,7 +788,9 @@ document.addEventListener('click', async (e) => {
             info.innerText = "PLEASE SELECT A CLASS FIRST!";
             info.style.color = "red";
             info.classList.remove('fade-out', 'hidden');
-            setTimeout(() => info.classList.add('fade-out'), 2000);
+            setTimeout(() => {
+                info.classList.add('fade-out');
+            }, 2000);
             return; // DON'T REMOVE INVITE, JUST WARN
         }
         
@@ -745,7 +805,9 @@ document.addEventListener('click', async (e) => {
             const notifBox = target.closest('.notif-box');
             if (notifBox) {
                 notifBox.classList.remove('show');
-                setTimeout(() => notifBox.remove(), 400);
+                setTimeout(() => {
+                    notifBox.remove();
+                }, 400);
             }
             if (auth.currentUser) {
                 await updateDoc(doc(db, "users", auth.currentUser.uid), {
@@ -790,9 +852,8 @@ document.addEventListener('click', async (e) => {
                         timestamp: Date.now()
                     })
                 });
-                inviteBtn.innerText = "INVITE SENT! WAITING IN LOBBY...";
                 
-                // Immediately route the Sender to the Multiplayer Tab to wait
+                inviteBtn.innerText = "INVITE SENT! WAITING IN LOBBY...";
                 setTimeout(() => { 
                     document.getElementById('account-modal').classList.add('hidden');
                     document.querySelector('.tab-btn[data-target="multiplayer"]').click();
@@ -801,18 +862,20 @@ document.addEventListener('click', async (e) => {
 
             } catch(e) {
                 inviteBtn.innerText = "ERROR!";
-                setTimeout(() => { inviteBtn.innerText = "INVITE TO MULTIPLAYER"; }, 2000);
+                setTimeout(() => { 
+                    inviteBtn.innerText = "INVITE TO MULTIPLAYER"; 
+                }, 2000);
             }
         };
         return;
     }
-
 
     // Class Selection
     if (target.classList.contains('class-btn')) {
         document.querySelectorAll('.class-btn').forEach(b => b.classList.remove('active'));
         target.classList.add('active');
         selectedClass = target.dataset.class;
+        
         broadcastLobbyUpdate(); 
         
         const info = document.getElementById('class-info');
@@ -837,6 +900,12 @@ document.addEventListener('click', async (e) => {
     const equipBtn = target.closest('.btn-equip');
     if (equipBtn) {
         const itemId = equipBtn.dataset.id;
+        
+        // 🚨 FAILSAFE
+        if (!window.equippedItems) {
+            window.equippedItems = { Skin: null, Trail: null, Banner: null, Color: null };
+        }
+
         if (!itemId) { 
             if (currentLockerCategory) {
                 window.equippedItems[currentLockerCategory] = null;
@@ -851,6 +920,7 @@ document.addEventListener('click', async (e) => {
                 }
             }
         }
+        
         saveUserData(); 
         broadcastLobbyUpdate(); 
         renderLocker();
@@ -896,7 +966,9 @@ document.addEventListener('click', async (e) => {
                 info.innerText = "PLEASE SELECT A CLASS FIRST!";
                 info.style.color = "red";
                 info.classList.remove('fade-out', 'hidden');
-                setTimeout(() => info.classList.add('fade-out'), 2000);
+                setTimeout(() => {
+                    info.classList.add('fade-out');
+                }, 2000);
             }
             return;
         }
@@ -928,6 +1000,7 @@ document.addEventListener('click', async (e) => {
             
             if (!window.currentLobbyCode) {
                 window.currentLobbyCode = generateLobbyCode();
+                
                 const myPlayerObj = {
                     uid: getMyUid(),
                     name: currentUser || 'GUEST',
@@ -935,6 +1008,7 @@ document.addEventListener('click', async (e) => {
                     class: selectedClass || 'triangle',
                     equipped: window.equippedItems || {}
                 };
+                
                 setDoc(doc(db, "lobbies", window.currentLobbyCode), {
                     mode: currentLobbyMode,
                     players: [myPlayerObj],
@@ -942,9 +1016,11 @@ document.addEventListener('click', async (e) => {
                 }).then(() => {
                     listenToLobby(window.currentLobbyCode);
                 });
+                
             } else {
                 renderLobbySlots(); 
             }
+            
         } else {
             if (gmSelector) gmSelector.classList.add('hidden');
             if (lobbyControls) lobbyControls.classList.add('hidden');
@@ -965,11 +1041,13 @@ async function renderFriendsUI() {
     const reqContainer = document.getElementById('friend-requests-container');
     const reqList = document.getElementById('friend-requests-list');
     const fList = document.getElementById('friends-list');
+    
     if (!reqContainer || !reqList || !fList) return;
 
     if (window.myRequests.length > 0) {
         reqContainer.classList.remove('hidden');
         reqList.innerHTML = '';
+        
         for (let uid of window.myRequests) {
             let data = friendCache[uid];
             if (!data) {
@@ -1008,14 +1086,17 @@ async function renderFriendsUI() {
             
             const aData = friendCache[a];
             const bData = friendCache[b];
+            
             const aOn = aData && (Date.now() - (aData.lastActive || 0)) < 65000;
             const bOn = bData && (Date.now() - (bData.lastActive || 0)) < 65000;
+            
             if (aOn && !bOn) return -1;
             if (bOn && !aOn) return 1;
             return 0;
         });
 
         fList.innerHTML = '';
+        
         for (let uid of sortedFriends) {
             let data = friendCache[uid];
             if (!data) {
@@ -1036,6 +1117,7 @@ async function renderFriendsUI() {
 
                 // Check for golden invite style
                 const activeInvite = activeInvites.find(i => i.fromUid === uid);
+                
                 if (activeInvite) {
                     fList.innerHTML += `
                         <div class="friend-item has-invite" data-uid="${uid}">
@@ -1071,6 +1153,7 @@ async function renderFriendsUI() {
 function showInviteNotification(senderName, code, hostUid) {
     const queue = document.getElementById('notif-queue');
     const template = document.getElementById('invite-template');
+    
     if (!queue || !template) return;
 
     const clone = template.cloneNode(true);
@@ -1084,7 +1167,9 @@ function showInviteNotification(senderName, code, hostUid) {
     btn.dataset.hostname = senderName;
     
     queue.appendChild(clone);
-    requestAnimationFrame(() => clone.classList.add('show'));
+    requestAnimationFrame(() => {
+        clone.classList.add('show');
+    });
     
     if(sounds && sounds.play) {
         sounds.play('levelUp', 0.8);
@@ -1093,7 +1178,9 @@ function showInviteNotification(senderName, code, hostUid) {
     setTimeout(() => {
         if(clone.parentNode) {
             clone.classList.remove('show');
-            setTimeout(() => clone.remove(), 400);
+            setTimeout(() => {
+                clone.remove();
+            }, 400);
         }
     }, 15000);
 }
@@ -1107,8 +1194,8 @@ const startClaim = (e) => {
     
     e.preventDefault(); 
     btn.classList.add('holding');
-    const storeItem = btn.closest('.store-item');
     
+    const storeItem = btn.closest('.store-item');
     if (storeItem) {
         storeItem.classList.add('shaking');
     }
@@ -1127,6 +1214,7 @@ const startClaim = (e) => {
             storeItem.classList.remove('shaking');
             storeItem.classList.add('claimed-pop');
         }
+        
         setTimeout(() => {
             renderSeasonStore();
             renderMainStore();
@@ -1139,6 +1227,7 @@ const stopClaim = (e) => {
     document.querySelectorAll('.btn-claim.holding').forEach(btn => {
         clearTimeout(btn.claimTimeout);
         btn.classList.remove('holding');
+        
         const storeItem = btn.closest('.store-item');
         if (storeItem) {
             storeItem.classList.remove('shaking');
@@ -1191,8 +1280,12 @@ function renderPreview() {
     let dt = current - previewLastTime;
     previewLastTime = current;
     
-    if (dt > 250) dt = 16.666; 
-    if (dt < 0) dt = 0; 
+    if (dt > 250) {
+        dt = 16.666; 
+    }
+    if (dt < 0) {
+        dt = 0; 
+    }
     
     previewAccumulator += dt;
     
@@ -1230,6 +1323,12 @@ function renderPreview() {
     const lockerTabRender = document.getElementById('locker');
     if (lockerCtx && lockerTabRender && lockerTabRender.classList.contains('active')) {
         lockerCtx.clearRect(0, 0, 300, 300);
+        
+        // 🚨 FAILSAFE
+        if (!window.equippedItems) {
+            window.equippedItems = { Skin: null, Trail: null, Banner: null, Color: null };
+        }
+        
         previewDummy.type = selectedClass || 'triangle';
         previewDummy.equipped = { ...window.equippedItems };
         
@@ -1252,6 +1351,12 @@ function renderPreview() {
     if (fsCtx && itemPreviewRender && !itemPreviewRender.classList.contains('hidden')) {
         fsCtx.clearRect(0, 0, 350, 350);
         previewDummy.type = selectedClass || 'triangle';
+        
+        // 🚨 FAILSAFE
+        if (!window.equippedItems) {
+            window.equippedItems = { Skin: null, Trail: null, Banner: null, Color: null };
+        }
+        
         let equipState = { ...window.equippedItems };
         
         if (window.activePreviewItem && ITEMS_DB[window.activePreviewItem]) {
@@ -1280,6 +1385,7 @@ function renderPreview() {
         for (let i = 0; i < window.lobbyPlayers.length; i++) {
             const p = window.lobbyPlayers[i];
             const cvs = document.getElementById(`lobby-canvas-${i}`);
+            
             if (cvs && p) {
                 if (!cvs.initialized) {
                     cvs.width = 140 * dpr;
@@ -1287,6 +1393,7 @@ function renderPreview() {
                     cvs.getContext('2d').scale(dpr, dpr);
                     cvs.initialized = true;
                 }
+                
                 const ctx = cvs.getContext('2d');
                 ctx.clearRect(0, 0, 140, 140);
                 
@@ -1313,7 +1420,9 @@ function renderPreview() {
 }
 window.previewAnimationId = requestAnimationFrame(renderPreview);
 
+// ==========================================
 // SETTINGS BINDINGS
+// ==========================================
 document.getElementById('settings-btn').addEventListener('click', () => { 
     document.getElementById('settings-modal').classList.remove('hidden'); 
 });
@@ -1323,6 +1432,7 @@ document.getElementById('close-settings-btn').addEventListener('click', () => {
     window.gameSettings.particles = document.getElementById('set-particles').checked;
     window.gameSettings.showNames = document.getElementById('set-names').checked;
     window.gameSettings.showFps = document.getElementById('set-fps').checked;
+    
     window.gameSettings.volume = parseInt(document.getElementById('set-volume').value) / 100;
     window.gameSettings.showLeaderboard = document.getElementById('set-leaderboard').checked;
     window.gameSettings.showBadges = document.getElementById('set-badges').checked;
@@ -1344,6 +1454,7 @@ document.getElementById('close-settings-btn').addEventListener('click', () => {
         window.game.updateLeaderboard();
         window.game.updateUpgradeBadges();
     }
+    
     document.getElementById('settings-modal').classList.add('hidden');
 });
 
@@ -1401,13 +1512,19 @@ document.getElementById('play-btn').addEventListener('click', () => {
             info.innerText = "PLEASE SELECT A CLASS FIRST!";
             info.style.color = "red";
             info.classList.remove('fade-out', 'hidden');
-            if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
-            window.classInfoTimeout = setTimeout(() => info.classList.add('fade-out'), 2000);
+            
+            if (window.classInfoTimeout) {
+                clearTimeout(window.classInfoTimeout);
+            }
+            window.classInfoTimeout = setTimeout(() => {
+                info.classList.add('fade-out');
+            }, 2000);
         }
         return;
     }
     
     setInGameStatus(true); 
+    
     document.getElementById('main-menu').classList.add('hidden');
     document.getElementById('game-ui').classList.remove('hidden');
     
@@ -1430,6 +1547,7 @@ document.getElementById('return-lobby-btn').addEventListener('click', () => {
     
     if (window.lastMatchStats) {
         window.lastMatchStats.timestamp = Date.now();
+        
         window.hourlyStats.kills += window.lastMatchStats.kills || 0;
         window.hourlyStats.time += window.lastMatchStats.time || 0;
         window.hourlyStats.points += window.lastMatchStats.points || 0;
@@ -1446,6 +1564,7 @@ document.getElementById('return-lobby-btn').addEventListener('click', () => {
             window.matchHistory.pop();
         }
         window.lastMatchStats = null; 
+        
         saveUserData(); 
     }
     
@@ -1454,7 +1573,12 @@ document.getElementById('return-lobby-btn').addEventListener('click', () => {
         const me = window.lobbyPlayers.find(p => p.uid === getMyUid());
         if (me) {
             const newPlayers = window.lobbyPlayers.map(p => p.uid === getMyUid() ? { ...p, ready: false } : p);
-            updateDoc(doc(db, "lobbies", window.currentLobbyCode), { players: newPlayers, inGame: false }).catch(e=>{});
+            updateDoc(doc(db, "lobbies", window.currentLobbyCode), { 
+                players: newPlayers, 
+                inGame: false 
+            }).catch(e => {
+                console.error(e);
+            });
         }
     }
     
@@ -1481,7 +1605,9 @@ document.addEventListener('keydown', (e) => {
         if (devConsole && devInput) {
             devConsole.classList.remove('hidden');
             devInput.focus();
-            setTimeout(() => { devInput.value = '/'; }, 10); 
+            setTimeout(() => { 
+                devInput.value = '/'; 
+            }, 10); 
         }
     } else if (e.key === 'Escape') {
         if (devConsole && !devConsole.classList.contains('hidden')) {
