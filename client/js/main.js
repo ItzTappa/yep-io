@@ -5,61 +5,100 @@ import { UPGRADE_POOL } from './upgrades.js';
 import { sounds } from './soundManager.js';
 import { lobbyUI } from './networkLobby.js';
 
+// ==========================================
+// 1. FIREBASE GLOBAL ACCOUNT SYSTEM
+// ==========================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+// YOUR REAL FIREBASE KEYS
+const firebaseConfig = {
+    apiKey: "AIzaSyD1jhU8Z7EkxMqMop4cM0jrQ6aLBnzHmeE",
+    authDomain: "yep-io-6a50d.firebaseapp.com",
+    projectId: "yep-io-6a50d",
+    storageBucket: "yep-io-6a50d.firebasestorage.app",
+    messagingSenderId: "956171272863",
+    appId: "1:956171272863:web:5aa42a88cf78ff4b7698aa"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
 let selectedClass = null; 
+let currentUser = null;
 
-// ==========================================
-// ACCOUNT SYSTEM
-// ==========================================
-let accounts = JSON.parse(localStorage.getItem('yepio_accounts')) || {};
-let currentUser = localStorage.getItem('yepio_current_user');
+// Clean out the old local testing logic
+localStorage.removeItem('yepio_accounts');
+localStorage.removeItem('yepio_current_user');
 
-function loadUserData() {
-    if (currentUser && accounts[currentUser]) {
-        let data = accounts[currentUser];
-        window.globalAccountXP = data.xp || 0;
-        window.globalAccountLevel = data.level || 1;
-        window.equippedItems = data.equipped || { Skin: null, Trail: null, Banner: null, Color: null };
-        window.claimedItems = data.unlocked || {};
-        window.matchHistory = data.history || [];
-        window.lifetimeStats = data.stats || { matches: 0, kills: 0, time: 0, points: 0, distance: 0 };
+function resetLocalStats() {
+    window.globalAccountXP = 0;
+    window.globalAccountLevel = 1;
+    window.equippedItems = { Skin: null, Trail: null, Banner: null, Color: null };
+    window.claimedItems = {};
+    window.matchHistory = [];
+    window.lifetimeStats = { matches: 0, kills: 0, time: 0, points: 0, distance: 0 };
+}
+
+// Fetch stats securely from the Cloud Database
+async function loadUserData(uid) {
+    try {
+        const docRef = doc(db, "users", uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            let data = docSnap.data();
+            window.globalAccountXP = data.xp || 0;
+            window.globalAccountLevel = data.level || 1;
+            window.equippedItems = data.equipped || { Skin: null, Trail: null, Banner: null, Color: null };
+            window.claimedItems = data.unlocked || {};
+            window.matchHistory = data.history || [];
+            window.lifetimeStats = data.stats || { matches: 0, kills: 0, time: 0, points: 0, distance: 0 };
+        } else {
+            resetLocalStats(); // Brand new account
+        }
+    } catch(e) { 
+        console.error("Error loading profile:", e); 
+        resetLocalStats(); 
+    }
+    refreshAllUIs();
+}
+
+// Save stats securely to the Cloud Database
+async function saveUserData() {
+    if (auth.currentUser) {
+        try {
+            await setDoc(doc(db, "users", auth.currentUser.uid), {
+                username: currentUser,
+                xp: window.globalAccountXP,
+                level: window.globalAccountLevel,
+                equipped: window.equippedItems,
+                unlocked: window.claimedItems,
+                history: window.matchHistory,
+                stats: window.lifetimeStats
+            }, { merge: true });
+        } catch(e) { console.error("Error saving profile:", e); }
+    }
+}
+
+// Listen for Login/Logout events
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        currentUser = user.email.split('@')[0]; // Pulls the username out of the fake email
+        loadUserData(user.uid);
     } else {
-        window.globalAccountXP = 0;
-        window.globalAccountLevel = 1;
-        window.equippedItems = { Skin: null, Trail: null, Banner: null, Color: null };
-        window.claimedItems = {};
-        window.matchHistory = [];
-        window.lifetimeStats = { matches: 0, kills: 0, time: 0, points: 0, distance: 0 };
+        currentUser = null;
+        resetLocalStats();
+        refreshAllUIs();
     }
-}
+});
 
-function saveUserData() {
-    if (currentUser && accounts[currentUser]) {
-        accounts[currentUser] = {
-            password: accounts[currentUser].password, 
-            xp: window.globalAccountXP,
-            level: window.globalAccountLevel,
-            equipped: window.equippedItems,
-            unlocked: window.claimedItems,
-            history: window.matchHistory,
-            stats: window.lifetimeStats
-        };
-        localStorage.setItem('yepio_accounts', JSON.stringify(accounts));
-    }
-}
 
-// Load data immediately on boot
-loadUserData();
-
+// Initialize all default device settings (These stay local)
 window.gameSettings = JSON.parse(localStorage.getItem('yepio_settings')) || { 
-    highQuality: true, 
-    particles: true, 
-    showNames: true, 
-    showFps: false,
-    volume: 1.0, 
-    showLeaderboard: true, 
-    showBadges: true, 
-    showNotifs: true, 
-    showMinimap: true,
+    highQuality: true, particles: true, showNames: true, showFps: false,
+    volume: 1.0, showLeaderboard: true, showBadges: true, showNotifs: true, showMinimap: true,
     keybinds: { up: 'w', down: 's', left: 'a', right: 'd', dash: ' ', ability: 'e' }
 };
 
@@ -120,11 +159,7 @@ const canvas = document.getElementById('gameCanvas');
 const game = new GameEngine(canvas);
 window.game = game; 
 
-try {
-    game.startDemo();
-} catch(e) {
-    console.error("Failed to start demo on load: ", e);
-}
+try { game.startDemo(); } catch(e) { console.error(e); }
 
 // ==========================================
 // GLOBAL UI HANDLER
@@ -147,7 +182,7 @@ document.addEventListener('click', (e) => {
         if (sounds && sounds.play) sounds.play('click', 0.4 * (window.gameSettings.volume || 1.0));
     }
 
-    // Modal Close Buttons
+    // Modals
     if (target.id === 'close-preview-btn' || target.closest('#close-preview-btn')) {
         window.activePreviewItem = null;
         document.getElementById('item-preview-screen').classList.add('hidden');
@@ -158,7 +193,7 @@ document.addEventListener('click', (e) => {
         return;
     }
 
-    // Account Modal Buttons
+    // Account Modal Toggle
     if (target.id === 'account-btn') {
         const accModal = document.getElementById('account-modal');
         const loggedOutView = document.getElementById('account-logged-out');
@@ -167,7 +202,7 @@ document.addEventListener('click', (e) => {
         
         errorText.innerText = "";
         
-        if (currentUser) {
+        if (auth.currentUser) {
             loggedOutView.classList.add('hidden');
             loggedInView.classList.remove('hidden');
             document.getElementById('acc-display-name').innerText = currentUser;
@@ -181,52 +216,58 @@ document.addEventListener('click', (e) => {
         return;
     }
 
+    // Firebase Registration
     if (target.id === 'acc-register-btn') {
         const user = document.getElementById('acc-user').value.trim();
         const pass = document.getElementById('acc-pass').value;
         const errorText = document.getElementById('acc-error');
         
-        if (user.length < 3) { errorText.innerText = "Username must be at least 3 characters!"; return; }
-        if (pass.length < 3) { errorText.innerText = "Password must be at least 3 characters!"; return; }
+        if (user.length < 3) { errorText.innerText = "Username must be at least 3 chars!"; return; }
+        if (pass.length < 6) { errorText.innerText = "Password must be at least 6 chars!"; return; }
         
-        if (accounts[user]) { errorText.innerText = "Username already exists!"; return; }
+        errorText.innerText = "Creating account...";
+        errorText.style.color = "white";
 
-        accounts[user] = { password: pass };
-        currentUser = user;
-        localStorage.setItem('yepio_accounts', JSON.stringify(accounts));
-        localStorage.setItem('yepio_current_user', user);
-        
-        loadUserData();
-        refreshAllUIs();
-        document.getElementById('account-modal').classList.add('hidden');
+        createUserWithEmailAndPassword(auth, user + "@yepio.game", pass)
+            .then(() => {
+                document.getElementById('account-modal').classList.add('hidden');
+            })
+            .catch((error) => {
+                errorText.style.color = "#ff4444";
+                if(error.code === 'auth/email-already-in-use') errorText.innerText = "Username already taken!";
+                else errorText.innerText = error.message.replace("Firebase: ", "");
+            });
         return;
     }
 
+    // Firebase Login
     if (target.id === 'acc-login-btn') {
         const user = document.getElementById('acc-user').value.trim();
         const pass = document.getElementById('acc-pass').value;
         const errorText = document.getElementById('acc-error');
         
-        if (!accounts[user]) { errorText.innerText = "Account not found!"; return; }
-        if (accounts[user].password !== pass) { errorText.innerText = "Incorrect password!"; return; }
-
-        currentUser = user;
-        localStorage.setItem('yepio_current_user', user);
+        if (!user || !pass) { errorText.innerText = "Please enter username and password!"; return; }
         
-        loadUserData();
-        refreshAllUIs();
-        document.getElementById('account-modal').classList.add('hidden');
+        errorText.innerText = "Logging in...";
+        errorText.style.color = "white";
+
+        signInWithEmailAndPassword(auth, user + "@yepio.game", pass)
+            .then(() => {
+                document.getElementById('account-modal').classList.add('hidden');
+            })
+            .catch((error) => {
+                errorText.style.color = "#ff4444";
+                errorText.innerText = "Incorrect username or password!";
+            });
         return;
     }
 
+    // Firebase Logout
     if (target.id === 'acc-logout-btn') {
-        saveUserData(); // Ensure everything is saved before logging out
-        currentUser = null;
-        localStorage.removeItem('yepio_current_user');
-        
-        loadUserData(); // Resets local state to 0
-        refreshAllUIs();
-        document.getElementById('account-modal').classList.add('hidden');
+        saveUserData().then(() => {
+            signOut(auth);
+            document.getElementById('account-modal').classList.add('hidden');
+        });
         return;
     }
 
@@ -246,7 +287,7 @@ document.addEventListener('click', (e) => {
                 }
             }
         }
-        saveUserData(); // Save when they equip an item
+        saveUserData(); // Saves instantly to cloud
         renderLocker();
         renderSeasonStore();
         renderMainStore();
@@ -338,7 +379,7 @@ const startClaim = (e) => {
     btn.claimTimeout = setTimeout(() => {
         const itemId = btn.dataset.id;
         window.claimedItems[itemId] = true;
-        saveUserData(); // Save when they claim an item
+        saveUserData(); // Instantly save unlocks to the cloud!
         
         if(sounds && sounds.play) sounds.play('levelUp', 0.6 * (window.gameSettings.volume || 1.0)); 
         
@@ -641,7 +682,7 @@ document.getElementById('return-lobby-btn').addEventListener('click', () => {
         }
         window.lastMatchStats = null; 
         
-        saveUserData(); // Save stats to account after game
+        saveUserData(); // Save stats to cloud after every game!
     }
     
     updateMenuXPBar(); 
