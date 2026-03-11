@@ -29,6 +29,21 @@ const db = getFirestore(app);
 let selectedClass = null; 
 let currentUser = null;
 let currentLobbyMode = 'duos'; 
+window.currentLobbyCode = null; // Globally available code
+
+// Utility to generate a random 5-char code
+function generateLobbyCode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 5; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+    return code;
+}
+
+function setInGameStatus(isIngame) {
+    if (auth.currentUser) {
+        updateDoc(doc(db, "users", auth.currentUser.uid), { inGame: isIngame }).catch(e=>{});
+    }
+}
 
 // Clean out old local testing
 localStorage.removeItem('yepio_accounts');
@@ -43,14 +58,16 @@ function resetLocalStats() {
     window.lifetimeStats = { matches: 0, kills: 0, time: 0, points: 0, distance: 0 };
     window.myFriends = [];
     window.myRequests = [];
+    window.myInvites = [];
 }
+// Run immediately on boot so the UI never crashes looking for a missing 'Skin'
 resetLocalStats();
 
 let unsubUser = null;
 let handledInvites = {};
-let friendCache = {}; // Caches friend data to avoid spamming the DB
+let friendCache = {};
 
-// Fetch stats & Start Listening for Live Updates (Friends/Invites)
+// Fetch stats & Start Listening for Live Updates
 async function listenToUserData(uid) {
     if (unsubUser) unsubUser();
     
@@ -58,7 +75,6 @@ async function listenToUserData(uid) {
         if (docSnap.exists()) {
             let data = docSnap.data();
             
-            // Base Stats
             window.globalAccountXP = data.xp || 0;
             window.globalAccountLevel = data.level || 1;
             window.equippedItems = data.equipped || { Skin: null, Trail: null, Banner: null, Color: null };
@@ -66,22 +82,18 @@ async function listenToUserData(uid) {
             window.matchHistory = data.history || [];
             window.lifetimeStats = data.stats || { matches: 0, kills: 0, time: 0, points: 0, distance: 0 };
             
-            // Friends & Requests
             window.myFriends = data.friends || [];
             window.myRequests = data.requestsIn || [];
+            window.myInvites = data.invites || [];
             
-            // Process Live Invites
-            const invites = data.invites || [];
             const now = Date.now();
-            invites.forEach(inv => {
-                // Only show invites less than 60 seconds old that we haven't seen yet
+            window.myInvites.forEach(inv => {
                 if (now - inv.timestamp < 60000 && !handledInvites[inv.timestamp]) {
                     handledInvites[inv.timestamp] = true;
-                    showInviteNotification(inv.fromName, inv.code);
+                    showInviteNotification(inv.fromName, inv.code, inv.fromUid);
                 }
             });
 
-            // Re-render UI
             refreshAllUIs();
             renderFriendsUI(); 
             
@@ -92,7 +104,7 @@ async function listenToUserData(uid) {
     });
 }
 
-// Save stats securely to the Cloud Database
+// Save stats securely to the Cloud
 async function saveUserData() {
     if (auth.currentUser) {
         try {
@@ -110,7 +122,7 @@ async function saveUserData() {
     }
 }
 
-// Keep "Online" status alive every 30 seconds
+// Keep "Online" status alive every 30s
 setInterval(() => {
     if (auth.currentUser) saveUserData();
 }, 30000);
@@ -118,6 +130,7 @@ setInterval(() => {
 onAuthStateChanged(auth, (user) => {
     if (user) {
         currentUser = user.email.split('@')[0];
+        setInGameStatus(false); // Reset inGame flag on fresh load
         listenToUserData(user.uid);
     } else {
         currentUser = null;
@@ -152,10 +165,8 @@ function generateShop() {
         const base = stat.mult[item.rarity - 1];
         const variance = base * 0.2; 
         let req = Math.floor(base + (Math.random() * variance * 2) - variance);
-        
         if (stat.type === 'distance' || stat.type === 'points') req = Math.ceil(req / 100) * 100;
         if (stat.type === 'time') req = Math.ceil(req / 10) * 10;
-        
         return { id: item.id, type: stat.type, req: req, label: stat.label };
     });
 
@@ -205,22 +216,44 @@ function refreshAllUIs() {
 }
 
 // Visual Lobby Slots Mockup
-function renderLobbySlots() {
+function renderLobbySlots(hostName = null) {
     const container = document.getElementById('player-slots-container');
     if (!container) return;
     
     let count = currentLobbyMode === 'duos' ? 2 : currentLobbyMode === 'trios' ? 3 : 4;
     container.innerHTML = '';
     
-    for(let i=0; i<count; i++) {
-        if(i === 0) {
+    // If joining someone else's lobby
+    if (hostName) {
+        container.innerHTML += `
+            <div class="player-slot ready">
+                <div class="lobby-preview-canvas" style="display:flex; align-items:center; justify-content:center;">(HOST)</div>
+                <div class="name">${hostName}</div>
+                <div class="status">READY</div>
+            </div>`;
+        container.innerHTML += `
+            <div class="player-slot ready">
+                <div class="lobby-preview-canvas" style="display:flex; align-items:center; justify-content:center;">(YOU)</div>
+                <div class="name">${currentUser || 'GUEST'}</div>
+                <div class="status">READY</div>
+            </div>`;
+        for(let i=2; i<count; i++) {
             container.innerHTML += `
-                <div class="player-slot ready">
-                    <div class="lobby-preview-canvas" style="display:flex; align-items:center; justify-content:center;">(YOU)</div>
-                    <div class="name">${currentUser || 'GUEST'}</div>
-                    <div class="status">READY</div>
+                <div class="player-slot empty">
+                    <div class="lobby-preview-canvas">+</div>
+                    <div class="name" style="color:gray;">WAITING...</div>
                 </div>`;
-        } else {
+        }
+    } 
+    // If it's your own lobby
+    else {
+        container.innerHTML += `
+            <div class="player-slot ready">
+                <div class="lobby-preview-canvas" style="display:flex; align-items:center; justify-content:center;">(YOU)</div>
+                <div class="name">${currentUser || 'GUEST'}</div>
+                <div class="status">READY</div>
+            </div>`;
+        for(let i=1; i<count; i++) {
             container.innerHTML += `
                 <div class="player-slot empty">
                     <div class="lobby-preview-canvas">+</div>
@@ -229,6 +262,53 @@ function renderLobbySlots() {
         }
     }
 }
+
+// Reusable function to execute "Joining a Lobby"
+async function executeJoinLobby(code, hostUid, hostName, sourceBtn) {
+    const originalText = sourceBtn.innerText;
+    sourceBtn.innerText = "JOINING...";
+
+    try {
+        const hostSnap = await getDoc(doc(db, "users", hostUid));
+        if (hostSnap.exists() && hostSnap.data().inGame) {
+            sourceBtn.innerText = "PLAYER IN MATCH!";
+            sourceBtn.style.backgroundColor = "#ff4444";
+            sourceBtn.style.color = "white";
+            setTimeout(() => { 
+                sourceBtn.innerText = originalText; 
+                sourceBtn.style.backgroundColor = ""; 
+                sourceBtn.style.color = "";
+            }, 3000);
+            
+            // Clear out that invalid invite locally
+            await updateDoc(doc(db, "users", auth.currentUser.uid), {
+                invites: window.myInvites.filter(i => i.fromUid !== hostUid)
+            });
+            return;
+        }
+
+        // Successfully Joined -> Route to Multiplayer Tab
+        document.getElementById('account-modal').classList.add('hidden');
+        document.getElementById('friend-profile-view').classList.add('hidden');
+        
+        window.currentLobbyCode = code;
+        document.getElementById('lobby-code-display').innerText = code;
+        renderLobbySlots(hostName);
+        
+        document.querySelector('.tab-btn[data-target="multiplayer"]').click();
+
+        // Clear out that invite since we accepted it
+        await updateDoc(doc(db, "users", auth.currentUser.uid), {
+            invites: window.myInvites.filter(i => i.fromUid !== hostUid)
+        });
+
+    } catch (e) {
+        console.error("Join Error:", e);
+        sourceBtn.innerText = "ERROR!";
+        setTimeout(() => { sourceBtn.innerText = originalText; }, 2000);
+    }
+}
+
 
 document.addEventListener('click', async (e) => {
     const target = e.target;
@@ -263,24 +343,10 @@ document.addEventListener('click', async (e) => {
         return;
     }
     
-    // Back to Friends list from Friend Profile
+    // Back to Friends
     if (target.id === 'back-to-friends-btn') {
         document.getElementById('friend-profile-view').classList.add('hidden');
         document.getElementById('account-logged-in').classList.remove('hidden');
-        return;
-    }
-
-    // Accept Invite Button Notification
-    if (target.classList.contains('accept-invite-btn')) {
-        const code = target.dataset.code;
-        document.querySelector('.tab-btn[data-target="multiplayer"]').click();
-        const codeInput = document.getElementById('join-code-input');
-        const joinBtn = document.getElementById('join-lobby-btn');
-        if (codeInput && joinBtn) {
-            codeInput.value = code;
-            joinBtn.click();
-        }
-        target.closest('.notif-box').remove();
         return;
     }
 
@@ -385,9 +451,9 @@ document.addEventListener('click', async (e) => {
         return;
     }
 
-    // --- FRIENDS SYSTEM ---
+    // --- FRIENDS SYSTEM ACTIONS ---
     
-    // Send Friend Request
+    // Add Friend
     if (target.id === 'add-friend-btn') {
         const searchInput = document.getElementById('friend-search-input');
         const msg = document.getElementById('friend-search-msg');
@@ -435,12 +501,10 @@ document.addEventListener('click', async (e) => {
         const friendUid = target.dataset.uid;
         target.innerText = "...";
         try {
-            // Remove request, add to friends
             await updateDoc(doc(db, "users", auth.currentUser.uid), {
                 requestsIn: arrayRemove(friendUid),
                 friends: arrayUnion(friendUid)
             });
-            // Reciprocate
             await updateDoc(doc(db, "users", friendUid), {
                 friends: arrayUnion(auth.currentUser.uid)
             });
@@ -459,9 +523,25 @@ document.addEventListener('click', async (e) => {
         return;
     }
 
+    // Accept Live Invite via Slider Notification OR Friend List Button
+    if (target.classList.contains('accept-invite-btn') || target.classList.contains('join-invite-btn')) {
+        const hostUid = target.dataset.hostuid;
+        const hostName = target.dataset.hostname;
+        const code = target.dataset.code;
+        
+        executeJoinLobby(code, hostUid, hostName, target);
+        
+        const notifBox = target.closest('.notif-box');
+        if (notifBox) {
+            notifBox.classList.remove('show');
+            setTimeout(() => notifBox.remove(), 400);
+        }
+        return;
+    }
+
     // Click Friend -> View Profile
     const friendItem = target.closest('.friend-item');
-    if (friendItem && !target.classList.contains('friend-action-btn')) {
+    if (friendItem && !target.classList.contains('friend-action-btn') && !target.classList.contains('join-invite-btn')) {
         const fUid = friendItem.dataset.uid;
         if (!friendCache[fUid]) return;
         
@@ -476,21 +556,12 @@ document.addEventListener('click', async (e) => {
         document.getElementById('fp-kills').innerText = (fData.stats && fData.stats.kills) || 0;
         document.getElementById('fp-matches').innerText = (fData.stats && fData.stats.matches) || 0;
         
-        // Count Wins
-        let wins = 0;
-        if (fData.history) {
-            wins = fData.history.filter(m => m.rank === 1).length;
-        }
-        document.getElementById('fp-wins').innerText = wins;
-
-        // Hook up Invite Button
         const inviteBtn = document.getElementById('invite-friend-btn');
         inviteBtn.onclick = async () => {
-            const lobbyCode = document.getElementById('lobby-code-display').innerText;
-            if (!lobbyCode || lobbyCode === '-----') {
-                inviteBtn.innerText = "GO TO LOBBY TAB FIRST!";
-                setTimeout(() => { inviteBtn.innerText = "INVITE TO MULTIPLAYER"; }, 2000);
-                return;
+            // Generate Code if they haven't visited Multiplayer yet
+            if (!window.currentLobbyCode) {
+                window.currentLobbyCode = generateLobbyCode();
+                document.getElementById('lobby-code-display').innerText = window.currentLobbyCode;
             }
             
             inviteBtn.innerText = "SENDING...";
@@ -498,15 +569,24 @@ document.addEventListener('click', async (e) => {
                 await updateDoc(doc(db, "users", fUid), {
                     invites: arrayUnion({
                         fromName: currentUser,
-                        code: lobbyCode,
+                        fromUid: auth.currentUser.uid,
+                        code: window.currentLobbyCode,
                         timestamp: Date.now()
                     })
                 });
-                inviteBtn.innerText = "INVITE SENT!";
+                inviteBtn.innerText = "INVITE SENT! WAITING IN LOBBY...";
+                
+                // Immediately route the Sender to the Multiplayer Tab to wait
+                setTimeout(() => { 
+                    document.getElementById('account-modal').classList.add('hidden');
+                    document.querySelector('.tab-btn[data-target="multiplayer"]').click();
+                    inviteBtn.innerText = "INVITE TO MULTIPLAYER";
+                }, 1000);
+
             } catch(e) {
                 inviteBtn.innerText = "ERROR!";
+                setTimeout(() => { inviteBtn.innerText = "INVITE TO MULTIPLAYER"; }, 2000);
             }
-            setTimeout(() => { inviteBtn.innerText = "INVITE TO MULTIPLAYER"; }, 2000);
         };
         return;
     }
@@ -590,23 +670,27 @@ document.addEventListener('click', async (e) => {
         // Menu Footer Visibility Rules
         const menuFooter = document.querySelector('.menu-footer');
         const gmSelector = document.getElementById('gamemode-selector');
+        const lobbyControls = document.getElementById('footer-center-lobby-controls');
         
         if (menuFooter) {
-            if (targetTab === 'locker') {
-                menuFooter.classList.add('hidden'); // Hide completely in locker
-            } else {
-                menuFooter.classList.remove('hidden');
-            }
+            if (targetTab === 'locker') menuFooter.classList.add('hidden');
+            else menuFooter.classList.remove('hidden');
         }
         
-        // Gamemode Selector ONLY in Multiplayer
-        if (gmSelector) {
-            if (targetTab === 'multiplayer') {
-                gmSelector.classList.remove('hidden');
-                renderLobbySlots(); 
-            } else {
-                gmSelector.classList.add('hidden');
+        // Show controls ONLY in Multiplayer
+        if (targetTab === 'multiplayer') {
+            if (gmSelector) gmSelector.classList.remove('hidden');
+            if (lobbyControls) lobbyControls.classList.remove('hidden');
+            
+            // Generate standard Lobby Code if entering fresh
+            if (!window.currentLobbyCode) {
+                window.currentLobbyCode = generateLobbyCode();
+                document.getElementById('lobby-code-display').innerText = window.currentLobbyCode;
             }
+            renderLobbySlots(); 
+        } else {
+            if (gmSelector) gmSelector.classList.add('hidden');
+            if (lobbyControls) lobbyControls.classList.add('hidden');
         }
         
         if (targetTab === 'season') renderSeasonStore();
@@ -626,7 +710,6 @@ async function renderFriendsUI() {
     const fList = document.getElementById('friends-list');
     if (!reqContainer || !reqList || !fList) return;
 
-    // Render Pending Requests
     if (window.myRequests.length > 0) {
         reqContainer.classList.remove('hidden');
         reqList.innerHTML = '';
@@ -652,10 +735,29 @@ async function renderFriendsUI() {
         reqList.innerHTML = '';
     }
 
-    // Render Friends List
     if (window.myFriends.length > 0) {
+        // Find which friends have sent you active invites
+        const activeInvites = window.myInvites.filter(inv => (Date.now() - inv.timestamp) < 60000);
+        const invitedUids = activeInvites.map(i => i.fromUid);
+
+        // Sort: Invites -> Online -> Offline
+        let sortedFriends = [...window.myFriends].sort((a, b) => {
+            const aHasInv = invitedUids.includes(a);
+            const bHasInv = invitedUids.includes(b);
+            if (aHasInv && !bHasInv) return -1;
+            if (bHasInv && !aHasInv) return 1;
+            
+            const aData = friendCache[a];
+            const bData = friendCache[b];
+            const aOn = aData && (Date.now() - (aData.lastActive || 0)) < 65000;
+            const bOn = bData && (Date.now() - (bData.lastActive || 0)) < 65000;
+            if (aOn && !bOn) return -1;
+            if (bOn && !aOn) return 1;
+            return 0;
+        });
+
         fList.innerHTML = '';
-        for (let uid of window.myFriends) {
+        for (let uid of sortedFriends) {
             let data = friendCache[uid];
             if (!data) {
                 const s = await getDoc(doc(db, "users", uid));
@@ -665,21 +767,37 @@ async function renderFriendsUI() {
                 const isOnline = (Date.now() - (data.lastActive || 0)) < 65000;
                 const dotClass = isOnline ? '' : 'offline';
                 
-                // Get Banner Icon if equipped
                 let avatarIcon = '';
                 if (data.equipped && data.equipped.Banner && ITEMS_DB[data.equipped.Banner]) {
                     avatarIcon = ITEMS_DB[data.equipped.Banner].icon;
                 }
-                
-                fList.innerHTML += `
-                    <div class="friend-item" data-uid="${uid}">
-                        <div class="friend-avatar">
-                            ${avatarIcon}
-                            <div class="friend-online-dot ${dotClass}"></div>
-                        </div>
-                        <div class="friend-name">${data.username}</div>
-                        <span style="color:gray; font-size:0.8rem; font-weight:bold;">❯</span>
-                    </div>`;
+
+                // Check for golden invite style
+                const activeInvite = activeInvites.find(i => i.fromUid === uid);
+                if (activeInvite) {
+                    fList.innerHTML += `
+                        <div class="friend-item has-invite" data-uid="${uid}">
+                            <div class="friend-avatar">
+                                ${avatarIcon}
+                                <div class="friend-online-dot ${dotClass}"></div>
+                            </div>
+                            <div class="friend-name">
+                                ${data.username}
+                                <span>INVITE PENDING</span>
+                            </div>
+                            <button class="friend-action-btn join-invite-btn yellow-btn-solid" data-hostuid="${uid}" data-hostname="${data.username}" data-code="${activeInvite.code}">JOIN</button>
+                        </div>`;
+                } else {
+                    fList.innerHTML += `
+                        <div class="friend-item" data-uid="${uid}">
+                            <div class="friend-avatar">
+                                ${avatarIcon}
+                                <div class="friend-online-dot ${dotClass}"></div>
+                            </div>
+                            <div class="friend-name">${data.username}</div>
+                            <span style="color:gray; font-size:0.8rem; font-weight:bold;">❯</span>
+                        </div>`;
+                }
             }
         }
     } else {
@@ -687,8 +805,8 @@ async function renderFriendsUI() {
     }
 }
 
-// Show In-Game Invite Notification
-function showInviteNotification(senderName, code) {
+// Slide-in Notification
+function showInviteNotification(senderName, code, hostUid) {
     const queue = document.getElementById('notif-queue');
     const template = document.getElementById('invite-template');
     if (!queue || !template) return;
@@ -697,14 +815,17 @@ function showInviteNotification(senderName, code) {
     clone.id = "";
     clone.classList.remove('hidden');
     clone.querySelector('.invite-sender-name').innerText = `From: ${senderName}`;
-    clone.querySelector('.accept-invite-btn').dataset.code = code;
+    
+    const btn = clone.querySelector('.accept-invite-btn');
+    btn.dataset.code = code;
+    btn.dataset.hostuid = hostUid;
+    btn.dataset.hostname = senderName;
     
     queue.appendChild(clone);
     requestAnimationFrame(() => clone.classList.add('show'));
     
     if(sounds && sounds.play) sounds.play('levelUp', 0.8);
 
-    // Auto dismiss after 15s
     setTimeout(() => {
         if(clone.parentNode) {
             clone.classList.remove('show');
@@ -712,7 +833,6 @@ function showInviteNotification(senderName, code) {
         }
     }, 15000);
 }
-
 
 // ==========================================
 // HOLD-TO-CLAIM
@@ -732,7 +852,7 @@ const startClaim = (e) => {
     btn.claimTimeout = setTimeout(() => {
         const itemId = btn.dataset.id;
         window.claimedItems[itemId] = true;
-        saveUserData(); // Instantly save unlocks to the cloud!
+        saveUserData(); 
         
         if(sounds && sounds.play) sounds.play('levelUp', 0.6 * (window.gameSettings.volume || 1.0)); 
         
@@ -1008,6 +1128,8 @@ document.getElementById('play-btn').addEventListener('click', () => {
         return;
     }
     
+    setInGameStatus(true); // Protect from invites while playing
+
     document.getElementById('main-menu').classList.add('hidden');
     document.getElementById('game-ui').classList.remove('hidden');
     
@@ -1018,6 +1140,8 @@ document.getElementById('play-btn').addEventListener('click', () => {
 });
 
 document.getElementById('return-lobby-btn').addEventListener('click', () => {
+    setInGameStatus(false); // Remove protection
+    
     document.getElementById('game-over-screen').classList.add('hidden');
     document.getElementById('game-ui').classList.add('hidden');
     document.getElementById('main-menu').classList.remove('hidden');
@@ -1115,14 +1239,17 @@ function renderStats() {
     const ONE_DAY = 24 * 60 * 60 * 1000;
     let historyChanged = false;
 
+    // Filter out matches older than 24 hours
     window.matchHistory = window.matchHistory.filter(match => {
-        if (!match.timestamp) match.timestamp = now; 
+        if (!match.timestamp) match.timestamp = now; // Retroactively assign a timestamp to old matches so they don't break
         const isValid = (now - match.timestamp) < ONE_DAY;
         if (!isValid) historyChanged = true;
         return isValid;
     });
 
-    if (historyChanged) saveUserData();
+    if (historyChanged) {
+        saveUserData(); // Update the cloud if matches expired while you were away!
+    }
 
     const el1 = document.getElementById('stat-account-level'); if(el1) el1.innerText = window.globalAccountLevel;
     const el2 = document.getElementById('stat-matches'); if(el2) el2.innerText = window.lifetimeStats.matches;
