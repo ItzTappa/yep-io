@@ -1,48 +1,86 @@
+// ==========================================
+// YEP.IO - SOUND MANAGER (WEB AUDIO API)
+// ==========================================
+
 class SoundManager {
     constructor() {
-        this.sounds = {};
+        // Create the high-performance Web Audio API context
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        this.context = new AudioContext();
+        
+        this.buffers = {}; // Stores the decoded audio data in RAM
         this.enabled = true;
-        
-        // Preload sounds but silently catch errors so it doesn't spam the console
-        this.loadSound('shoot', 'assets/sounds/shoot.mp3');
-        this.loadSound('hit', 'assets/sounds/hit.mp3');
-        this.loadSound('explosion', 'assets/sounds/explosion.mp3');
-        this.loadSound('collect', 'assets/sounds/collect.mp3');
-        this.loadSound('levelUp', 'assets/sounds/levelUp.mp3');
-        this.loadSound('upgradeReady', 'assets/sounds/upgradeReady.mp3');
-        this.loadSound('dash', 'assets/sounds/dash.mp3');
-        this.loadSound('click', 'assets/sounds/click.mp3');
+        this.volume = 0.5;
+        this.lastPlayed = {}; 
+
+        // Master volume control that routes to the speakers
+        this.masterGain = this.context.createGain();
+        this.masterGain.gain.value = this.volume;
+        this.masterGain.connect(this.context.destination);
+
+        // Initialize your library
+        this.load('shoot', 'assets/sounds/shoot.mp3');
+        this.load('dash', 'assets/sounds/dash.mp3');
+        this.load('explosion', 'assets/sounds/explosion.mp3');
+        this.load('hit', 'assets/sounds/hit.mp3');
+        this.load('collect', 'assets/sounds/collect.mp3');
+        this.load('levelUp', 'assets/sounds/levelUp.mp3');
+        this.load('upgradeReady', 'assets/sounds/upgradeReady.mp3');
+        this.load('click', 'assets/sounds/click.mp3');
     }
 
-    loadSound(name, url) {
-        const audio = new Audio();
-        audio.src = url;
-        audio.volume = 1.0;
-        
-        // Silently ignore missing files
-        audio.onerror = () => {
-            this.sounds[name] = null; 
-        };
-        
-        this.sounds[name] = audio;
-    }
-
-    play(name, volume = 1.0) {
-        if (!this.enabled || !this.sounds[name]) return;
-        
+    async load(name, path) {
         try {
-            const clone = this.sounds[name].cloneNode();
-            clone.volume = Math.max(0, Math.min(1, volume));
-            
-            let playPromise = clone.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(error => {
-                    // Silently catch the DOMException if the file is missing or blocked by browser policy
-                });
-            }
+            // Fetch the audio file and decode it into raw buffer data
+            const response = await fetch(path);
+            const arrayBuffer = await response.arrayBuffer();
+            const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
+            this.buffers[name] = audioBuffer;
+            this.lastPlayed[name] = 0;
         } catch (e) {
-            // Ignore clone errors
+            console.warn(`Failed to load sound: ${name} at ${path}`, e);
         }
+    }
+
+    play(name, customVolume = 1.0) {
+        if (!this.enabled || !this.buffers[name]) return;
+
+        // Browsers block audio until the user clicks somewhere.
+        // This wakes up the audio engine the moment they click "PLAY".
+        if (this.context.state === 'suspended') {
+            this.context.resume();
+        }
+
+        // Throttling: Prevent 10 bots shooting on the exact same frame 
+        // from blowing out the player's speakers
+        const now = Date.now();
+        if (now - this.lastPlayed[name] < 40) return;
+        this.lastPlayed[name] = now;
+
+        // Create a new lightweight sound source for this specific playback
+        const source = this.context.createBufferSource();
+        source.buffer = this.buffers[name];
+
+        // Create a temporary volume node for just this sound (for spatial audio)
+        const gainNode = this.context.createGain();
+        gainNode.gain.value = customVolume;
+
+        // Connect the pipes: Source -> Individual Volume -> Master Volume -> Speakers
+        source.connect(gainNode);
+        gainNode.connect(this.masterGain);
+
+        // Play the sound! (The Web Audio API automatically destroys it when it finishes)
+        source.start(0);
+    }
+
+    setVolume(val) {
+        this.volume = Math.max(0, Math.min(1, val));
+        this.masterGain.gain.value = this.volume;
+    }
+
+    toggle(state) {
+        this.enabled = state !== undefined ? state : !this.enabled;
+        this.masterGain.gain.value = this.enabled ? this.volume : 0;
     }
 }
 

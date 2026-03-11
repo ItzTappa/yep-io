@@ -3,18 +3,17 @@ import { sounds } from './soundManager.js';
 import { ITEMS_DB } from './items.js';
 
 // ==========================================
-// GLOBALS & LOCAL STORAGE
+// GLOBALS & GAME STATE (RESETS ON REFRESH)
 // ==========================================
-window.globalAccountXP = parseInt(localStorage.getItem('yepio_xp')) || 0;
-window.globalAccountLevel = parseInt(localStorage.getItem('yepio_level')) || 1;
-window.equippedItems = JSON.parse(localStorage.getItem('yepio_equipped')) || { Skin: null, Trail: null, Banner: null, Color: null };
-window.unlockedItems = JSON.parse(localStorage.getItem('yepio_unlocked')) || [];
-
-// RESET STATS ON PAGE RELOAD
+// Removed localStorage fetching so the game completely resets on refresh
+window.globalAccountXP = 0;
+window.globalAccountLevel = 1;
+window.equippedItems = { Skin: null, Trail: null, Banner: null, Color: null };
+window.unlockedItems = [];
 window.matchHistory = [];
 window.gameStats = { matches: 0, kills: 0, points: 0, time: 0 };
 
-window.gameSettings = JSON.parse(localStorage.getItem('yepio_settings')) || {
+window.gameSettings = {
     volume: 100,
     highQuality: true,
     particles: true,
@@ -27,20 +26,12 @@ window.gameSettings = JSON.parse(localStorage.getItem('yepio_settings')) || {
     keybinds: { up: 'w', down: 's', left: 'a', right: 'd', dash: ' ', ability: 'e' }
 };
 
-function saveData() {
-    localStorage.setItem('yepio_xp', window.globalAccountXP);
-    localStorage.setItem('yepio_level', window.globalAccountLevel);
-    localStorage.setItem('yepio_equipped', JSON.stringify(window.equippedItems));
-    localStorage.setItem('yepio_unlocked', JSON.stringify(window.unlockedItems));
-    localStorage.setItem('yepio_settings', JSON.stringify(window.gameSettings));
-}
-
 // ==========================================
 // ENGINE INITIALIZATION
 // ==========================================
 const canvas = document.getElementById('gameCanvas');
 const engine = new GameEngine(canvas);
-let selectedClass = null; // Forced empty so player must choose
+let selectedClass = null; 
 
 let socket = null;
 if (typeof io !== 'undefined') {
@@ -49,6 +40,19 @@ if (typeof io !== 'undefined') {
 }
 
 engine.startDemo();
+
+// ==========================================
+// SHOP ROTATION TIMER
+// ==========================================
+setInterval(() => {
+    let d = new Date();
+    let m = 59 - d.getMinutes();
+    let s = 59 - d.getSeconds();
+    const timerEl = document.getElementById('shop-timer');
+    if (timerEl) {
+        timerEl.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+}, 1000);
 
 // ==========================================
 // UI BINDINGS: TABS & CLASS SELECTION
@@ -84,7 +88,7 @@ document.querySelectorAll('.class-btn').forEach(btn => {
         else if (selectedClass === 'square') info.innerText = "TANK: Slow, massive health, fires slow heavy shots.";
         else if (selectedClass === 'circle') info.innerText = "SOLDIER: Balanced speed, health, and damage.";
         
-        info.style.color = "white"; // Reset color in case it was red
+        info.style.color = "white"; 
         info.classList.remove('hidden', 'fade-out');
         setTimeout(() => info.classList.add('fade-out'), 2000);
     });
@@ -94,7 +98,7 @@ document.getElementById('play-btn').addEventListener('click', () => {
     if (!selectedClass) {
         const info = document.getElementById('class-info');
         info.innerText = "PLEASE SELECT A CLASS!";
-        info.style.color = "#ff4444"; // RED TEXT WARNING
+        info.style.color = "#ff4444"; 
         info.classList.remove('hidden', 'fade-out');
         setTimeout(() => {
             info.classList.add('fade-out');
@@ -129,8 +133,6 @@ document.getElementById('return-lobby-btn').addEventListener('click', () => {
 
         window.matchHistory.unshift(stats);
         if (window.matchHistory.length > 20) window.matchHistory.pop();
-        
-        saveData();
     }
     
     updateMenuXPBar();
@@ -155,7 +157,6 @@ document.querySelectorAll('.mode-card').forEach(card => {
             info.classList.remove('hidden', 'fade-out');
             setTimeout(() => { info.classList.add('fade-out'); setTimeout(() => info.style.color = "white", 500); }, 2000);
             
-            // Auto switch to lobby tab so they see the warning
             document.querySelectorAll('.tab-btn')[0].click();
             return;
         }
@@ -281,7 +282,11 @@ function getEquippedColor() {
 }
 
 function showLobbyScreen(data) {
-    document.getElementById('lobby-code-display').innerText = data.code || data.lobbyCode || "ERROR";
+    // FIXED: Properly display lobby code
+    let displayCode = data.code || data.lobbyCode;
+    if (!displayCode && typeof data === 'string') displayCode = data;
+    document.getElementById('lobby-code-display').innerText = displayCode || "ERROR";
+    
     document.getElementById('lobby-screen').classList.remove('hidden');
     renderLobbySlots(data);
 }
@@ -414,24 +419,29 @@ function renderStats() {
         for(let key in m.upgrades) {
             let tier = m.upgrades[key];
             
-            if (abilities.includes(key)) {
-                upgHtml += `
-                    <div class="upgrade-badge ability-badge">
-                        <div class="badge-name">⭐ ${key.replace('_',' ').toUpperCase()}</div>
-                        <div class="badge-tier">ACTIVE</div>
-                    </div>`;
-            } else {
-                let tc = tier === 1 ? 'badge-t1' : tier === 2 ? 'badge-t2' : tier === 3 ? 'badge-t3' : tier === 4 ? 'badge-t4' : 'badge-t5';
-                upgHtml += `
-                    <div class="upgrade-badge ${tc}">
-                        <div class="badge-name">${key.toUpperCase()}</div>
-                        <div class="badge-tier">T${tier}</div>
-                    </div>`;
+            // FIX: ONLY show upgrades that were actually leveled up!
+            if (tier > 0) {
+                if (abilities.includes(key)) {
+                    upgHtml += `
+                        <div class="upgrade-badge ability-badge">
+                            <div class="badge-name">⭐ ${key.replace('_',' ').toUpperCase()}</div>
+                            <div class="badge-tier">ACTIVE</div>
+                        </div>`;
+                } else {
+                    let tc = tier === 1 ? 'badge-t1' : tier === 2 ? 'badge-t2' : tier === 3 ? 'badge-t3' : tier === 4 ? 'badge-t4' : 'badge-t5';
+                    upgHtml += `
+                        <div class="upgrade-badge ${tc}">
+                            <div class="badge-name">${key.toUpperCase()}</div>
+                            <div class="badge-tier">T${tier}</div>
+                        </div>`;
+                }
             }
         }
 
         let card = document.createElement('div');
         card.className = 'match-card';
+        
+        // FIX: Match History explicit RANK format
         card.innerHTML = `
             <div class="match-card-main">
                 <div><span class="match-detail-label">RANK</span><span class="match-detail-val">${m.rank}<span>${getOrdinal(m.rank)}</span></span></div>
@@ -469,12 +479,17 @@ function renderShop() {
     if (seasonGrid) seasonGrid.innerHTML = '';
     if (mainGrid) mainGrid.innerHTML = '';
 
-    // FIX: PROPER FILTERING FOR SHOP ITEMS
     Object.values(ITEMS_DB).forEach(item => {
+        // FIX: Properly route items to Season (level required) or Main Shop (points required)
+        let isSeason = item.levelReq !== undefined || item.reqType === 'level';
+        let isMain = item.cost !== undefined || item.reqType === 'points';
+        
+        if (!isSeason && !isMain) isSeason = true; // Fallback
+
         const isEquipped = window.equippedItems[item.category] === item.id;
         
-        if (item.reqType === 'level' && seasonGrid) {
-            let reqVal = item.reqVal || 1;
+        if (isSeason && seasonGrid) {
+            let reqVal = item.levelReq || item.reqVal || 1;
             const isUnlocked = window.globalAccountLevel >= reqVal || window.unlockedItems.includes(item.id);
             
             let btnHTML = isUnlocked 
@@ -488,8 +503,8 @@ function renderShop() {
                     ${btnHTML}
                 </div>`;
         } 
-        else if (item.reqType === 'points' && mainGrid) {
-            let reqVal = item.reqVal || 1000;
+        else if (isMain && mainGrid) {
+            let reqVal = item.cost || item.reqVal || 1000;
             const isUnlocked = window.gameStats.points >= reqVal || window.unlockedItems.includes(item.id);
             let progressPct = Math.min(100, (window.gameStats.points / reqVal) * 100);
             
@@ -526,7 +541,6 @@ function bindShopButtons() {
             } else {
                 window.equippedItems[cat] = id === "null" ? null : id; 
             }
-            saveData();
             renderShop();
             renderLocker();
         });
@@ -547,7 +561,6 @@ function bindShopButtons() {
                 if (!window.unlockedItems.includes(id)) {
                     window.unlockedItems.push(id);
                     sounds.play('levelUp', 0.5 * (window.gameSettings.volume/100));
-                    saveData();
                     btn.classList.remove('holding');
                     renderShop();
                     renderLocker();
@@ -585,14 +598,15 @@ function renderLocker() {
         let equippedId = window.equippedItems[cat];
         let item = equippedId ? ITEMS_DB[equippedId] : null;
         
-        let icon = item ? item.icon : '❌'; 
+        // FIX: Restored normal grey X
+        let icon = item ? item.icon : '<span style="color:gray; font-family:sans-serif; font-size:3rem; font-weight:bold;">X</span>'; 
         let name = item ? item.name : 'NONE';
         let rColor = item ? getRarityColor(item.rarity) : '#444';
         
         slotsView.innerHTML += `
             <div class="locker-slot" data-targetcat="${cat}" style="--slot-color: ${rColor}">
                 <div class="slot-header">${cat}</div>
-                <div class="slot-icon" style="${!item ? 'color:#ff4444; font-family:sans-serif;' : ''}">${icon}</div>
+                <div class="slot-icon">${icon}</div>
                 <div class="slot-name">${name}</div>
             </div>
         `;
@@ -617,20 +631,25 @@ function openLockerCategory(category) {
     grid.innerHTML = '';
     
     const noneEquipped = window.equippedItems[category] === null;
+    
+    // FIX: Restored normal grey X in category select
     grid.innerHTML += `
         <div class="store-item unlocked" style="--rarity-color: #555;">
             <div class="item-name">Unequip</div>
-            <div class="item-icon" style="color:#ff4444; font-family:sans-serif;">❌</div>
+            <div class="item-icon"><span style="color:gray; font-family:sans-serif; font-weight:bold;">X</span></div>
             <button class="btn-equip ${noneEquipped ? 'equipped' : ''}" data-id="null" data-cat="${category}">${noneEquipped ? 'EQUIPPED' : 'EQUIP'}</button>
         </div>
     `;
 
     Object.values(ITEMS_DB).filter(i => i.category === category).forEach(item => {
         let isUnlocked = false;
-        if (item.reqType === 'level') {
-            isUnlocked = window.globalAccountLevel >= (item.reqVal || 1) || window.unlockedItems.includes(item.id);
-        } else if (item.reqType === 'points') {
-            isUnlocked = window.gameStats.points >= (item.reqVal || 1000) || window.unlockedItems.includes(item.id);
+        
+        if (item.levelReq !== undefined || item.reqType === 'level') {
+            let reqVal = item.levelReq || item.reqVal || 1;
+            isUnlocked = window.globalAccountLevel >= reqVal || window.unlockedItems.includes(item.id);
+        } else {
+            let reqVal = item.cost || item.reqVal || 1000;
+            isUnlocked = window.gameStats.points >= reqVal || window.unlockedItems.includes(item.id);
         }
         
         if (isUnlocked) {
@@ -823,7 +842,8 @@ function drawPreview(ctx, w, h, angle, specificItem = null) {
         }
         ctx.restore();
     }
-    ctx.restore(); 
+
+    ctx.restore();
 
     if (hasBanner) {
         ctx.save();
@@ -884,7 +904,7 @@ window.addEventListener('keydown', (e) => {
         saveData();
     }
 
-    // ESCAPE KEY LOGIC FIX
+    // FIX: ESC KEY LOGIC RESTORED
     if (e.key === 'Escape') {
         const consoleEl = document.getElementById('dev-console');
         if (!consoleEl.classList.contains('hidden')) {
@@ -894,9 +914,8 @@ window.addEventListener('keydown', (e) => {
         }
         
         const gameUi = document.getElementById('game-ui');
-        if (!gameUi.classList.contains('hidden') && !engine.isGameOver && !engine.isDemo && engine.player) {
-            // TRIGGER SPECTATOR MODE
-            engine.player.health = 0;
+        if (!gameUi.classList.contains('hidden') && !engine.isGameOver && !engine.isDemo && engine.player && !engine.player.isDead) {
+            engine.processDeath(engine.player, null);
         }
     }
 });
