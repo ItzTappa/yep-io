@@ -1249,7 +1249,7 @@ export class Entity {
             let t = (Date.now() / 500) * this.overclock; 
             let selfSpin = (Date.now() / 80) * this.overclock; 
 
-            // GLIDING EFFECT FOR ORBITERS
+            // GLIDING EFFECT (SAME AS FACING ARROW)
             let swayX = Math.max(-3, Math.min(3, -this.vx * 0.3));
             let swayY = Math.max(-3, Math.min(3, -this.vy * 0.3));
             
@@ -1290,7 +1290,9 @@ export class Entity {
             ctx.shadowBlur = 0; 
         }
 
-        // FLOATING FACING ARROW
+        // =====================================
+        // NEW: FLOATING FACING ARROW
+        // =====================================
         if (this.isPlayer && this.frontVisual !== 'gun' && this.frontVisual !== 'spikes' && !this.isCloaked && !isPreviewCanvas) {
             
             let timeBob = Math.sin(Date.now() / 300) * 1.5; 

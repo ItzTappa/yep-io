@@ -90,6 +90,13 @@ export class GameEngine {
         this.initInput();
     }
 
+    getVol() {
+        if (window.gameSettings && window.gameSettings.volume !== undefined) {
+            return window.gameSettings.volume;
+        }
+        return 1.0;
+    }
+
     initInput() {
         window.addEventListener('resize', () => {
             this.width = window.innerWidth; 
@@ -289,13 +296,13 @@ export class GameEngine {
         }
     }
 
-    playSoundAt(soundName, x, y, baseVolume = 1.0, category = 'combat', varyPitch = false) {
+    playSoundAt(soundName, x, y, baseVolume = 1.0) {
         const dist = distance(this.camera.x, this.camera.y, x, y);
         const maxHearingDistance = 2000; 
         if (dist < maxHearingDistance) {
             const falloff = 1 - (dist / maxHearingDistance);
-            const spatialVolume = baseVolume * (falloff * falloff);
-            sounds.play(soundName, category, spatialVolume, varyPitch);
+            const spatialVolume = baseVolume * (falloff * falloff) * this.getVol();
+            sounds.play(soundName, spatialVolume);
         }
     }
 
@@ -381,7 +388,7 @@ export class GameEngine {
             if (!window.gameSettings || window.gameSettings.showNotifs !== false) {
                 const notif = document.getElementById('account-level-notif');
                 if (notif) {
-                    sounds.play('level_up', 'alert');
+                    sounds.play('level_up', 0.8 * this.getVol()); 
                     document.getElementById('account-notif-level-num').innerText = window.globalAccountLevel;
                     
                     notif.classList.remove('hidden', 'fade-out', 'show'); 
@@ -1050,7 +1057,7 @@ export class GameEngine {
         if (!window.gameSettings || window.gameSettings.showNotifs !== false) {
             const notif = document.getElementById('level-up-notif');
             if (notif) {
-                sounds.play('upgrade_ready', 'alert'); 
+                sounds.play('upgrade_ready', 'alert', 1.0); 
                 
                 notif.classList.remove('hidden', 'fade-out', 'show'); 
                 notif.classList.add('active'); 
@@ -1820,6 +1827,7 @@ export class GameEngine {
                     
                     proj.hitTargets.push(target);
                     
+                    // JUGGERNAUT, SHIELD, AND PHASE STRIKE IMMUNITY
                     let immune = target.abilityTimer > 0 && (target.activeAbility === 'shield' || target.activeAbility === 'juggernaut' || target.activeAbility === 'phase_strike');
 
                     if (!immune) {
@@ -2021,6 +2029,9 @@ export class GameEngine {
         this.ctx.translate(camX, camY);
         this.ctx.scale(this.cameraZoom, this.cameraZoom);
         
+        // ==========================================
+        // MAP BORDER FORCEFIELD
+        // ==========================================
         this.ctx.save();
         this.ctx.strokeStyle = '#00ffff'; 
         this.ctx.lineWidth = 8;
@@ -2043,6 +2054,7 @@ export class GameEngine {
         this.ctx.fillRect(-10000, this.worldSize, this.worldSize + 20000, 10000); 
         this.ctx.fillRect(-10000, 0, 10000, this.worldSize); 
         this.ctx.fillRect(this.worldSize, 0, 10000, this.worldSize); 
+        // ==========================================
 
         if (this.stormActive) {
             this.ctx.save();
@@ -2127,6 +2139,7 @@ export class GameEngine {
         ctx.clearRect(0, 0, 220, 220);
         const scale = 220 / this.worldSize;
 
+        // TRUE SIZE MINIMAP SAFE ZONES!
         this.safeZones.forEach(sz => {
             ctx.fillStyle = sz.state === 'active' ? 'rgba(0, 255, 204, 0.4)' : 'rgba(0, 255, 204, 0.15)';
             ctx.beginPath();
@@ -2156,6 +2169,8 @@ export class GameEngine {
         ctx.lineWidth = 2;
         ctx.strokeRect(0, 0, 220, 220);
 
+        let aliveCount = (this.player && !this.player.isDead) ? 1 : 0;
+
         const drawDot = (x, y, color, size) => {
             ctx.fillStyle = color;
             ctx.beginPath();
@@ -2165,6 +2180,7 @@ export class GameEngine {
 
         this.bots.forEach(b => {
             if (!b.isDead) {
+                aliveCount++;
                 if (b.isTeammate) drawDot(b.x, b.y, '#00ffcc', 3);
                 else drawDot(b.x, b.y, '#ff4444', 2);
             }
@@ -2180,6 +2196,17 @@ export class GameEngine {
             const cx = (this.camera.x * scale) - viewW/2;
             const cy = (this.camera.y * scale) - viewH/2;
             ctx.strokeRect(cx, cy, viewW, viewH);
+        }
+
+        const countDisplay = document.getElementById('player-count-display');
+        if (countDisplay) {
+            let isMultiplayer = this.lobbyCode || this.isHost;
+            if (isMultiplayer) {
+                countDisplay.style.display = 'block';
+                countDisplay.innerText = `ALIVE: ${aliveCount}`;
+            } else {
+                countDisplay.style.display = 'none';
+            }
         }
     }
 
