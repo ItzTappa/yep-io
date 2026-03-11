@@ -77,6 +77,7 @@ export class Entity {
         } else if (type === 'square') {
             this.speed = 4.2; 
             this.size = 28; 
+            // Nerfed Square health to prevent unkillable late-game sponges
             this.maxHealth = 380; 
             this.fireRate = 55; 
             this.baseDamage = 35; 
@@ -102,7 +103,9 @@ export class Entity {
         this.upgrades = {};
         if (UPGRADE_POOL) {
             UPGRADE_POOL.forEach(upg => { 
-                if (upg && upg.id) this.upgrades[upg.id] = 0; 
+                if (upg && upg.id) {
+                    this.upgrades[upg.id] = 0; 
+                }
             });
         }
         
@@ -703,7 +706,7 @@ export class Entity {
         ctx.restore();
         
         // =====================================
-        // FULL SKIN DRAWING LOGIC (EXPANDED)
+        // FULL SKIN DRAWING LOGIC
         // =====================================
         if (this.equipped.Skin && ITEMS_DB && ITEMS_DB[this.equipped.Skin]) {
             const skinType = ITEMS_DB[this.equipped.Skin].value;
@@ -720,9 +723,9 @@ export class Entity {
             if (skinType === 'ghost') { 
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.6)'; 
                 ctx.beginPath(); 
-                if(this.type === 'circle') {
+                if (this.type === 'circle') {
                     ctx.arc(0, 0, this.size, 0, Math.PI * 2); 
-                } else if(this.type === 'square') {
+                } else if (this.type === 'square') {
                     ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size); 
                 } else { 
                     ctx.moveTo(this.size, 0); 
@@ -741,9 +744,9 @@ export class Entity {
             else if (skinType === 'assassin') { 
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.8)'; 
                 ctx.beginPath(); 
-                if(this.type === 'circle') {
+                if (this.type === 'circle') {
                     ctx.arc(0, 0, this.size * 0.8, 0, Math.PI * 2); 
-                } else if(this.type === 'square') {
+                } else if (this.type === 'square') {
                     ctx.rect(-this.size * 0.4, -this.size * 0.4, this.size * 0.8, this.size * 0.8); 
                 } else { 
                     ctx.moveTo(this.size * 0.8, 0); 
@@ -777,9 +780,9 @@ export class Entity {
                 ctx.shadowColor = '#00ffff'; 
                 ctx.shadowBlur = 10; 
                 ctx.beginPath(); 
-                if(this.type === 'circle') {
+                if (this.type === 'circle') {
                     ctx.arc(0, 0, this.size * 0.6, 0, Math.PI * 2); 
-                } else if(this.type === 'square') {
+                } else if (this.type === 'square') {
                     ctx.rect(-this.size * 0.3, -this.size * 0.3, this.size * 0.6, this.size * 0.6); 
                 } else { 
                     ctx.moveTo(this.size * 0.6, 0); 
@@ -834,9 +837,9 @@ export class Entity {
             else if (skinType === 'cyborg') { 
                 ctx.save(); 
                 ctx.beginPath(); 
-                if(this.type === 'circle') {
+                if (this.type === 'circle') {
                     ctx.arc(0, 0, this.size, 0, Math.PI * 2); 
-                } else if(this.type === 'square') {
+                } else if (this.type === 'square') {
                     ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size); 
                 } else { 
                     ctx.moveTo(this.size, 0); 
@@ -927,9 +930,9 @@ export class Entity {
             else if (skinType === 'target') { 
                 ctx.save(); 
                 ctx.beginPath(); 
-                if(this.type === 'circle') {
+                if (this.type === 'circle') {
                     ctx.arc(0, 0, this.size, 0, Math.PI * 2); 
-                } else if(this.type === 'square') {
+                } else if (this.type === 'square') {
                     ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size); 
                 } else { 
                     ctx.moveTo(this.size, 0); 
@@ -953,9 +956,9 @@ export class Entity {
             else if (skinType === 'stripes') { 
                 ctx.save(); 
                 ctx.beginPath(); 
-                if(this.type === 'circle') {
+                if (this.type === 'circle') {
                     ctx.arc(0, 0, this.size, 0, Math.PI * 2); 
-                } else if(this.type === 'square') {
+                } else if (this.type === 'square') {
                     ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size); 
                 } else { 
                     ctx.moveTo(this.size, 0); 
@@ -974,9 +977,9 @@ export class Entity {
             else if (skinType === 'checker') { 
                 ctx.save(); 
                 ctx.beginPath(); 
-                if(this.type === 'circle') {
+                if (this.type === 'circle') {
                     ctx.arc(0, 0, this.size, 0, Math.PI * 2); 
-                } else if(this.type === 'square') {
+                } else if (this.type === 'square') {
                     ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size); 
                 } else { 
                     ctx.moveTo(this.size, 0); 
@@ -1000,9 +1003,9 @@ export class Entity {
             else if (skinType === 'zebra') { 
                 ctx.save(); 
                 ctx.beginPath(); 
-                if(this.type === 'circle') {
+                if (this.type === 'circle') {
                     ctx.arc(0, 0, this.size, 0, Math.PI * 2); 
-                } else if(this.type === 'square') {
+                } else if (this.type === 'square') {
                     ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size); 
                 } else { 
                     ctx.moveTo(this.size, 0); 
@@ -1028,9 +1031,9 @@ export class Entity {
             else if (skinType === 'camo') { 
                 ctx.save(); 
                 ctx.beginPath(); 
-                if(this.type === 'circle') {
+                if (this.type === 'circle') {
                     ctx.arc(0, 0, this.size, 0, Math.PI * 2); 
-                } else if(this.type === 'square') {
+                } else if (this.type === 'square') {
                     ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size); 
                 } else { 
                     ctx.moveTo(this.size, 0); 
@@ -1105,9 +1108,9 @@ export class Entity {
             else if (skinType === 'pirate') { 
                 ctx.save(); 
                 ctx.beginPath(); 
-                if(this.type === 'circle') {
+                if (this.type === 'circle') {
                     ctx.arc(0, 0, this.size, 0, Math.PI * 2); 
-                } else if(this.type === 'square') {
+                } else if (this.type === 'square') {
                     ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size); 
                 } else { 
                     ctx.moveTo(this.size, 0); 
@@ -1134,9 +1137,9 @@ export class Entity {
             else if (skinType === 'bandit') { 
                 ctx.save(); 
                 ctx.beginPath(); 
-                if(this.type === 'circle') {
+                if (this.type === 'circle') {
                     ctx.arc(0, 0, this.size, 0, Math.PI * 2); 
-                } else if(this.type === 'square') {
+                } else if (this.type === 'square') {
                     ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size); 
                 } else { 
                     ctx.moveTo(this.size, 0); 
@@ -1157,9 +1160,9 @@ export class Entity {
             else if (skinType === 'mecha') { 
                 ctx.save(); 
                 ctx.beginPath(); 
-                if(this.type === 'circle') {
+                if (this.type === 'circle') {
                     ctx.arc(0, 0, this.size, 0, Math.PI * 2); 
-                } else if(this.type === 'square') {
+                } else if (this.type === 'square') {
                     ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size); 
                 } else { 
                     ctx.moveTo(this.size, 0); 
@@ -1239,16 +1242,38 @@ export class Entity {
 
         // Hide arrow if front weapon equipped or if cloaked!
         if (this.isPlayer && this.frontVisual !== 'gun' && this.frontVisual !== 'spikes' && !this.isCloaked) {
+            
+            // Calculate a floating "bob" effect for the arrow
+            let timeBob = Math.sin(Date.now() / 200) * 3; 
+            
+            // Calculate the dynamic offset based on active abilities so it doesn't clip!
+            let dynamicOffset = 0;
+            if (this.abilityTimer > 0) {
+                if (this.activeAbility === 'shield') dynamicOffset = 18;
+                else if (this.activeAbility === 'overdrive' || this.activeAbility === 'sonic_boom') dynamicOffset = 10;
+                else if (this.activeAbility === 'juggernaut') dynamicOffset = 15;
+            }
+            if (this.auraVisual === 'regen') dynamicOffset = Math.max(dynamicOffset, 15);
+
             ctx.save(); 
             ctx.translate(this.x, this.y); 
-            ctx.rotate(this.angle); 
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'; 
+            ctx.rotate(this.angle);
+            
+            // Base radius + armor + ability ring offset + bob animation
+            let arrowOffset = (this.type === 'square' ? this.size / 2 : this.size) + armorOffset + dynamicOffset + 12 + timeBob; 
+            
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'; 
+            if (window.gameSettings && window.gameSettings.highQuality) {
+                ctx.shadowBlur = 5;
+                ctx.shadowColor = '#ffffff';
+            }
+            
             ctx.beginPath(); 
-            let arrowOffset = (this.type === 'square' ? this.size / 2 : this.size) + armorOffset + 6; 
-            ctx.moveTo(arrowOffset, -5); 
-            ctx.lineTo(arrowOffset + 10, 0); 
-            ctx.lineTo(arrowOffset, 5); 
+            ctx.moveTo(arrowOffset, -6); 
+            ctx.lineTo(arrowOffset + 12, 0); 
+            ctx.lineTo(arrowOffset, 6); 
             ctx.fill(); 
+            
             ctx.restore();
         }
 
@@ -1389,7 +1414,7 @@ export class Bot extends Entity {
         this.changeTargetTimer = 0; 
         this.isTeammate = false; 
 
-        // Probability-based Realistic Bot Names
+        // MASSIVE LIST OF REALISTIC BOT NAMES (Probability Tiers!)
         const realNames = ["John", "Sarah", "Mike", "Emily", "David", "Jessica", "Chris", "Ashley", "Matthew", "Amanda", "Joshua", "Megan", "Andrew", "Brittany", "James", "Samantha", "Daniel", "Lauren", "Joseph", "Nicole", "Kevin", "Kayla", "Jason", "Tyler", "Brian", "Rachel", "Eric", "Elizabeth", "Ryan", "Jacob", "Gary", "Nicholas", "Adam", "Justin", "Brandon", "Kelly", "Frank", "Christina", "Scott", "Melissa", "Larry", "Rebecca", "Stephen", "Victoria", "Timothy", "Stephanie", "Richard", "Amy", "Patrick", "Laura", "Edward", "Mary", "Colin", "Michelle", "Peter", "Tiffany", "Mark", "Katherine", "Walter", "Andrea"];
         const gamerTags = ["ProGamer", "Sniper", "Shadow", "Vortex", "Rogue", "Noob", "King", "Queen", "Titan", "Spectre", "Ghost", "Dragon", "Wolf", "Demon", "Angel", "Slayer", "Hunter", "Warrior", "Tank", "Healer", "Ninja", "Samurai", "Pirate", "Cyborg", "Alien", "Mutant", "Zombie", "Vampire", "Reaper", "Death", "Chaos", "Havoc", "Phantom", "Spirit", "Soul", "TTV_Sweat", "discord_mod", "hacker_man", "aimbot.exe", "wallhack", "pay_to_win"];
         const funnyNames = ["I_LAG_A_LOT", "mom_pull_the_plug", "ur_trash_kid", "free_xp", "plz_dont_kill", "touch_grass", "ping_999", "deez_nuts", "ligma", "sugma", "bofa", "joe_mama", "ben_dover", "dixon_cyder", "mike_hunt", "qwerty", "asdfgh", "123456", "zxcvbn", "poiuyt", "user7712", "guest_999", "guest_1234", "bruh", "im_lagging"];
@@ -1397,14 +1422,15 @@ export class Bot extends Entity {
         
         let roll = Math.random();
         let bName = "";
-        if (roll < 0.01) { // 1% chance for super rare
+        
+        if (roll < 0.01) { 
             bName = superRare[Math.floor(Math.random() * superRare.length)];
-        } else if (roll < 0.15) { // 14% chance for funny
+        } else if (roll < 0.15) { 
             bName = funnyNames[Math.floor(Math.random() * funnyNames.length)];
-        } else if (roll < 0.50) { // 35% chance for gamertags
+        } else if (roll < 0.50) { 
             bName = gamerTags[Math.floor(Math.random() * gamerTags.length)];
             if (Math.random() > 0.5) bName += Math.floor(Math.random() * 9999);
-        } else { // 50% chance for real names
+        } else { 
             bName = realNames[Math.floor(Math.random() * realNames.length)];
             if (Math.random() > 0.7) bName += Math.floor(Math.random() * 99); 
         }
@@ -1418,6 +1444,9 @@ export class Bot extends Entity {
         this.strafeDir = Math.random() > 0.5 ? 1 : -1; 
         this.personality = Math.random(); 
         
+        // Fatigue timer so bots don't spam abilities instantly
+        this.botAbilityFatigue = 0; 
+        
         while (this.upgradeProgress >= this.botPointsToNextUpgrade) {
             this.upgradeProgress -= this.botPointsToNextUpgrade; 
             this.upgradeCount++; 
@@ -1428,19 +1457,25 @@ export class Bot extends Entity {
             }
         }
         
-        if (ITEMS_DB && Math.random() < 0.15) {
+        // FIX: NPCs ACTUALLY USE COSMETICS NOW
+        if (ITEMS_DB) {
             const items = Object.values(ITEMS_DB);
-            if (Math.random() < 0.2) { 
-                let skins = items.filter(i => i.category === 'Skin'); 
-                if (skins.length) {
-                    this.equipped.Skin = skins[Math.floor(Math.random() * skins.length)].id; 
-                }
+            
+            if (Math.random() < 0.6) {
+                let colors = items.filter(i => i.category === 'Color'); 
+                if (colors.length) this.color = ITEMS_DB[colors[Math.floor(Math.random() * colors.length)].id].value;
             }
-            if (Math.random() < 0.2) { 
+            if (Math.random() < 0.3) {
+                let skins = items.filter(i => i.category === 'Skin'); 
+                if (skins.length) this.equipped.Skin = skins[Math.floor(Math.random() * skins.length)].id; 
+            }
+            if (Math.random() < 0.3) {
                 let trails = items.filter(i => i.category === 'Trail'); 
-                if (trails.length) {
-                    this.equipped.Trail = trails[Math.floor(Math.random() * trails.length)].id; 
-                }
+                if (trails.length) this.equipped.Trail = trails[Math.floor(Math.random() * trails.length)].id; 
+            }
+            if (Math.random() < 0.3) {
+                let banners = items.filter(i => i.category === 'Banner'); 
+                if (banners.length) this.equipped.Banner = banners[Math.floor(Math.random() * banners.length)].id; 
             }
         }
     }
@@ -1453,6 +1488,8 @@ export class Bot extends Entity {
         }
 
         this.changeTargetTimer--; 
+        if (this.botAbilityFatigue > 0) this.botAbilityFatigue--;
+
         let nearestEnemy = null; 
         let minDist = 800;
         
@@ -1522,9 +1559,20 @@ export class Bot extends Entity {
             let isBerserker = this.personality > 0.8;
             let fleeThreshold = isBerserker ? 0 : 0.15 + (this.personality * 0.20); 
             
-            if (this.activeAbility && this.abilityCooldown <= 0) {
-                if (this.health < this.maxHealth * 0.3 || trueDist < 300) {
+            // SMART BOT ABILITY USAGE (Fixed spamming!)
+            if (this.activeAbility && this.abilityCooldown <= 0 && this.botAbilityFatigue <= 0) {
+                let shouldCast = false;
+                
+                if (this.activeAbility === 'juggernaut' || this.activeAbility === 'shield' || this.activeAbility === 'cloak') {
+                    if (this.health < this.maxHealth * 0.4) shouldCast = true; 
+                } else {
+                    if (trueDist < 300) shouldCast = true;
+                }
+                
+                if (shouldCast) {
                     this.useAbility();
+                    // Force them to wait 10 to 20 seconds after it wears off before casting again!
+                    this.botAbilityFatigue = this.abilityTimer + Math.floor(600 + Math.random() * 600); 
                 }
             }
 
@@ -1591,6 +1639,7 @@ export class SafeZone {
         this.triggerTimer = 180; 
         this.lifeTimer = 0; 
         this.maxLifeTimer = 0;
+        this.idleTimer = 3600; // 60 seconds to be claimed!
     }
     
     update(player) {
@@ -1598,10 +1647,16 @@ export class SafeZone {
         let isInside = dist < this.radius;
         
         if (this.state === 'idle') { 
+            this.idleTimer--;
             if (isInside) { 
                 this.state = 'triggering'; 
                 this.triggerTimer = 180; 
             } 
+            // If idle for 60 seconds, trigger despawn!
+            if (this.idleTimer <= 0) {
+                this.state = 'active';
+                this.lifeTimer = 0; 
+            }
         } else if (this.state === 'triggering') {
             if (isInside) { 
                 this.triggerTimer--; 
@@ -1649,7 +1704,7 @@ export class SafeZone {
             } 
             let secs = Math.ceil(this.triggerTimer / 60); 
             ctx.fillText(`ACTIVATING IN ${secs}`, 0, -this.radius - 20); 
-        } else if (this.state === 'active') { 
+        } else if (this.state === 'active' && this.maxLifeTimer > 0) { 
             ctx.fillStyle = '#ffe600'; 
             ctx.font = 'bold 24px sans-serif'; 
             ctx.textAlign = 'center'; 
