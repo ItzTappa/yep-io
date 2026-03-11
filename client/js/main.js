@@ -282,16 +282,15 @@ document.addEventListener('click', (e) => {
     const logoutBtn = target.closest('#acc-logout-btn');
     if (logoutBtn) {
         logoutBtn.innerText = "LOGGING OUT...";
-        saveUserData().finally(() => {
-            signOut(auth).then(() => {
-                document.getElementById('account-modal').classList.add('hidden');
-                logoutBtn.innerText = "LOG OUT";
-            }).catch(e => {
-                console.error("Logout Error", e);
-                document.getElementById('account-modal').classList.add('hidden');
-                logoutBtn.innerText = "LOG OUT";
-            });
-        });
+        
+        setTimeout(async () => {
+            try { await saveUserData(); } catch (e) { console.error("Save error during logout:", e); }
+            try { await signOut(auth); } catch (e) { console.error("SignOut error:", e); }
+            
+            document.getElementById('account-modal').classList.add('hidden');
+            logoutBtn.innerText = "LOG OUT";
+        }, 10);
+        
         return;
     }
 
@@ -777,11 +776,11 @@ function renderLocker() {
 }
 
 function renderStats() {
-    // FIX: 24-Hour Expiration logic for match history!
     const now = Date.now();
     const ONE_DAY = 24 * 60 * 60 * 1000;
     let historyChanged = false;
 
+    // Filter out matches older than 24 hours
     window.matchHistory = window.matchHistory.filter(match => {
         if (!match.timestamp) match.timestamp = now; // Retroactively assign a timestamp to old matches so they don't break
         const isValid = (now - match.timestamp) < ONE_DAY;

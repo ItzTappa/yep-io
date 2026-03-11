@@ -55,7 +55,7 @@ html, body {
 .menu-xp-bar-container { width: 100%; height: 8px; background: #222; border-radius: 4px; overflow: hidden; margin-top: 10px; border: 1px solid #444; box-shadow: inset 0 0 5px black; }
 #menu-xp-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #3b82f6, #00ffcc); transition: width 0.3s ease; }
 
-.menu-footer-buttons { display: flex; gap: 15px; align-items: center; margin-left: auto; } /* FIX: Keeps right-aligned in locker */
+.menu-footer-buttons { display: flex; gap: 15px; align-items: center; margin-left: auto; }
 
 #settings-btn { position: relative; background: rgba(0,0,0,0.5); border: 2px solid #555; border-radius: 50%; width: 60px; height: 60px; font-size: 1.8rem; cursor: pointer; transition: transform 0.2s, border-color 0.2s; color: white; display: flex; align-items: center; justify-content: center; }
 #settings-btn:hover { transform: rotate(45deg); border-color: var(--accent); }
@@ -104,7 +104,7 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .acc-input:focus { border-color: var(--accent); }
 
 .password-wrapper { position: relative; width: 100%; }
-.password-wrapper .acc-input { padding-left: 45px; padding-right: 45px; } /* keeps password text centered! */
+.password-wrapper .acc-input { padding-left: 45px; padding-right: 45px; } 
 #toggle-pass-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: transparent; border: none; font-size: 1.2rem; cursor: pointer; opacity: 0.5; transition: opacity 0.2s; display: flex; align-items: center; justify-content: center; }
 #toggle-pass-btn:hover { opacity: 1; }
 
@@ -265,8 +265,7 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 #player-count-display { text-align: center; padding: 8px; font-weight: bold; color: var(--accent); background: rgba(0,0,0,0.8); border-top: 2px solid #444; font-size: 1.2rem; letter-spacing: 2px; }
 
 /* NOTIFICATION QUEUE STYLING */
-/* FIX: Moved from bottom 40px to 140px so it perfectly aligns with upgrade cards */
-#notif-queue { position: absolute; bottom: 140px; left: 20px; display: flex; flex-direction: column-reverse; gap: 15px; align-items: flex-start; z-index: 150; pointer-events: none; }
+#notif-queue { position: absolute; bottom: 90px; left: 20px; display: flex; flex-direction: column-reverse; gap: 15px; align-items: flex-start; z-index: 150; pointer-events: none; }
 .notif-box { display: none; padding: 12px 25px; border-radius: 8px; font-weight: bold; text-align: left; opacity: 0; transform: translateX(-150%); transition: all 0.4s ease; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
 .notif-box.active { display: block; }
 .notif-box.show { opacity: 1; transform: translateX(0); }
@@ -378,7 +377,7 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
     #minimap-canvas { width: 100px; height: 100px; }
     #player-count-display { font-size: 0.9rem; padding: 4px; }
     
-    #notif-queue { bottom: 180px; left: 10px; transform: scale(0.8); transform-origin: bottom left; }
+    #notif-queue { bottom: 65px; left: 10px; transform: scale(0.8); transform-origin: bottom left; }
     .notif-box { padding: 10px 20px; }
     .notif-text { font-size: 0.85rem; }
     .notif-level { font-size: 1rem; }
