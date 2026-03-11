@@ -3,17 +3,18 @@ import { sounds } from './soundManager.js';
 import { ITEMS_DB } from './items.js';
 
 // ==========================================
-// GLOBALS & GAME STATE (RESETS ON REFRESH)
+// GLOBALS & LOCAL STORAGE
 // ==========================================
-// Removed localStorage fetching so the game completely resets on refresh
-window.globalAccountXP = 0;
-window.globalAccountLevel = 1;
-window.equippedItems = { Skin: null, Trail: null, Banner: null, Color: null };
-window.unlockedItems = [];
+window.globalAccountXP = parseInt(localStorage.getItem('yepio_xp')) || 0;
+window.globalAccountLevel = parseInt(localStorage.getItem('yepio_level')) || 1;
+window.equippedItems = JSON.parse(localStorage.getItem('yepio_equipped')) || { Skin: null, Trail: null, Banner: null, Color: null };
+window.unlockedItems = JSON.parse(localStorage.getItem('yepio_unlocked')) || [];
+
+// RESET STATS ON PAGE RELOAD
 window.matchHistory = [];
 window.gameStats = { matches: 0, kills: 0, points: 0, time: 0 };
 
-window.gameSettings = {
+window.gameSettings = JSON.parse(localStorage.getItem('yepio_settings')) || {
     volume: 100,
     highQuality: true,
     particles: true,
@@ -25,6 +26,14 @@ window.gameSettings = {
     showFps: false,
     keybinds: { up: 'w', down: 's', left: 'a', right: 'd', dash: ' ', ability: 'e' }
 };
+
+function saveData() {
+    localStorage.setItem('yepio_xp', window.globalAccountXP);
+    localStorage.setItem('yepio_level', window.globalAccountLevel);
+    localStorage.setItem('yepio_equipped', JSON.stringify(window.equippedItems));
+    localStorage.setItem('yepio_unlocked', JSON.stringify(window.unlockedItems));
+    localStorage.setItem('yepio_settings', JSON.stringify(window.gameSettings));
+}
 
 // ==========================================
 // ENGINE INITIALIZATION
@@ -282,7 +291,6 @@ function getEquippedColor() {
 }
 
 function showLobbyScreen(data) {
-    // FIXED: Properly display lobby code
     let displayCode = data.code || data.lobbyCode;
     if (!displayCode && typeof data === 'string') displayCode = data;
     document.getElementById('lobby-code-display').innerText = displayCode || "ERROR";
@@ -419,7 +427,6 @@ function renderStats() {
         for(let key in m.upgrades) {
             let tier = m.upgrades[key];
             
-            // FIX: ONLY show upgrades that were actually leveled up!
             if (tier > 0) {
                 if (abilities.includes(key)) {
                     upgHtml += `
@@ -440,8 +447,6 @@ function renderStats() {
 
         let card = document.createElement('div');
         card.className = 'match-card';
-        
-        // FIX: Match History explicit RANK format
         card.innerHTML = `
             <div class="match-card-main">
                 <div><span class="match-detail-label">RANK</span><span class="match-detail-val">${m.rank}<span>${getOrdinal(m.rank)}</span></span></div>
@@ -480,11 +485,10 @@ function renderShop() {
     if (mainGrid) mainGrid.innerHTML = '';
 
     Object.values(ITEMS_DB).forEach(item => {
-        // FIX: Properly route items to Season (level required) or Main Shop (points required)
-        let isSeason = item.levelReq !== undefined || item.reqType === 'level';
-        let isMain = item.cost !== undefined || item.reqType === 'points';
+        let isSeason = item.reqType === 'level' || item.levelReq !== undefined;
+        let isMain = item.reqType === 'points' || item.cost !== undefined;
         
-        if (!isSeason && !isMain) isSeason = true; // Fallback
+        if (!isSeason && !isMain) isSeason = true; 
 
         const isEquipped = window.equippedItems[item.category] === item.id;
         
@@ -541,6 +545,7 @@ function bindShopButtons() {
             } else {
                 window.equippedItems[cat] = id === "null" ? null : id; 
             }
+            saveData();
             renderShop();
             renderLocker();
         });
@@ -561,6 +566,7 @@ function bindShopButtons() {
                 if (!window.unlockedItems.includes(id)) {
                     window.unlockedItems.push(id);
                     sounds.play('levelUp', 0.5 * (window.gameSettings.volume/100));
+                    saveData();
                     btn.classList.remove('holding');
                     renderShop();
                     renderLocker();
@@ -598,8 +604,7 @@ function renderLocker() {
         let equippedId = window.equippedItems[cat];
         let item = equippedId ? ITEMS_DB[equippedId] : null;
         
-        // FIX: Restored normal grey X
-        let icon = item ? item.icon : '<span style="color:gray; font-family:sans-serif; font-size:3rem; font-weight:bold;">X</span>'; 
+        let icon = item ? item.icon : '❌'; 
         let name = item ? item.name : 'NONE';
         let rColor = item ? getRarityColor(item.rarity) : '#444';
         
@@ -631,24 +636,21 @@ function openLockerCategory(category) {
     grid.innerHTML = '';
     
     const noneEquipped = window.equippedItems[category] === null;
-    
-    // FIX: Restored normal grey X in category select
     grid.innerHTML += `
         <div class="store-item unlocked" style="--rarity-color: #555;">
             <div class="item-name">Unequip</div>
-            <div class="item-icon"><span style="color:gray; font-family:sans-serif; font-weight:bold;">X</span></div>
+            <div class="item-icon">❌</div>
             <button class="btn-equip ${noneEquipped ? 'equipped' : ''}" data-id="null" data-cat="${category}">${noneEquipped ? 'EQUIPPED' : 'EQUIP'}</button>
         </div>
     `;
 
     Object.values(ITEMS_DB).filter(i => i.category === category).forEach(item => {
         let isUnlocked = false;
-        
-        if (item.levelReq !== undefined || item.reqType === 'level') {
-            let reqVal = item.levelReq || item.reqVal || 1;
+        if (item.reqType === 'level' || item.levelReq !== undefined) {
+            let reqVal = item.reqVal || item.levelReq || 1;
             isUnlocked = window.globalAccountLevel >= reqVal || window.unlockedItems.includes(item.id);
         } else {
-            let reqVal = item.cost || item.reqVal || 1000;
+            let reqVal = item.reqVal || item.cost || 1000;
             isUnlocked = window.gameStats.points >= reqVal || window.unlockedItems.includes(item.id);
         }
         
@@ -696,7 +698,7 @@ function updateMenuXPBar() {
 }
 
 // ==========================================
-// PREVIEW SYSTEM (ENLARGED & ARROW REMOVED)
+// PREVIEW SYSTEM
 // ==========================================
 let currentPreviewItem = null;
 
@@ -749,7 +751,7 @@ function drawPreview(ctx, w, h, angle, specificItem = null) {
     ctx.rotate(angle);
 
     let pClass = selectedClass || 'triangle';
-    let size = 70; // Massive size for locker preview
+    let size = 70; 
     if (pClass === 'square') size = 90;
 
     let baseColor = getEquippedColor();
@@ -819,7 +821,7 @@ function drawPreview(ctx, w, h, angle, specificItem = null) {
         else if (skinType === 'inferno') { ctx.fillStyle='#fbbf24'; ctx.beginPath(); ctx.arc(0,0,size*0.6,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#dc2626'; ctx.shadowColor='#dc2626'; ctx.shadowBlur=25; ctx.beginPath(); ctx.arc(0,0,size*0.4,0,Math.PI*2); ctx.fill(); }
         else if (skinType === 'warlord') { ctx.strokeStyle='#444'; ctx.lineWidth=6; ctx.beginPath(); ctx.moveTo(-size*0.5,-size*0.5); ctx.lineTo(size*0.5,size*0.5); ctx.moveTo(size*0.5,-size*0.5); ctx.lineTo(-size*0.5,size*0.5); ctx.stroke(); }
         else if (skinType === 'spectre') { ctx.fillStyle='rgba(168,85,247,0.8)'; ctx.shadowColor='#a855f7'; ctx.shadowBlur=30; ctx.beginPath(); ctx.arc(0,0,size*0.7,0,Math.PI*2); ctx.fill(); }
-        else if (skinType === 'phantom') { ctx.strokeStyle='rgba(59, 130, 246, 0.8)'; ctx.lineWidth=4; ctx.shadowColor='#3b82f6'; ctx.shadowBlur=15; ctx.beginPath(); ctx.arc(0,0,size*0.8,0,Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(0,0,size*0.4,0,Math.PI*2); ctx.stroke(); }
+        else if (skinType === 'phantom') { ctx.strokeStyle='rgba(59,130,246,0.8)'; ctx.lineWidth=4; ctx.shadowColor='#3b82f6'; ctx.shadowBlur=15; ctx.beginPath(); ctx.arc(0,0,size*0.8,0,Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(0,0,size*0.4,0,Math.PI*2); ctx.stroke(); }
         else if (skinType === 'target') { ctx.save(); ctx.beginPath(); if(pClass==='circle') ctx.arc(0,0,size,0,Math.PI*2); else if(pClass==='square') ctx.rect(-size/2,-size/2,size,size); else { ctx.moveTo(size,0); ctx.lineTo(-size/2,-size*0.866); ctx.lineTo(-size/2,size*0.866); ctx.closePath(); } ctx.clip(); ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=6; ctx.beginPath(); ctx.arc(0,0,size*0.6,0,Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(0,0,size*0.2,0,Math.PI*2); ctx.stroke(); ctx.restore(); }
         else if (skinType === 'stripes') { ctx.save(); ctx.beginPath(); if(pClass==='circle') ctx.arc(0,0,size,0,Math.PI*2); else if(pClass==='square') ctx.rect(-size/2,-size/2,size,size); else { ctx.moveTo(size,0); ctx.lineTo(-size/2,-size*0.866); ctx.lineTo(-size/2,size*0.866); ctx.closePath(); } ctx.clip(); ctx.fillStyle='rgba(255,255,255,0.3)'; for(let i=-size; i<size; i+=15) { ctx.fillRect(i,-size,8,size*2); } ctx.restore(); }
         else if (skinType === 'checker') { ctx.save(); ctx.beginPath(); if(pClass==='circle') ctx.arc(0,0,size,0,Math.PI*2); else if(pClass==='square') ctx.rect(-size/2,-size/2,size,size); else { ctx.moveTo(size,0); ctx.lineTo(-size/2,-size*0.866); ctx.lineTo(-size/2,size*0.866); ctx.closePath(); } ctx.clip(); ctx.fillStyle='rgba(0,0,0,0.3)'; let sq=size*0.25; for(let x=-size;x<=size;x+=sq){ for(let y=-size;y<=size;y+=sq){ if(Math.abs(Math.round(x/sq)+Math.round(y/sq))%2===0) ctx.fillRect(x,y,sq,sq); } } ctx.restore(); }
@@ -843,7 +845,7 @@ function drawPreview(ctx, w, h, angle, specificItem = null) {
         ctx.restore();
     }
 
-    ctx.restore();
+    ctx.restore(); 
 
     if (hasBanner) {
         ctx.save();
@@ -904,7 +906,6 @@ window.addEventListener('keydown', (e) => {
         saveData();
     }
 
-    // FIX: ESC KEY LOGIC RESTORED
     if (e.key === 'Escape') {
         const consoleEl = document.getElementById('dev-console');
         if (!consoleEl.classList.contains('hidden')) {
