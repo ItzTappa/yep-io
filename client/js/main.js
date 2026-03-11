@@ -40,7 +40,7 @@ function saveData() {
 // ==========================================
 const canvas = document.getElementById('gameCanvas');
 const engine = new GameEngine(canvas);
-let selectedClass = 'triangle';
+let selectedClass = null; // Forced empty so player must choose
 
 let socket = null;
 if (typeof io !== 'undefined') {
@@ -90,6 +90,10 @@ document.querySelectorAll('.class-btn').forEach(btn => {
 });
 
 document.getElementById('play-btn').addEventListener('click', () => {
+    if (!selectedClass) {
+        alert("Please select a class first!");
+        return;
+    }
     sounds.play('click', 0.8 * (window.gameSettings.volume/100));
     document.getElementById('main-menu').style.display = 'none';
     engine.start(selectedClass);
@@ -132,9 +136,14 @@ document.getElementById('return-lobby-btn').addEventListener('click', () => {
 let currentLobbyCode = null;
 let isHost = false;
 let lobbyPlayers = [];
+let lobbyAnimationIds = {}; // for rotating previews
 
 document.querySelectorAll('.mode-card').forEach(card => {
     card.addEventListener('click', (e) => {
+        if (!selectedClass) {
+            alert("Please select a class first!");
+            return;
+        }
         if (!socket) {
             alert("Multiplayer server is offline.");
             return;
@@ -148,6 +157,10 @@ document.querySelectorAll('.mode-card').forEach(card => {
 });
 
 document.getElementById('join-lobby-btn').addEventListener('click', () => {
+    if (!selectedClass) {
+        alert("Please select a class first!");
+        return;
+    }
     if (!socket) return;
     let code = document.getElementById('join-code-input').value.toUpperCase().trim();
     if (code.length === 5) {
@@ -188,13 +201,13 @@ document.getElementById('ready-btn').addEventListener('click', () => {
 
 if (socket) {
     socket.on('lobbyCreated', (data) => {
-        currentLobbyCode = data.code;
+        currentLobbyCode = data.code || data.lobbyCode;
         isHost = true;
         showLobbyScreen(data);
     });
 
     socket.on('lobbyJoined', (data) => {
-        currentLobbyCode = data.code;
+        currentLobbyCode = data.code || data.lobbyCode;
         isHost = false;
         showLobbyScreen(data);
     });
@@ -248,7 +261,7 @@ function getEquippedColor() {
 }
 
 function showLobbyScreen(data) {
-    document.getElementById('lobby-code-display').innerText = data.code;
+    document.getElementById('lobby-code-display').innerText = data.code || data.lobbyCode || "ERROR";
     document.getElementById('lobby-screen').classList.remove('hidden');
     renderLobbySlots(data);
 }
@@ -270,7 +283,7 @@ function renderLobbySlots(data) {
                 <div class="status">${p.isReady ? 'READY' : 'NOT READY'}</div>
             `;
             container.appendChild(slot);
-            drawLobbyPreview(document.getElementById(`lobby-canvas-${i}`), p.classType, p.color);
+            startLobbyPreviewLoop(document.getElementById(`lobby-canvas-${i}`), p.classType, p.color, i);
         } else {
             slot.className = 'player-slot empty';
             slot.innerHTML = `
@@ -295,55 +308,60 @@ function renderLobbySlots(data) {
     }
 }
 
-function drawLobbyPreview(canvas, pClass, pColor) {
+function startLobbyPreviewLoop(canvas, pClass, pColor, slotIndex) {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let angle = 0;
     
-    ctx.save();
-    ctx.translate(canvas.width / 2, canvas.height / 2);
-    ctx.rotate(-Math.PI / 2);
-    
-    let size = 45;
-    ctx.fillStyle = pColor;
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = pColor;
-    if (pColor === '#111111' || pColor === '#000000') {
-        ctx.shadowColor = '#ffffff';
-        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-        ctx.lineWidth = 4;
-    }
-
-    ctx.beginPath();
-    if (pClass === 'circle') {
-        ctx.arc(0, 0, size, 0, Math.PI * 2);
-        ctx.fill();
-        if (pColor === '#111111') ctx.stroke();
-    } else if (pClass === 'square') {
-        size = 55;
-        ctx.rect(-size/2, -size/2, size, size);
-        ctx.fill();
-        if (pColor === '#111111') ctx.stroke();
-    } else {
-        ctx.moveTo(size, 0);
-        ctx.lineTo(-size/2, -size*0.866);
-        ctx.lineTo(-size/2, size*0.866);
-        ctx.closePath();
-        ctx.fill();
-        if (pColor === '#111111') ctx.stroke();
+    if (lobbyAnimationIds[slotIndex]) {
+        cancelAnimationFrame(lobbyAnimationIds[slotIndex]);
     }
     
-    // Default Arrow
-    ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    ctx.shadowBlur = 0;
-    ctx.beginPath();
-    let arrowOffset = size + 15;
-    ctx.moveTo(arrowOffset, -8);
-    ctx.lineTo(arrowOffset + 15, 0);
-    ctx.lineTo(arrowOffset, 8);
-    ctx.fill();
+    const loop = () => {
+        if (canvas.offsetParent === null) {
+            lobbyAnimationIds[slotIndex] = requestAnimationFrame(loop);
+            return;
+        }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        angle += 0.015; // Smooth rotation
+        
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(angle);
+        
+        let size = 45;
+        ctx.fillStyle = pColor;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = pColor;
+        if (pColor === '#111111' || pColor === '#000000') {
+            ctx.shadowColor = '#ffffff';
+            ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+            ctx.lineWidth = 4;
+        }
 
-    ctx.restore();
+        ctx.beginPath();
+        if (pClass === 'circle') {
+            ctx.arc(0, 0, size, 0, Math.PI * 2);
+            ctx.fill();
+            if (pColor === '#111111') ctx.stroke();
+        } else if (pClass === 'square') {
+            size = 55;
+            ctx.rect(-size/2, -size/2, size, size);
+            ctx.fill();
+            if (pColor === '#111111') ctx.stroke();
+        } else {
+            ctx.moveTo(size, 0);
+            ctx.lineTo(-size/2, -size*0.866);
+            ctx.lineTo(-size/2, size*0.866);
+            ctx.closePath();
+            ctx.fill();
+            if (pColor === '#111111') ctx.stroke();
+        }
+        
+        ctx.restore();
+        lobbyAnimationIds[slotIndex] = requestAnimationFrame(loop);
+    };
+    loop();
 }
 
 // ==========================================
@@ -397,11 +415,11 @@ function renderStats() {
         card.className = 'match-card';
         card.innerHTML = `
             <div class="match-card-main">
-                <div class="match-rank">${m.rank}<span>${getOrdinal(m.rank)}</span> / ${m.totalPlayers}</div>
-                <div><span class="match-detail-label">Class</span><span class="match-detail-val" style="text-transform:capitalize;">${m.playerClass}</span></div>
-                <div><span class="match-detail-label">Kills</span><span class="match-detail-val">${m.kills}</span></div>
-                <div><span class="match-detail-label">Points</span><span class="match-detail-val">${Math.floor(m.points)}</span></div>
-                <div><span class="match-detail-label">Time</span><span class="match-detail-val">${Math.floor(m.time/60)}m ${m.time%60}s</span></div>
+                <div><span class="match-detail-label">RANK</span><span class="match-detail-val">${m.rank}<span>${getOrdinal(m.rank)}</span> / ${m.totalPlayers}</span></div>
+                <div><span class="match-detail-label">CLASS</span><span class="match-detail-val" style="text-transform:capitalize;">${m.playerClass}</span></div>
+                <div><span class="match-detail-label">KILLS</span><span class="match-detail-val">${m.kills}</span></div>
+                <div><span class="match-detail-label">POINTS</span><span class="match-detail-val">${Math.floor(m.points)}</span></div>
+                <div><span class="match-detail-label">TIME</span><span class="match-detail-val">${Math.floor(m.time/60)}m ${m.time%60}s</span></div>
             </div>
             <div class="match-upgrades" style="display:none; flex-wrap:wrap; gap:5px; margin-top:15px; padding-top:10px; border-top:1px solid #333;">
                 ${upgHtml || '<span style="color:gray; font-size:0.8rem;">No Upgrades</span>'}
@@ -427,15 +445,30 @@ let previewAngle = 0;
 
 function renderShop() {
     const seasonGrid = document.getElementById('season-grid');
-    if (seasonGrid) {
-        seasonGrid.innerHTML = '';
-        Object.values(ITEMS_DB).filter(i => i.reqType === 'level').forEach(item => {
-            const isUnlocked = window.globalAccountLevel >= item.reqVal || window.unlockedItems.includes(item.id);
-            const isEquipped = window.equippedItems[item.category] === item.id;
+    const mainGrid = document.getElementById('main-store-grid');
+    
+    if (seasonGrid) seasonGrid.innerHTML = '';
+    if (mainGrid) mainGrid.innerHTML = '';
+
+    Object.values(ITEMS_DB).forEach(item => {
+        let isLevelItem = item.reqType === 'level';
+        let isPointItem = item.reqType === 'points';
+        
+        // If reqType is somehow missing, fall back based on category
+        if (!item.reqType) {
+            if (item.category === 'Skin' || item.category === 'Color') isLevelItem = true;
+            else isPointItem = true;
+        }
+
+        const isEquipped = window.equippedItems[item.category] === item.id;
+        
+        if (isLevelItem && seasonGrid) {
+            let reqVal = item.reqVal || 1;
+            const isUnlocked = window.globalAccountLevel >= reqVal || window.unlockedItems.includes(item.id);
             
             let btnHTML = isUnlocked 
                 ? `<button class="btn-equip ${isEquipped ? 'equipped' : ''}" data-id="${item.id}" data-cat="${item.category}">${isEquipped ? 'EQUIPPED' : 'EQUIP'}</button>` 
-                : `<button class="btn-claim locked" data-id="${item.id}"><span>REACH LVL ${item.reqVal}</span><div class="fill"></div></button>`;
+                : `<button class="btn-claim locked" data-id="${item.id}"><span>REACH LVL ${reqVal}</span><div class="fill"></div></button>`;
                 
             seasonGrid.innerHTML += `
                 <div class="store-item ${isUnlocked ? 'unlocked' : 'locked'}" style="--rarity-color: ${getRarityColor(item.rarity)}">
@@ -443,24 +476,18 @@ function renderShop() {
                     <div class="item-icon" data-id="${item.id}">${item.icon}</div>
                     ${btnHTML}
                 </div>`;
-        });
-    }
-
-    const mainGrid = document.getElementById('main-store-grid');
-    if (mainGrid) {
-        mainGrid.innerHTML = '';
-        Object.values(ITEMS_DB).filter(i => i.reqType === 'points').forEach(item => {
-            const isUnlocked = window.gameStats.points >= item.reqVal || window.unlockedItems.includes(item.id);
-            const isEquipped = window.equippedItems[item.category] === item.id;
-            
-            let progressPct = Math.min(100, (window.gameStats.points / item.reqVal) * 100);
+        } 
+        else if (isPointItem && mainGrid) {
+            let reqVal = item.reqVal || 1000;
+            const isUnlocked = window.gameStats.points >= reqVal || window.unlockedItems.includes(item.id);
+            let progressPct = Math.min(100, (window.gameStats.points / reqVal) * 100);
             
             let btnHTML = isUnlocked 
                 ? `<button class="btn-equip ${isEquipped ? 'equipped' : ''}" data-id="${item.id}" data-cat="${item.category}">${isEquipped ? 'EQUIPPED' : 'EQUIP'}</button>` 
                 : `<div class="item-progress-bg"><div class="item-progress-fill" style="background:${getRarityColor(item.rarity)}; width:${progressPct}%"></div></div>
-                   <button class="btn-claim locked"><span>${Math.floor(window.gameStats.points)} / ${item.reqVal} PTS</span><div class="fill"></div></button>`;
+                   <button class="btn-claim locked"><span>${Math.floor(window.gameStats.points)} / ${reqVal} PTS</span><div class="fill"></div></button>`;
 
-            if (window.gameStats.points >= item.reqVal && !window.unlockedItems.includes(item.id)) {
+            if (window.gameStats.points >= reqVal && !window.unlockedItems.includes(item.id)) {
                 btnHTML = `<button class="btn-claim claimable" data-id="${item.id}"><span>HOLD TO CLAIM</span><div class="fill"></div></button>`;
             }
 
@@ -470,8 +497,8 @@ function renderShop() {
                     <div class="item-icon" data-id="${item.id}">${item.icon}</div>
                     ${btnHTML}
                 </div>`;
-        });
-    }
+        }
+    });
 
     bindShopButtons();
 }
@@ -494,7 +521,6 @@ function bindShopButtons() {
         });
     });
 
-    // FIX: PROPER HOLD TO CLAIM LOGIC
     document.querySelectorAll('.btn-claim.claimable').forEach(btn => {
         let holdTimer = null;
         let isHolding = false;
@@ -509,13 +535,13 @@ function bindShopButtons() {
                 const id = btn.dataset.id;
                 if (!window.unlockedItems.includes(id)) {
                     window.unlockedItems.push(id);
-                    sounds.play('levelUp', 0.5 * (window.gameSettings.volume/100)); // Success Sound!
+                    sounds.play('levelUp', 0.5 * (window.gameSettings.volume/100));
                     saveData();
                     btn.classList.remove('holding');
                     renderShop();
                     renderLocker();
                 }
-            }, 1000); // 1 second CSS transition fills up
+            }, 1000); 
         };
 
         const cancelHold = () => {
@@ -534,7 +560,7 @@ function bindShopButtons() {
     document.querySelectorAll('.item-icon').forEach(icon => {
         icon.addEventListener('click', (e) => {
             const id = e.currentTarget.dataset.id;
-            if(id) openFullScreenPreview(id);
+            if(id && id !== "null") openFullScreenPreview(id);
         });
     });
 }
@@ -548,7 +574,7 @@ function renderLocker() {
         let equippedId = window.equippedItems[cat];
         let item = equippedId ? ITEMS_DB[equippedId] : null;
         
-        let icon = item ? item.icon : '❌';
+        let icon = item ? item.icon : '❌'; // Standard X emoji
         let name = item ? item.name : 'NONE';
         let rColor = item ? getRarityColor(item.rarity) : '#444';
         
@@ -589,7 +615,8 @@ function openLockerCategory(category) {
     `;
 
     Object.values(ITEMS_DB).filter(i => i.category === category).forEach(item => {
-        let isUnlocked = window.unlockedItems.includes(item.id) || (item.reqType === 'level' && window.globalAccountLevel >= item.reqVal);
+        let reqVal = item.reqVal || 1;
+        let isUnlocked = window.unlockedItems.includes(item.id) || (item.reqType === 'level' && window.globalAccountLevel >= reqVal);
         
         if (isUnlocked) {
             const isEquipped = window.equippedItems[category] === item.id;
@@ -635,7 +662,7 @@ function updateMenuXPBar() {
 }
 
 // ==========================================
-// PREVIEW SYSTEM (MASSIVE DRAWING LOGIC)
+// PREVIEW SYSTEM (ENLARGED & ARROW REMOVED)
 // ==========================================
 let currentPreviewItem = null;
 
@@ -674,7 +701,7 @@ function startPreviewLoop(canvas, specificItem = null) {
         }
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        previewAngle += 0.015;
+        previewAngle += 0.015; // Smooth rotation
         
         drawPreview(ctx, canvas.width, canvas.height, previewAngle, specificItem);
         previewAnimationId = requestAnimationFrame(loop);
@@ -688,8 +715,8 @@ function drawPreview(ctx, w, h, angle, specificItem = null) {
     ctx.rotate(angle);
 
     let pClass = selectedClass || 'triangle';
-    let size = 35;
-    if (pClass === 'square') size = 45;
+    let size = 70; // Massive size for locker preview
+    if (pClass === 'square') size = 90;
 
     let baseColor = getEquippedColor();
     let skinType = null;
@@ -781,18 +808,8 @@ function drawPreview(ctx, w, h, angle, specificItem = null) {
         }
         ctx.restore();
     }
-
-    // Default arrow for preivew
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-    ctx.shadowBlur = 0;
-    ctx.beginPath();
-    let arrowOffset = size + 15;
-    ctx.moveTo(arrowOffset, -8);
-    ctx.lineTo(arrowOffset + 15, 0);
-    ctx.lineTo(arrowOffset, 8);
-    ctx.fill();
-
-    ctx.restore();
+    
+    ctx.restore(); // Ensure the clip from the shape is closed out.
 
     if (hasBanner) {
         ctx.save();
@@ -851,6 +868,21 @@ window.addEventListener('keydown', (e) => {
         document.querySelector(`.keybind-btn[data-action="${listeningForKey}"]`).innerText = key.toUpperCase();
         listeningForKey = null;
         saveData();
+    }
+
+    // ESCAPE KEY LOGIC FIX
+    if (e.key === 'Escape') {
+        const consoleEl = document.getElementById('dev-console');
+        if (!consoleEl.classList.contains('hidden')) {
+            consoleEl.classList.add('hidden');
+            document.getElementById('dev-input').blur();
+            return; 
+        }
+        
+        const gameUi = document.getElementById('game-ui');
+        if (!gameUi.classList.contains('hidden') && !engine.isGameOver && !engine.isDemo) {
+            engine.handleGameOver(null);
+        }
     }
 });
 

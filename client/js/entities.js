@@ -77,7 +77,6 @@ export class Entity {
         } else if (type === 'square') {
             this.speed = 4.2; 
             this.size = 28; 
-            // Nerfed Square health to prevent unkillable late-game sponges
             this.maxHealth = 380; 
             this.fireRate = 55; 
             this.baseDamage = 35; 
@@ -152,7 +151,6 @@ export class Entity {
         this.abilityTimer = 0; 
         this.abilityMaxCooldown = 450; 
         
-        // Ability Hooks
         this.abilityTriggered = false; 
         this.isCloaked = false;
     }
@@ -192,25 +190,23 @@ export class Entity {
         if (this.abilityCooldown <= 0 && this.activeAbility) {
             this.abilityCooldown = this.abilityMaxCooldown;
             
-            // Set the duration of the visual state depending on ability type
             if (['juggernaut', 'repulsor', 'cloak'].includes(this.activeAbility)) {
-                this.abilityTimer = 300; // 5 Seconds
+                this.abilityTimer = 300; 
             } else if (this.activeAbility === 'minigun' || this.activeAbility === 'strafe_run' || this.activeAbility === 'blade_ring') {
-                this.abilityTimer = 240; // 4 Seconds
+                this.abilityTimer = 240; 
             } else if (this.activeAbility === 'sonic_boom') {
-                this.abilityTimer = 180; // 3 Seconds
+                this.abilityTimer = 180; 
             } else if (this.activeAbility === 'phase_strike') {
-                this.abilityTimer = 30; // 0.5 Seconds Dash
+                this.abilityTimer = 30; 
             } else {
-                this.abilityTimer = 120; // 2 Seconds default
+                this.abilityTimer = 120; 
             }
 
             if (this.activeAbility === 'juggernaut') {
                 this.size = this.baseSize * 1.5;
-                this.health = this.maxHealth; // Full Heal!
+                this.health = this.maxHealth; 
             }
             
-            // Signal the GameEngine to trigger the hard logic
             this.abilityTriggered = true; 
         }
     }
@@ -269,7 +265,7 @@ export class Entity {
             }
             
             if (this.abilityTimer === 0 && this.activeAbility === 'juggernaut') {
-                this.size = this.baseSize; // Shrink back down
+                this.size = this.baseSize; 
             }
         } else {
             this.isCloaked = false;
@@ -707,7 +703,7 @@ export class Entity {
         ctx.restore();
         
         // =====================================
-        // FULL SKIN DRAWING LOGIC (ALL UNCOMPRESSED)
+        // FULL SKIN DRAWING LOGIC (ALL EXPANDED)
         // =====================================
         if (this.equipped.Skin && ITEMS_DB && ITEMS_DB[this.equipped.Skin]) {
             const skinType = ITEMS_DB[this.equipped.Skin].value;
@@ -1241,7 +1237,7 @@ export class Entity {
         
         ctx.globalAlpha = oldAlpha;
 
-        // NEW: Transparent, floating/gliding facing arrow
+        // NEW: Transparent, floating/gliding facing arrow (DRAWN LAST)
         if (this.isPlayer && this.frontVisual !== 'gun' && this.frontVisual !== 'spikes' && !this.isCloaked) {
             
             // Calculate a floating "bob" effect for the arrow
@@ -1423,11 +1419,10 @@ export class Bot extends Entity {
         this.changeTargetTimer = 0; 
         this.isTeammate = false; 
 
-        // Probability-based Realistic Bot Names (Cleaned up!)
         const realNames = ["John", "Sarah", "Mike", "Emily", "David", "Jessica", "Chris", "Ashley", "Matthew", "Amanda", "Joshua", "Megan", "Andrew", "Brittany", "James", "Samantha", "Daniel", "Lauren", "Joseph", "Nicole", "Kevin", "Kayla", "Jason", "Tyler", "Brian", "Rachel", "Eric", "Elizabeth", "Ryan", "Jacob", "Gary", "Nicholas", "Adam", "Justin", "Brandon", "Kelly", "Frank", "Christina", "Scott", "Melissa", "Larry", "Rebecca", "Stephen", "Victoria", "Timothy", "Stephanie", "Richard", "Amy", "Patrick", "Laura", "Edward", "Mary", "Colin", "Michelle", "Peter", "Tiffany", "Mark", "Katherine", "Walter", "Andrea"];
         const gamerTags = ["ProGamer", "Sniper", "Shadow", "Vortex", "Rogue", "Noob", "King", "Queen", "Titan", "Spectre", "Ghost", "Dragon", "Wolf", "Demon", "Angel", "Slayer", "Hunter", "Warrior", "Tank", "Healer", "Ninja", "Samurai", "Pirate", "Cyborg", "Alien", "Mutant", "Zombie", "Vampire", "Reaper", "Death", "Chaos", "Havoc", "Phantom", "Spirit", "Soul", "TTV_Sweat", "discord_mod", "hacker_man", "aimbot.exe", "wallhack", "pay_to_win"];
         const funnyNames = ["I_LAG_A_LOT", "mom_pull_the_plug", "ur_trash_kid", "free_xp", "plz_dont_kill", "touch_grass", "ping_999", "skill_issue", "Error_404", "NoobSlayer9000", "ctrl_alt_del", "try_harder", "qwerty", "asdfgh", "123456", "user7712", "guest_999", "bruh"];
-        const superRare = ["A", "X", "Z", "7", "Q", "God"];
+        const superRare = ["A", "X", "Z", "7", "Q", "God", "Omega"]; 
         
         let roll = Math.random();
         let bName = "";
