@@ -7,6 +7,10 @@ import { lobbyUI } from './networkLobby.js';
 
 let selectedClass = null; 
 
+// FORCE WIPE BROWSER CACHE SO XP IS NEVER STUCK!
+localStorage.removeItem('yepio_xp');
+localStorage.removeItem('yepio_level');
+
 window.globalAccountXP = 0;
 window.globalAccountLevel = 1;
 
@@ -31,50 +35,49 @@ window.lifetimeStats = { matches: 0, kills: 0, time: 0, points: 0, distance: 0 }
 window.matchHistory = [];
 
 function generateShop() {
-    const rotatingItems = Object.values(ITEMS_DB).filter(item => item.isRotating);
-    const shuffled = rotatingItems.sort(() => 0.5 - Math.random());
-    const selected = shuffled.slice(0, 4);
-    
-    const statTypes = [
-        { type: 'kills', label: 'Kills', mult: [15, 30, 50, 80, 120] },
-        { type: 'distance', label: 'Dist.', mult: [15000, 30000, 60000, 90000, 150000] },
-        { type: 'time', label: 'Secs', mult: [300, 600, 1200, 2400, 3600] },
-        { type: 'points', label: 'Pts', mult: [1000, 2500, 5000, 10000, 20000] }
-    ];
-
-    const newShop = selected.map(item => {
-        const stat = statTypes[Math.floor(Math.random() * statTypes.length)];
-        const base = stat.mult[item.rarity - 1];
-        const variance = base * 0.2; 
-        let req = Math.floor(base + (Math.random() * variance * 2) - variance);
+    try {
+        const rotatingItems = Object.values(ITEMS_DB).filter(item => item.isRotating);
+        const shuffled = rotatingItems.sort(() => 0.5 - Math.random());
+        const selected = shuffled.slice(0, 4);
         
-        if (stat.type === 'distance' || stat.type === 'points') {
-            req = Math.ceil(req / 100) * 100;
-        }
-        if (stat.type === 'time') {
-            req = Math.ceil(req / 10) * 10;
-        }
-        
-        return { id: item.id, type: stat.type, req: req, label: stat.label };
-    });
+        const statTypes = [
+            { type: 'kills', label: 'Kills', mult: [15, 30, 50, 80, 120] },
+            { type: 'distance', label: 'Dist.', mult: [15000, 30000, 60000, 90000, 150000] },
+            { type: 'time', label: 'Secs', mult: [300, 600, 1200, 2400, 3600] },
+            { type: 'points', label: 'Pts', mult: [1000, 2500, 5000, 10000, 20000] }
+        ];
 
-    localStorage.setItem('yep_shop', JSON.stringify({ hour: new Date().getHours(), items: newShop }));
-    return newShop;
+        const newShop = selected.map(item => {
+            const stat = statTypes[Math.floor(Math.random() * statTypes.length)];
+            const base = stat.mult[item.rarity - 1] || 15;
+            const variance = base * 0.2; 
+            let req = Math.floor(base + (Math.random() * variance * 2) - variance);
+            
+            if (stat.type === 'distance' || stat.type === 'points') req = Math.ceil(req / 100) * 100;
+            if (stat.type === 'time') req = Math.ceil(req / 10) * 10;
+            
+            return { id: item.id, type: stat.type, req: req, label: stat.label };
+        });
+
+        localStorage.setItem('yep_shop', JSON.stringify({ hour: new Date().getHours(), items: newShop }));
+        return newShop;
+    } catch(e) {
+        console.error("Shop Error:", e);
+        return [];
+    }
 }
 
 function getShop() {
-    const saved = localStorage.getItem('yep_shop');
-    const currentHour = new Date().getHours();
-    
-    if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.hour === currentHour) {
-            return parsed.items; 
+    try {
+        const saved = localStorage.getItem('yep_shop');
+        const currentHour = new Date().getHours();
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            if (parsed.hour === currentHour) return parsed.items; 
         }
-    }
-    
-    window.hourlyStats = { kills: 0, time: 0, points: 0, distance: 0 }; 
-    return generateShop();
+        window.hourlyStats = { kills: 0, time: 0, points: 0, distance: 0 }; 
+        return generateShop();
+    } catch(e) { return []; }
 }
 
 window.currentShopHour = new Date().getHours();
@@ -87,127 +90,122 @@ function formatTime(secs) {
     return `${m}m ${s}s`;
 }
 
-const canvas = document.getElementById('gameCanvas');
-const game = new GameEngine(canvas);
-window.game = game; 
-
+// Engine Bootup Safety Check
 try {
-    game.startDemo();
+    const canvas = document.getElementById('gameCanvas');
+    if(canvas) {
+        window.game = new GameEngine(canvas);
+        window.game.startDemo();
+        console.log("[SUCCESS] Game Engine Booted");
+    } else {
+        console.error("[ERROR] gameCanvas not found in HTML!");
+    }
 } catch(e) {
-    console.error("Failed to start demo on load: ", e);
+    console.error("[FATAL ERROR] Engine failed to start: ", e);
 }
 
 // ==========================================
 // GLOBAL UI HANDLER
 // ==========================================
-
 let currentLockerCategory = null;
 window.activePreviewItem = null;
 
 document.addEventListener('click', (e) => {
-    const target = e.target;
+    try {
+        const target = e.target;
 
-    if (target.tagName === 'BUTTON' || target.closest('button')) {
-        sounds.play('click', 0.4 * (window.gameSettings.volume || 1.0));
-    }
+        if (target.tagName === 'BUTTON' || target.closest('button')) {
+            if(sounds && sounds.play) sounds.play('click', 0.4 * (window.gameSettings.volume || 1.0));
+        }
 
-    if (target.id === 'close-preview-btn' || target.closest('#close-preview-btn')) {
-        window.activePreviewItem = null;
-        document.getElementById('item-preview-screen').classList.add('hidden');
-        return;
-    }
+        if (target.id === 'close-preview-btn' || target.closest('#close-preview-btn')) {
+            window.activePreviewItem = null;
+            document.getElementById('item-preview-screen').classList.add('hidden');
+            return;
+        }
 
-    const equipBtn = target.closest('.btn-equip');
-    if (equipBtn) {
-        const itemId = equipBtn.dataset.id;
-        if (!itemId) { 
-            if (currentLockerCategory) window.equippedItems[currentLockerCategory] = null;
-        } else {
-            const item = ITEMS_DB[itemId];
-            if (item) {
-                if (window.equippedItems[item.category] === itemId) {
-                    window.equippedItems[item.category] = null; 
-                } else {
-                    window.equippedItems[item.category] = itemId; 
+        const equipBtn = target.closest('.btn-equip');
+        if (equipBtn) {
+            const itemId = equipBtn.dataset.id;
+            if (!itemId) { 
+                if (currentLockerCategory) window.equippedItems[currentLockerCategory] = null;
+            } else {
+                const item = ITEMS_DB[itemId];
+                if (item) {
+                    if (window.equippedItems[item.category] === itemId) window.equippedItems[item.category] = null; 
+                    else window.equippedItems[item.category] = itemId; 
                 }
             }
+            renderLocker(); renderSeasonStore(); renderMainStore();
+            return;
         }
-        renderLocker();
-        renderSeasonStore();
-        renderMainStore();
-        return;
-    }
 
-    const iconBtn = target.closest('.item-icon');
-    if (iconBtn && iconBtn.dataset.id) {
-        const item = ITEMS_DB[iconBtn.dataset.id];
-        if (item && item.category !== 'Banner') {
-            window.activePreviewItem = item.id;
-            document.getElementById('preview-screen-title').innerText = `PREVIEW: ${item.name}`;
-            document.getElementById('preview-screen-category').innerText = item.category;
-            document.getElementById('item-preview-screen').classList.remove('hidden');
-        }
-        return;
-    }
-
-    const lockerSlot = target.closest('.locker-slot');
-    if (lockerSlot) {
-        currentLockerCategory = lockerSlot.dataset.category;
-        window.activePreviewItem = null;
-        renderLocker();
-        return;
-    }
-
-    if (target.id === 'locker-back-btn') {
-        currentLockerCategory = null;
-        window.activePreviewItem = null;
-        renderLocker();
-        return;
-    }
-
-    if (target.classList.contains('tab-btn')) {
-        const targetTab = target.dataset.target;
-        
-        if (targetTab === 'multiplayer' && !selectedClass) {
-            const info = document.getElementById('class-info');
-            if (info) {
-                info.innerText = "PLEASE SELECT A CLASS FIRST!";
-                info.style.color = "red";
-                info.classList.remove('fade-out', 'hidden');
-                
-                if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
-                window.classInfoTimeout = setTimeout(() => info.classList.add('fade-out'), 2000);
+        const iconBtn = target.closest('.item-icon');
+        if (iconBtn && iconBtn.dataset.id) {
+            const item = ITEMS_DB[iconBtn.dataset.id];
+            if (item && item.category !== 'Banner') {
+                window.activePreviewItem = item.id;
+                document.getElementById('preview-screen-title').innerText = `PREVIEW: ${item.name}`;
+                document.getElementById('preview-screen-category').innerText = item.category;
+                document.getElementById('item-preview-screen').classList.remove('hidden');
             }
             return;
         }
 
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        
-        target.classList.add('active');
-        document.getElementById(targetTab).classList.add('active');
-        
-        window.activePreviewItem = null; 
-
-        const seasonLevelUI = document.querySelector('.player-level-ui');
-        if (seasonLevelUI) {
-            if (targetTab === 'locker') {
-                seasonLevelUI.classList.add('hidden');
-            } else {
-                seasonLevelUI.classList.remove('hidden');
-            }
+        const lockerSlot = target.closest('.locker-slot');
+        if (lockerSlot) {
+            currentLockerCategory = lockerSlot.dataset.category;
+            window.activePreviewItem = null;
+            renderLocker();
+            return;
         }
-        
-        if (targetTab === 'season') renderSeasonStore();
-        if (targetTab === 'store') renderMainStore();
-        if (targetTab === 'locker') renderLocker();
-        if (targetTab === 'stats') renderStats(); 
+
+        if (target.id === 'locker-back-btn') {
+            currentLockerCategory = null;
+            window.activePreviewItem = null;
+            renderLocker();
+            return;
+        }
+
+        if (target.classList.contains('tab-btn')) {
+            const targetTab = target.dataset.target;
+            
+            if (targetTab === 'multiplayer' && !selectedClass) {
+                const info = document.getElementById('class-info');
+                if (info) {
+                    info.innerText = "PLEASE SELECT A CLASS FIRST!";
+                    info.style.color = "red";
+                    info.classList.remove('fade-out', 'hidden');
+                    if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
+                    window.classInfoTimeout = setTimeout(() => info.classList.add('fade-out'), 2000);
+                }
+                return;
+            }
+
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            target.classList.add('active');
+            document.getElementById(targetTab).classList.add('active');
+            
+            window.activePreviewItem = null; 
+
+            const seasonLevelUI = document.querySelector('.player-level-ui');
+            if (seasonLevelUI) {
+                if (targetTab === 'locker') seasonLevelUI.classList.add('hidden');
+                else seasonLevelUI.classList.remove('hidden');
+            }
+            
+            if (targetTab === 'season') renderSeasonStore();
+            if (targetTab === 'store') renderMainStore();
+            if (targetTab === 'locker') renderLocker();
+            if (targetTab === 'stats') renderStats(); 
+        }
+    } catch(err) {
+        console.error("[UI CLICK ERROR]: ", err);
     }
 });
 
-// ==========================================
-// HOLD-TO-CLAIM
-// ==========================================
 const startClaim = (e) => {
     const btn = e.target.closest('.btn-claim');
     if (!btn) return;
@@ -216,14 +214,12 @@ const startClaim = (e) => {
     btn.classList.add('holding');
     
     const storeItem = btn.closest('.store-item');
-    if (storeItem) {
-        storeItem.classList.add('shaking');
-    }
+    if (storeItem) storeItem.classList.add('shaking');
 
     btn.claimTimeout = setTimeout(() => {
         const itemId = btn.dataset.id;
         window.claimedItems[itemId] = true;
-        sounds.play('levelUp', 0.6 * (window.gameSettings.volume || 1.0)); 
+        if(sounds && sounds.play) sounds.play('levelUp', 0.6 * (window.gameSettings.volume || 1.0)); 
         
         btn.classList.remove('holding');
         if (storeItem) {
@@ -232,9 +228,7 @@ const startClaim = (e) => {
         }
         
         setTimeout(() => {
-            renderSeasonStore();
-            renderMainStore();
-            renderLocker();
+            renderSeasonStore(); renderMainStore(); renderLocker();
         }, 300); 
     }, 1000); 
 };
@@ -244,9 +238,7 @@ const stopClaim = (e) => {
         clearTimeout(btn.claimTimeout);
         btn.classList.remove('holding');
         const storeItem = btn.closest('.store-item');
-        if (storeItem) {
-            storeItem.classList.remove('shaking');
-        }
+        if (storeItem) storeItem.classList.remove('shaking');
     });
 };
 
@@ -255,7 +247,6 @@ document.addEventListener('touchstart', startClaim, {passive: false});
 document.addEventListener('mouseup', stopClaim);
 document.addEventListener('mouseleave', stopClaim);
 document.addEventListener('touchend', stopClaim);
-
 
 // ==========================================
 // PREVIEW CANVASES & FIXED TIMESTEP LOOP
@@ -266,32 +257,23 @@ const fsCanvas = document.getElementById('fullscreenPreviewCanvas');
 const fsCtx = fsCanvas?.getContext('2d');
 
 const dpr = window.devicePixelRatio || 1;
-
-if (lockerCanvas) {
-    lockerCanvas.width = 300 * dpr; 
-    lockerCanvas.height = 300 * dpr; 
-    lockerCtx.scale(dpr, dpr);
-}
-if (fsCanvas) {
-    fsCanvas.width = 350 * dpr; 
-    fsCanvas.height = 350 * dpr; 
-    fsCtx.scale(dpr, dpr);
-}
+if (lockerCanvas) { lockerCanvas.width = 300 * dpr; lockerCanvas.height = 300 * dpr; lockerCtx.scale(dpr, dpr); }
+if (fsCanvas) { fsCanvas.width = 350 * dpr; fsCanvas.height = 350 * dpr; fsCtx.scale(dpr, dpr); }
 
 let previewAngle = 0;
-let previewDummy = new Player(0, 0, 'triangle', "");
-previewDummy.isPlayer = false; 
-
-if (window.previewAnimationId) {
-    cancelAnimationFrame(window.previewAnimationId);
-}
+let previewDummy = null;
+try {
+    previewDummy = new Player(0, 0, 'triangle', "");
+    previewDummy.isPlayer = false; 
+} catch(e) { console.error("Error creating preview dummy:", e); }
 
 let previewLastTime = performance.now();
 let previewAccumulator = 0;
 
 function renderPreview() {
     window.previewAnimationId = requestAnimationFrame(renderPreview);
-    
+    if(!previewDummy) return;
+
     let current = performance.now();
     let dt = current - previewLastTime;
     previewLastTime = current;
@@ -305,10 +287,10 @@ function renderPreview() {
         previewAngle += 0.015;
         let needsTrail = false;
         
-        if (document.getElementById('locker').classList.contains('active') && currentLockerCategory === 'Trail') {
+        if (document.getElementById('locker') && document.getElementById('locker').classList.contains('active') && currentLockerCategory === 'Trail') {
             needsTrail = true;
         }
-        if (!document.getElementById('item-preview-screen').classList.contains('hidden') && window.activePreviewItem && ITEMS_DB[window.activePreviewItem] && ITEMS_DB[window.activePreviewItem].category === 'Trail') {
+        if (document.getElementById('item-preview-screen') && !document.getElementById('item-preview-screen').classList.contains('hidden') && window.activePreviewItem && ITEMS_DB[window.activePreviewItem] && ITEMS_DB[window.activePreviewItem].category === 'Trail') {
             needsTrail = true;
         }
         
@@ -333,9 +315,7 @@ function renderPreview() {
         if (previewDummy.equipped.Color && ITEMS_DB[previewDummy.equipped.Color]) {
             const dbColor = ITEMS_DB[previewDummy.equipped.Color].value;
             previewDummy.color = dbColor === 'gold' ? '#ffe600' : dbColor; 
-        } else { 
-            previewDummy.color = '#d3d3d3'; 
-        }
+        } else { previewDummy.color = '#d3d3d3'; }
         
         previewDummy.angle = previewAngle; 
         previewDummy.size = 60; 
@@ -362,9 +342,7 @@ function renderPreview() {
         if (previewDummy.equipped.Color && ITEMS_DB[previewDummy.equipped.Color]) {
             const dbColor = ITEMS_DB[previewDummy.equipped.Color].value;
             previewDummy.color = dbColor === 'gold' ? '#ffe600' : dbColor; 
-        } else { 
-            previewDummy.color = '#d3d3d3'; 
-        }
+        } else { previewDummy.color = '#d3d3d3'; }
         
         previewDummy.angle = previewAngle; 
         previewDummy.size = 70; 
@@ -394,48 +372,46 @@ document.querySelectorAll('.class-btn').forEach(btn => {
             
             info.style.color = "var(--accent)";
             info.classList.remove('hidden', 'fade-out');
-            
             if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
-            window.classInfoTimeout = setTimeout(() => { 
-                info.classList.add('fade-out'); 
-            }, 4000);
+            window.classInfoTimeout = setTimeout(() => { info.classList.add('fade-out'); }, 4000);
         }
     });
 });
 
-document.getElementById('settings-btn').addEventListener('click', () => { 
-    document.getElementById('settings-modal').classList.remove('hidden'); 
-});
+const settingsBtn = document.getElementById('settings-btn');
+if(settingsBtn) {
+    settingsBtn.addEventListener('click', () => { 
+        document.getElementById('settings-modal').classList.remove('hidden'); 
+    });
+}
 
-// Saves all settings correctly!
-document.getElementById('close-settings-btn').addEventListener('click', () => {
-    window.gameSettings.highQuality = document.getElementById('set-hq').checked;
-    window.gameSettings.particles = document.getElementById('set-particles').checked;
-    window.gameSettings.showNames = document.getElementById('set-names').checked;
-    window.gameSettings.showFps = document.getElementById('set-fps').checked;
-    
-    window.gameSettings.volume = parseInt(document.getElementById('set-volume').value) / 100;
-    window.gameSettings.showLeaderboard = document.getElementById('set-leaderboard').checked;
-    window.gameSettings.showBadges = document.getElementById('set-badges').checked;
-    window.gameSettings.showNotifs = document.getElementById('set-notifs').checked;
-    window.gameSettings.showMinimap = document.getElementById('set-minimap').checked; 
+const closeSettingsBtn = document.getElementById('close-settings-btn');
+if(closeSettingsBtn) {
+    closeSettingsBtn.addEventListener('click', () => {
+        window.gameSettings.highQuality = document.getElementById('set-hq').checked;
+        window.gameSettings.particles = document.getElementById('set-particles').checked;
+        window.gameSettings.showNames = document.getElementById('set-names').checked;
+        window.gameSettings.showFps = document.getElementById('set-fps').checked;
+        
+        window.gameSettings.volume = parseInt(document.getElementById('set-volume').value) / 100;
+        window.gameSettings.showLeaderboard = document.getElementById('set-leaderboard').checked;
+        window.gameSettings.showBadges = document.getElementById('set-badges').checked;
+        window.gameSettings.showNotifs = document.getElementById('set-notifs').checked;
+        window.gameSettings.showMinimap = document.getElementById('set-minimap').checked; 
 
-    const fpsDisplay = document.getElementById('fps-display');
-    if (fpsDisplay) {
-        if (window.gameSettings.showFps) {
-            fpsDisplay.classList.remove('hidden');
-        } else {
-            fpsDisplay.classList.add('hidden');
+        const fpsDisplay = document.getElementById('fps-display');
+        if (fpsDisplay) {
+            if (window.gameSettings.showFps) fpsDisplay.classList.remove('hidden');
+            else fpsDisplay.classList.add('hidden');
         }
-    }
-    
-    if (window.game) {
-        window.game.updateLeaderboard();
-        window.game.updateUpgradeBadges();
-    }
-    
-    document.getElementById('settings-modal').classList.add('hidden');
-});
+        
+        if (window.game) {
+            window.game.updateLeaderboard();
+            window.game.updateUpgradeBadges();
+        }
+        document.getElementById('settings-modal').classList.add('hidden');
+    });
+}
 
 let listeningAction = null;
 const formatKeyName = (key) => key === ' ' ? 'SPACE' : key.toUpperCase();
@@ -475,61 +451,62 @@ function updateMenuXPBar() {
     if (lvl) lvl.innerText = window.globalAccountLevel;
     
     const sBar = document.getElementById('season-progress-bar');
-    if (sBar) {
-        sBar.style.width = `${Math.min(100, (window.globalAccountLevel / 50) * 100)}%`;
-    }
+    if (sBar) sBar.style.width = `${Math.min(100, (window.globalAccountLevel / 50) * 100)}%`;
 }
 
-document.getElementById('play-btn').addEventListener('click', () => {
-    if (!selectedClass) {
-        const info = document.getElementById('class-info');
-        if (info) {
-            info.innerText = "PLEASE SELECT A CLASS FIRST!";
-            info.style.color = "red";
-            info.classList.remove('fade-out', 'hidden');
-            
-            if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
-            window.classInfoTimeout = setTimeout(() => info.classList.add('fade-out'), 2000);
+const playBtn = document.getElementById('play-btn');
+if(playBtn) {
+    playBtn.addEventListener('click', () => {
+        if (!selectedClass) {
+            const info = document.getElementById('class-info');
+            if (info) {
+                info.innerText = "PLEASE SELECT A CLASS FIRST!";
+                info.style.color = "red";
+                info.classList.remove('fade-out', 'hidden');
+                if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
+                window.classInfoTimeout = setTimeout(() => info.classList.add('fade-out'), 2000);
+            }
+            return;
         }
-        return;
-    }
-    
-    document.getElementById('main-menu').classList.add('hidden');
-    document.getElementById('game-ui').classList.remove('hidden');
-    
-    const hud = document.querySelector('.hud');
-    if(hud) hud.classList.remove('hidden');
-    
-    game.start(selectedClass);
-});
+        
+        document.getElementById('main-menu').classList.add('hidden');
+        document.getElementById('game-ui').classList.remove('hidden');
+        
+        const hud = document.querySelector('.hud');
+        if(hud) hud.classList.remove('hidden');
+        
+        if(window.game) window.game.start(selectedClass);
+    });
+}
 
-document.getElementById('return-lobby-btn').addEventListener('click', () => {
-    document.getElementById('game-over-screen').classList.add('hidden');
-    document.getElementById('game-ui').classList.add('hidden');
-    document.getElementById('main-menu').classList.remove('hidden');
-    
-    if (window.lastMatchStats) {
-        window.hourlyStats.kills += window.lastMatchStats.kills || 0;
-        window.hourlyStats.time += window.lastMatchStats.time || 0;
-        window.hourlyStats.points += window.lastMatchStats.points || 0;
-        window.hourlyStats.distance += window.lastMatchStats.distance || 0;
+const returnLobbyBtn = document.getElementById('return-lobby-btn');
+if(returnLobbyBtn) {
+    returnLobbyBtn.addEventListener('click', () => {
+        document.getElementById('game-over-screen').classList.add('hidden');
+        document.getElementById('game-ui').classList.add('hidden');
+        document.getElementById('main-menu').classList.remove('hidden');
         
-        window.lifetimeStats.matches += 1;
-        window.lifetimeStats.kills += window.lastMatchStats.kills || 0;
-        window.lifetimeStats.time += window.lastMatchStats.time || 0;
-        window.lifetimeStats.points += window.lastMatchStats.points || 0;
-        window.lifetimeStats.distance += window.lastMatchStats.distance || 0;
-        
-        window.matchHistory.unshift(window.lastMatchStats);
-        if (window.matchHistory.length > 20) {
-            window.matchHistory.pop();
+        if (window.lastMatchStats) {
+            window.hourlyStats.kills += window.lastMatchStats.kills || 0;
+            window.hourlyStats.time += window.lastMatchStats.time || 0;
+            window.hourlyStats.points += window.lastMatchStats.points || 0;
+            window.hourlyStats.distance += window.lastMatchStats.distance || 0;
+            
+            window.lifetimeStats.matches += 1;
+            window.lifetimeStats.kills += window.lastMatchStats.kills || 0;
+            window.lifetimeStats.time += window.lastMatchStats.time || 0;
+            window.lifetimeStats.points += window.lastMatchStats.points || 0;
+            window.lifetimeStats.distance += window.lastMatchStats.distance || 0;
+            
+            window.matchHistory.unshift(window.lastMatchStats);
+            if (window.matchHistory.length > 20) window.matchHistory.pop();
+            window.lastMatchStats = null; 
         }
-        window.lastMatchStats = null; 
-    }
-    
-    updateMenuXPBar(); 
-    game.startDemo();
-});
+        
+        updateMenuXPBar(); 
+        if(window.game) window.game.startDemo();
+    });
+}
 
 // --- RENDERERS ---
 function renderLocker() {
@@ -593,11 +570,11 @@ function renderLocker() {
 }
 
 function renderStats() {
-    document.getElementById('stat-account-level').innerText = window.globalAccountLevel;
-    document.getElementById('stat-matches').innerText = window.lifetimeStats.matches;
-    document.getElementById('stat-kills').innerText = window.lifetimeStats.kills;
-    document.getElementById('stat-points').innerText = Math.floor(window.lifetimeStats.points);
-    document.getElementById('stat-time').innerText = formatTime(window.lifetimeStats.time);
+    const el1 = document.getElementById('stat-account-level'); if(el1) el1.innerText = window.globalAccountLevel;
+    const el2 = document.getElementById('stat-matches'); if(el2) el2.innerText = window.lifetimeStats.matches;
+    const el3 = document.getElementById('stat-kills'); if(el3) el3.innerText = window.lifetimeStats.kills;
+    const el4 = document.getElementById('stat-points'); if(el4) el4.innerText = Math.floor(window.lifetimeStats.points);
+    const el5 = document.getElementById('stat-time'); if(el5) el5.innerText = formatTime(window.lifetimeStats.time);
     
     const historyList = document.getElementById('match-history-list');
     if (!historyList) return;
@@ -609,6 +586,8 @@ function renderStats() {
     
     historyList.innerHTML = '';
     
+    const activeAbilities = ['shield','overdrive','bullet_nova','blink','emp','cloak','repulsor','sonic_boom','phase_strike','strafe_run','juggernaut','missile_swarm','earthshatter','minigun','tactical_nuke','blade_ring'];
+
     window.matchHistory.forEach(match => {
         let rankColor = '#a0a0a0'; 
         let rank = match.rank ? match.rank : '?';
@@ -628,18 +607,27 @@ function renderStats() {
         let pClass = match.playerClass ? match.playerClass.charAt(0).toUpperCase() + match.playerClass.slice(1) : 'Unknown';
 
         let upgradesHtml = '';
-        if (match.upgrades) {
+        if (match.upgrades && UPGRADE_POOL) {
             for(let key in match.upgrades) {
                 let tier = match.upgrades[key];
                 if (tier > 0) {
-                    let tClass = tier === 1 ? 'badge-t1' : tier === 2 ? 'badge-t2' : tier === 3 ? 'badge-t3' : tier === 4 ? 'badge-t4' : 'badge-t5';
                     let def = UPGRADE_POOL.find(u => u && u.id === key);
                     let title = def ? def.title.toUpperCase() : key.toUpperCase();
-                    upgradesHtml += `
-                        <div class="upgrade-badge ${tClass}" style="position: relative; top: auto; left: auto; display: flex; height: 24px; box-shadow: none;">
-                            <div class="badge-name" style="font-size: 0.65rem; padding: 0 8px;">${title}</div>
-                            <div class="badge-tier" style="font-size: 0.75rem; padding: 0 6px;">T${tier}</div>
-                        </div>`;
+                    
+                    if (activeAbilities.includes(key) || (def && def.isActiveAbility)) {
+                        upgradesHtml += `
+                            <div class="upgrade-badge ability-badge" style="position: relative; top: auto; left: auto; display: flex; height: 24px; box-shadow: none;">
+                                <div class="badge-name" style="font-size: 0.65rem; padding: 0 8px;">⭐ ${title.replace('ACTIVE: ', '')}</div>
+                                <div class="badge-tier" style="font-size: 0.75rem; padding: 0 6px;">ACTIVE</div>
+                            </div>`;
+                    } else {
+                        let tClass = tier === 1 ? 'badge-t1' : tier === 2 ? 'badge-t2' : tier === 3 ? 'badge-t3' : tier === 4 ? 'badge-t4' : 'badge-t5';
+                        upgradesHtml += `
+                            <div class="upgrade-badge ${tClass}" style="position: relative; top: auto; left: auto; display: flex; height: 24px; box-shadow: none;">
+                                <div class="badge-name" style="font-size: 0.65rem; padding: 0 8px;">${title}</div>
+                                <div class="badge-tier" style="font-size: 0.75rem; padding: 0 6px;">T${tier}</div>
+                            </div>`;
+                    }
                 }
             }
         }
@@ -774,18 +762,20 @@ setInterval(() => {
         window.hourlyStats = { kills: 0, time: 0, points: 0, distance: 0 };
         window.currentShopItems = getShop(); 
         
-        if (document.getElementById('store').classList.contains('active')) {
+        if (document.getElementById('store') && document.getElementById('store').classList.contains('active')) {
             renderMainStore();
         }
     }
 }, 1000);
 
-renderSeasonStore();
-renderMainStore();
-updateMenuXPBar(); 
+try {
+    renderSeasonStore();
+    renderMainStore();
+    updateMenuXPBar(); 
+} catch(e) { console.error("Initial render error:", e); }
 
 // ==========================================
-// DEV CONSOLE LOGIC
+// DEV CONSOLE LOGIC & ESCAPE KEY FIX
 // ==========================================
 const devConsole = document.getElementById('dev-console');
 const devInput = document.getElementById('dev-input');
@@ -803,18 +793,15 @@ document.addEventListener('keydown', (e) => {
         if (devConsole && devInput) {
             devConsole.classList.remove('hidden');
             devInput.focus();
-            // Perfectly types the slash into the box
-            setTimeout(() => { 
-                devInput.value = '/'; 
-            }, 10); 
+            setTimeout(() => { devInput.value = '/'; }, 10); 
         }
     } else if (e.key === 'Escape') {
         if (devConsole && !devConsole.classList.contains('hidden')) {
             devConsole.classList.add('hidden');
-            devInput.blur();
+            if (devInput) devInput.blur();
         } 
-        else if (window.game && !window.game.isDemo && !window.game.isGameOver) {
-            window.game.handleGameOver({ name: "SURRENDERED" });
+        else if (window.game && !window.game.isDemo && !window.game.isGameOver && window.game.player && !window.game.player.isDead) {
+            window.game.processDeath(window.game.player, null);
         }
     }
 });
@@ -839,7 +826,7 @@ if (devInput) {
                 updateMenuXPBar();
                 renderSeasonStore(); 
                 
-                if (document.getElementById('stats').classList.contains('active')) {
+                if (document.getElementById('stats') && document.getElementById('stats').classList.contains('active')) {
                     renderStats();
                 }
                 logDev(`[SUCCESS] Account Level set to ${arg}.`);
