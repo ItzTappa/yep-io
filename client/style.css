@@ -65,14 +65,12 @@ html, body {
 ========================================== */
 .lobby-content { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
 .lobby-center { display: flex; flex-direction: column; align-items: center; justify-content: center; }
-/* FIX: Restored original subtle glow opacity (0.3) but in the yellow accent color */
 h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0 0 15px rgba(255, 230, 0, 0.3); text-align: center; color: var(--accent); }
 
 .class-selection { display: flex; gap: 15px; margin-bottom: 30px; justify-content: center; }
 .class-btn { padding: 10px 20px; background: var(--panel-bg); border: 2px solid transparent; color: white; cursor: pointer; font-weight: bold; border-radius: 5px; }
 .class-btn.active { border-color: var(--accent); background: rgba(255, 230, 0, 0.2); }
 
-/* FIX: Dropped down to bottom: 45px to perfectly align horizontally between the bottom-left level UI and bottom-right settings cog */
 #class-info { position: absolute; bottom: 45px; left: 50%; transform: translateX(-50%); width: 100%; pointer-events: none; font-size: 1.2rem; font-weight: bold; transition: opacity 0.5s ease-in-out, color 0.2s; letter-spacing: 1px; text-shadow: 1px 1px 2px black; text-align: center; color: white; z-index: 10;}
 #class-info.fade-out { opacity: 0; pointer-events: none; }
 
@@ -310,7 +308,7 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 #join-code-input { flex: 1; background: transparent; border: none; color: white; font-size: 1.5rem; font-weight: bold; text-align: center; text-transform: uppercase; outline: none; letter-spacing: 3px; width: 100%; }
 #join-code-input::placeholder { color: #555; letter-spacing: 1px; }
 .control-btn { padding: 0 30px; border: none; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: filter 0.2s, background 0.2s; }
-.dark-btn { background: #333; color: white; border: left: 2px solid #444; } .dark-btn:hover { background: #444; }
+.dark-btn { background: #333; color: white; border-left: 2px solid #444; } .dark-btn:hover { background: #444; }
 .yellow-btn { background: var(--accent); color: black; border-left: 2px solid var(--accent); } .yellow-btn:hover { filter: brightness(1.1); }
 .player-slots { display: flex; gap: 40px; justify-content: center; margin-bottom: 40px; min-height: 300px; }
 .player-slot { width: 250px; background: transparent; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
