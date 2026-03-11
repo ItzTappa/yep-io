@@ -1,86 +1,89 @@
-// ==========================================
-// YEP.IO - SOUND MANAGER (WEB AUDIO API)
-// ==========================================
-
 class SoundManager {
     constructor() {
-        // Create the high-performance Web Audio API context
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        this.context = new AudioContext();
+        this.ctx = null;
+        this.enabled = false;
+        this.lastPlayTimes = {}; // Limits sounds so they don't overlap and get crazy loud
         
-        this.buffers = {}; // Stores the decoded audio data in RAM
+        // Browsers require user interaction before playing audio
+        document.addEventListener('click', () => this.init(), {once: true});
+        document.addEventListener('keydown', () => this.init(), {once: true});
+    }
+
+    init() {
+        if (this.ctx) return;
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AudioContext();
         this.enabled = true;
-        this.volume = 0.5;
-        this.lastPlayed = {}; 
-
-        // Master volume control that routes to the speakers
-        this.masterGain = this.context.createGain();
-        this.masterGain.gain.value = this.volume;
-        this.masterGain.connect(this.context.destination);
-
-        // Initialize your library
-        this.load('shoot', 'assets/sounds/shoot.mp3');
-        this.load('dash', 'assets/sounds/dash.mp3');
-        this.load('explosion', 'assets/sounds/explosion.mp3');
-        this.load('hit', 'assets/sounds/hit.mp3');
-        this.load('collect', 'assets/sounds/collect.mp3');
-        this.load('levelUp', 'assets/sounds/levelUp.mp3');
-        this.load('upgradeReady', 'assets/sounds/upgradeReady.mp3');
-        this.load('click', 'assets/sounds/click.mp3');
     }
 
-    async load(name, path) {
-        try {
-            // Fetch the audio file and decode it into raw buffer data
-            const response = await fetch(path);
-            const arrayBuffer = await response.arrayBuffer();
-            const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
-            this.buffers[name] = audioBuffer;
-            this.lastPlayed[name] = 0;
-        } catch (e) {
-            console.warn(`Failed to load sound: ${name} at ${path}`, e);
+    play(name, volume = 1.0) {
+        if (!this.enabled || !this.ctx) return;
+        
+        // HARD LIMITER: Prevents 50 bots shooting at once from blowing out your speakers
+        let now = Date.now();
+        if (this.lastPlayTimes[name] && now - this.lastPlayTimes[name] < 40) return; 
+        this.lastPlayTimes[name] = now;
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        // Cap maximum possible volume to prevent distortion
+        let v = Math.min(volume, 0.4); 
+
+        const t = this.ctx.currentTime;
+
+        if (name === 'shoot') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(300, t);
+            osc.frequency.exponentialRampToValueAtTime(100, t + 0.1);
+            gain.gain.setValueAtTime(v * 0.2, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+            osc.start(); osc.stop(t + 0.1);
+        } else if (name === 'hit') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(200, t);
+            osc.frequency.exponentialRampToValueAtTime(50, t + 0.1);
+            gain.gain.setValueAtTime(v * 0.3, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+            osc.start(); osc.stop(t + 0.1);
+        } else if (name === 'explosion') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(100, t);
+            osc.frequency.exponentialRampToValueAtTime(10, t + 0.3);
+            gain.gain.setValueAtTime(v * 0.5, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+            osc.start(); osc.stop(t + 0.3);
+        } else if (name === 'collect') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, t);
+            osc.frequency.linearRampToValueAtTime(900, t + 0.1);
+            gain.gain.setValueAtTime(v * 0.2, t);
+            gain.gain.linearRampToValueAtTime(0.01, t + 0.1);
+            osc.start(); osc.stop(t + 0.1);
+        } else if (name === 'levelUp' || name === 'upgradeReady') {
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(440, t);
+            osc.frequency.setValueAtTime(554, t + 0.1);
+            osc.frequency.setValueAtTime(659, t + 0.2);
+            gain.gain.setValueAtTime(v * 0.3, t);
+            gain.gain.linearRampToValueAtTime(0, t + 0.4);
+            osc.start(); osc.stop(t + 0.4);
+        } else if (name === 'dash') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(250, t);
+            osc.frequency.exponentialRampToValueAtTime(50, t + 0.2);
+            gain.gain.setValueAtTime(v * 0.3, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+            osc.start(); osc.stop(t + 0.2);
+        } else if (name === 'click') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, t);
+            gain.gain.setValueAtTime(v * 0.4, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+            osc.start(); osc.stop(t + 0.05);
         }
-    }
-
-    play(name, customVolume = 1.0) {
-        if (!this.enabled || !this.buffers[name]) return;
-
-        // Browsers block audio until the user clicks somewhere.
-        // This wakes up the audio engine the moment they click "PLAY".
-        if (this.context.state === 'suspended') {
-            this.context.resume();
-        }
-
-        // Throttling: Prevent 10 bots shooting on the exact same frame 
-        // from blowing out the player's speakers
-        const now = Date.now();
-        if (now - this.lastPlayed[name] < 40) return;
-        this.lastPlayed[name] = now;
-
-        // Create a new lightweight sound source for this specific playback
-        const source = this.context.createBufferSource();
-        source.buffer = this.buffers[name];
-
-        // Create a temporary volume node for just this sound (for spatial audio)
-        const gainNode = this.context.createGain();
-        gainNode.gain.value = customVolume;
-
-        // Connect the pipes: Source -> Individual Volume -> Master Volume -> Speakers
-        source.connect(gainNode);
-        gainNode.connect(this.masterGain);
-
-        // Play the sound! (The Web Audio API automatically destroys it when it finishes)
-        source.start(0);
-    }
-
-    setVolume(val) {
-        this.volume = Math.max(0, Math.min(1, val));
-        this.masterGain.gain.value = this.volume;
-    }
-
-    toggle(state) {
-        this.enabled = state !== undefined ? state : !this.enabled;
-        this.masterGain.gain.value = this.enabled ? this.volume : 0;
     }
 }
 

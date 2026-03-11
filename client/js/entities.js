@@ -400,6 +400,7 @@ export class Entity {
     draw(ctx) {
         if (!ctx || !window.gameSettings) return;
 
+        // DRAW TRAILS
         this.trail.forEach(t => {
             if (t.type === 'fire') {
                 ctx.save(); 
@@ -476,7 +477,7 @@ export class Entity {
                 ctx.stroke();
             } else if (this.activeAbility === 'repulsor') {
                 ctx.beginPath(); 
-                ctx.arc(0, 0, 250, 0, Math.PI * 2); // Massive Forcefield
+                ctx.arc(0, 0, 250, 0, Math.PI * 2); 
                 ctx.fillStyle = 'rgba(0, 255, 255, 0.1)'; 
                 ctx.fill(); 
                 ctx.strokeStyle = 'rgba(0, 255, 255, 0.4)'; 
@@ -706,7 +707,7 @@ export class Entity {
         ctx.restore();
         
         // =====================================
-        // FULL SKIN DRAWING LOGIC
+        // FULL SKIN DRAWING LOGIC (ALL UNCOMPRESSED)
         // =====================================
         if (this.equipped.Skin && ITEMS_DB && ITEMS_DB[this.equipped.Skin]) {
             const skinType = ITEMS_DB[this.equipped.Skin].value;
@@ -1240,13 +1241,18 @@ export class Entity {
         
         ctx.globalAlpha = oldAlpha;
 
-        // Hide arrow if front weapon equipped or if cloaked!
+        // NEW: Transparent, floating/gliding facing arrow
         if (this.isPlayer && this.frontVisual !== 'gun' && this.frontVisual !== 'spikes' && !this.isCloaked) {
             
             // Calculate a floating "bob" effect for the arrow
             let timeBob = Math.sin(Date.now() / 200) * 3; 
             
-            // Calculate the dynamic offset based on active abilities so it doesn't clip!
+            // Calculate dynamic sway (glide) based on velocity relative to facing angle
+            let localVx = this.vx * Math.cos(-this.angle) - this.vy * Math.sin(-this.angle);
+            let localVy = this.vx * Math.sin(-this.angle) + this.vy * Math.cos(-this.angle);
+            let swayX = Math.max(-10, Math.min(10, -localVx * 1.5));
+            let swayY = Math.max(-10, Math.min(10, -localVy * 1.5));
+
             let dynamicOffset = 0;
             if (this.abilityTimer > 0) {
                 if (this.activeAbility === 'shield') dynamicOffset = 18;
@@ -1259,13 +1265,16 @@ export class Entity {
             ctx.translate(this.x, this.y); 
             ctx.rotate(this.angle);
             
-            // Base radius + armor + ability ring offset + bob animation
             let arrowOffset = (this.type === 'square' ? this.size / 2 : this.size) + armorOffset + dynamicOffset + 12 + timeBob; 
             
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'; 
+            // Add sway translation so it glides
+            ctx.translate(swayX, swayY);
+
+            // Make it highly transparent!
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.25)'; 
             if (window.gameSettings && window.gameSettings.highQuality) {
                 ctx.shadowBlur = 5;
-                ctx.shadowColor = '#ffffff';
+                ctx.shadowColor = 'rgba(255, 255, 255, 0.5)';
             }
             
             ctx.beginPath(); 
@@ -1414,11 +1423,11 @@ export class Bot extends Entity {
         this.changeTargetTimer = 0; 
         this.isTeammate = false; 
 
-        // MASSIVE LIST OF REALISTIC BOT NAMES (Probability Tiers!)
+        // Probability-based Realistic Bot Names (Cleaned up!)
         const realNames = ["John", "Sarah", "Mike", "Emily", "David", "Jessica", "Chris", "Ashley", "Matthew", "Amanda", "Joshua", "Megan", "Andrew", "Brittany", "James", "Samantha", "Daniel", "Lauren", "Joseph", "Nicole", "Kevin", "Kayla", "Jason", "Tyler", "Brian", "Rachel", "Eric", "Elizabeth", "Ryan", "Jacob", "Gary", "Nicholas", "Adam", "Justin", "Brandon", "Kelly", "Frank", "Christina", "Scott", "Melissa", "Larry", "Rebecca", "Stephen", "Victoria", "Timothy", "Stephanie", "Richard", "Amy", "Patrick", "Laura", "Edward", "Mary", "Colin", "Michelle", "Peter", "Tiffany", "Mark", "Katherine", "Walter", "Andrea"];
         const gamerTags = ["ProGamer", "Sniper", "Shadow", "Vortex", "Rogue", "Noob", "King", "Queen", "Titan", "Spectre", "Ghost", "Dragon", "Wolf", "Demon", "Angel", "Slayer", "Hunter", "Warrior", "Tank", "Healer", "Ninja", "Samurai", "Pirate", "Cyborg", "Alien", "Mutant", "Zombie", "Vampire", "Reaper", "Death", "Chaos", "Havoc", "Phantom", "Spirit", "Soul", "TTV_Sweat", "discord_mod", "hacker_man", "aimbot.exe", "wallhack", "pay_to_win"];
-        const funnyNames = ["I_LAG_A_LOT", "mom_pull_the_plug", "ur_trash_kid", "free_xp", "plz_dont_kill", "touch_grass", "ping_999", "deez_nuts", "ligma", "sugma", "bofa", "joe_mama", "ben_dover", "dixon_cyder", "mike_hunt", "qwerty", "asdfgh", "123456", "zxcvbn", "poiuyt", "user7712", "guest_999", "guest_1234", "bruh", "im_lagging"];
-        const superRare = ["Penis", "penis", "A", "B", "C", "X", "Y", "Z", "1", "7", "Q", "God"];
+        const funnyNames = ["I_LAG_A_LOT", "mom_pull_the_plug", "ur_trash_kid", "free_xp", "plz_dont_kill", "touch_grass", "ping_999", "skill_issue", "Error_404", "NoobSlayer9000", "ctrl_alt_del", "try_harder", "qwerty", "asdfgh", "123456", "user7712", "guest_999", "bruh"];
+        const superRare = ["A", "X", "Z", "7", "Q", "God"];
         
         let roll = Math.random();
         let bName = "";
@@ -1444,7 +1453,6 @@ export class Bot extends Entity {
         this.strafeDir = Math.random() > 0.5 ? 1 : -1; 
         this.personality = Math.random(); 
         
-        // Fatigue timer so bots don't spam abilities instantly
         this.botAbilityFatigue = 0; 
         
         while (this.upgradeProgress >= this.botPointsToNextUpgrade) {
@@ -1457,10 +1465,8 @@ export class Bot extends Entity {
             }
         }
         
-        // FIX: NPCs ACTUALLY USE COSMETICS NOW
         if (ITEMS_DB) {
             const items = Object.values(ITEMS_DB);
-            
             if (Math.random() < 0.6) {
                 let colors = items.filter(i => i.category === 'Color'); 
                 if (colors.length) this.color = ITEMS_DB[colors[Math.floor(Math.random() * colors.length)].id].value;
@@ -1559,7 +1565,6 @@ export class Bot extends Entity {
             let isBerserker = this.personality > 0.8;
             let fleeThreshold = isBerserker ? 0 : 0.15 + (this.personality * 0.20); 
             
-            // SMART BOT ABILITY USAGE (Fixed spamming!)
             if (this.activeAbility && this.abilityCooldown <= 0 && this.botAbilityFatigue <= 0) {
                 let shouldCast = false;
                 
@@ -1571,7 +1576,6 @@ export class Bot extends Entity {
                 
                 if (shouldCast) {
                     this.useAbility();
-                    // Force them to wait 10 to 20 seconds after it wears off before casting again!
                     this.botAbilityFatigue = this.abilityTimer + Math.floor(600 + Math.random() * 600); 
                 }
             }
@@ -1639,7 +1643,7 @@ export class SafeZone {
         this.triggerTimer = 180; 
         this.lifeTimer = 0; 
         this.maxLifeTimer = 0;
-        this.idleTimer = 3600; // 60 seconds to be claimed!
+        this.idleTimer = 3600; 
     }
     
     update(player) {
@@ -1652,9 +1656,8 @@ export class SafeZone {
                 this.state = 'triggering'; 
                 this.triggerTimer = 180; 
             } 
-            // If idle for 60 seconds, trigger despawn!
-            if (this.idleTimer <= 0) {
-                this.state = 'active';
+            if (this.idleTimer <= 0) { 
+                this.state = 'active'; 
                 this.lifeTimer = 0; 
             }
         } else if (this.state === 'triggering') {
