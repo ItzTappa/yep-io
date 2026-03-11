@@ -132,47 +132,18 @@
     <div id="settings-modal" class="hidden">
         <div class="settings-content">
             <h2>SETTINGS</h2>
-            
-            <div class="setting-row">
-                <label for="set-volume">Master Volume</label>
-                <input type="range" id="set-volume" min="0" max="100" value="100" class="slider">
-            </div>
-            <div class="setting-row">
-                <label for="set-hq">High Quality Graphics</label>
-                <input type="checkbox" id="set-hq" checked>
-            </div>
-            <div class="setting-row">
-                <label for="set-particles">Particle Effects</label>
-                <input type="checkbox" id="set-particles" checked>
-            </div>
-            <div class="setting-row">
-                <label for="set-names">Show Player Names</label>
-                <input type="checkbox" id="set-names" checked>
-            </div>
-            <div class="setting-row">
-                <label for="set-leaderboard">Show Leaderboard</label>
-                <input type="checkbox" id="set-leaderboard" checked>
-            </div>
-            <div class="setting-row">
-                <label for="set-badges">Show Upgrade Badges</label>
-                <input type="checkbox" id="set-badges" checked>
-            </div>
-            <div class="setting-row">
-                <label for="set-notifs">Show Notifications</label>
-                <input type="checkbox" id="set-notifs" checked>
-            </div>
-            <div class="setting-row">
-                <label for="set-minimap">Show Minimap</label>
-                <input type="checkbox" id="set-minimap" checked>
-            </div>
-            <div class="setting-row">
-                <label for="set-fps">Show FPS Counter</label>
-                <input type="checkbox" id="set-fps">
-            </div>
+            <div class="setting-row"><label for="set-volume">Master Volume</label><input type="range" id="set-volume" min="0" max="100" value="100" class="slider"></div>
+            <div class="setting-row"><label for="set-hq">High Quality Graphics</label><input type="checkbox" id="set-hq" checked></div>
+            <div class="setting-row"><label for="set-particles">Particle Effects</label><input type="checkbox" id="set-particles" checked></div>
+            <div class="setting-row"><label for="set-names">Show Player Names</label><input type="checkbox" id="set-names" checked></div>
+            <div class="setting-row"><label for="set-leaderboard">Show Leaderboard</label><input type="checkbox" id="set-leaderboard" checked></div>
+            <div class="setting-row"><label for="set-badges">Show Upgrade Badges</label><input type="checkbox" id="set-badges" checked></div>
+            <div class="setting-row"><label for="set-notifs">Show Notifications</label><input type="checkbox" id="set-notifs" checked></div>
+            <div class="setting-row"><label for="set-minimap">Show Minimap</label><input type="checkbox" id="set-minimap" checked></div>
+            <div class="setting-row"><label for="set-fps">Show FPS Counter</label><input type="checkbox" id="set-fps"></div>
 
             <hr class="settings-divider">
             <h3 class="controls-title">CONTROLS</h3>
-            
             <div class="setting-row"><label>Move Up</label><button class="keybind-btn" data-action="up">W</button></div>
             <div class="setting-row"><label>Move Down</label><button class="keybind-btn" data-action="down">S</button></div>
             <div class="setting-row"><label>Move Left</label><button class="keybind-btn" data-action="left">A</button></div>
@@ -188,23 +159,33 @@
         <div class="hud">
             <div id="fps-display" class="hidden">60 FPS</div>
             <div id="upgrade-badges" class="upgrade-badges-container"></div>
+            
             <div class="xp-bar-container">
                 <div id="xp-bar"></div>
                 <span id="level-display">0 PTS</span>
             </div>
-            <div id="leaderboard-container" class="leaderboard">
-                <h3>Leaderboard</h3>
-                <ul id="leaderboard-list"></ul>
-            </div>
-        </div>
 
-        <div id="level-up-notif" class="notif-box notif-upgrade">
-            <div class="notif-text">BAR FILLED!</div>
-            <div class="notif-level">UPGRADE READY</div>
-        </div>
-        <div id="account-level-notif" class="notif-box notif-season">
-            <div class="notif-text black-text">SEASON LEVEL UP!</div>
-            <div class="notif-level black-text">REACHED LEVEL <span id="account-notif-level-num">2</span></div>
+            <div id="right-hud-column" class="right-hud-column">
+                <div id="leaderboard-container" class="leaderboard">
+                    <h3>Leaderboard</h3>
+                    <ul id="leaderboard-list"></ul>
+                </div>
+                <div id="minimap-container">
+                    <canvas id="minimap-canvas"></canvas>
+                    <div id="player-count-display">ALIVE: --</div>
+                </div>
+            </div>
+
+            <div id="notif-queue">
+                <div id="account-level-notif" class="notif-box notif-season">
+                    <div class="notif-text black-text">SEASON LEVEL UP!</div>
+                    <div class="notif-level black-text">REACHED LEVEL <span id="account-notif-level-num">2</span></div>
+                </div>
+                <div id="level-up-notif" class="notif-box notif-upgrade">
+                    <div class="notif-text">BAR FILLED!</div>
+                    <div class="notif-level">UPGRADE READY</div>
+                </div>
+            </div>
         </div>
 
         <div id="upgrade-ui" class="hidden">
@@ -217,10 +198,6 @@
         </div>
 
         <div id="br-ui" class="hidden">
-            <div id="minimap-container">
-                <canvas id="minimap-canvas"></canvas>
-                <div id="player-count-display">ALIVE: --</div>
-            </div>
             <div id="teammate-pointers"></div>
         </div>
 
@@ -239,9 +216,7 @@
     </div>
 
     <div id="dev-console" class="hidden">
-        <div id="dev-log">
-            <div class="dev-startup">Developer Console Started. Press ` or / to close. Type /help for commands.</div>
-        </div>
+        <div id="dev-log"><div class="dev-startup">Developer Console Started. Press ` or / to close. Type /help for commands.</div></div>
         <input type="text" id="dev-input" placeholder="Enter command (e.g., /level 50)" autocomplete="off">
     </div>
 
@@ -249,19 +224,11 @@
         <div class="lobby-header">
             <h2 class="lobby-title">MULTIPLAYER LOBBY</h2>
             <div class="lobby-header-controls">
-                <div class="control-box">
-                    <div class="code-label">CODE: <span id="lobby-code-display">-----</span></div>
-                    <button id="copy-code-btn" class="control-btn dark-btn">COPY</button>
-                </div>
-                <div class="control-box">
-                    <input type="text" id="join-code-input" placeholder="ENTER CODE" maxlength="5">
-                    <button id="join-lobby-btn" class="control-btn yellow-btn">JOIN</button>
-                </div>
+                <div class="control-box"><div class="code-label">CODE: <span id="lobby-code-display">-----</span></div><button id="copy-code-btn" class="control-btn dark-btn">COPY</button></div>
+                <div class="control-box"><input type="text" id="join-code-input" placeholder="ENTER CODE" maxlength="5"><button id="join-lobby-btn" class="control-btn yellow-btn">JOIN</button></div>
             </div>
         </div>
-
         <div id="player-slots-container" class="player-slots"></div>
-
         <div class="lobby-footer">
             <button id="leave-lobby-btn" class="footer-btn dark-btn-outline">LEAVE</button>
             <button id="ready-btn" class="footer-btn yellow-btn-solid">READY</button>
@@ -270,14 +237,12 @@
 
     <div id="black-fade-overlay"></div>
     <div id="mobile-controls" class="hidden">
-        <div id="joystick-left" class="joystick-zone">
-            <div class="joystick-base" id="base-left"><div class="joystick-stick" id="stick-left"></div></div>
-        </div>
+        <div id="joystick-left" class="joystick-zone"><div class="joystick-base" id="base-left"><div class="joystick-stick" id="stick-left"></div></div></div>
         <button id="mobile-dash-btn">DASH</button>
         <button id="mobile-ability-btn">ABILITY</button>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script type="module" src="js/main.js"></script>
+    <script type="module" src="main.js"></script>
 </body>
 </html>

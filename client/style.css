@@ -131,7 +131,6 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .btn-equip { padding: 10px; background: transparent; border: 2px solid var(--rarity-color); color: var(--rarity-color); border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 5px; transition: all 0.2s; pointer-events: auto; }
 .btn-equip.equipped { background: var(--rarity-color); color: #000; box-shadow: 0 0 15px var(--rarity-color); }
 
-/* FIX: HOLD TO CLAIM ANIMATION */
 .btn-claim { padding: 10px; background: transparent; border: 2px solid var(--rarity-color); border-radius: 5px; cursor: pointer; margin-top: 5px; position: relative; overflow: hidden; pointer-events: auto; }
 .btn-claim span { position: relative; z-index: 2; font-weight: bold; color: var(--rarity-color); text-shadow: 1px 1px 2px black; pointer-events: none; transition: color 0.2s; }
 .btn-claim .fill { position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: var(--rarity-color); transition: width 0.1s linear; z-index: 0; opacity: 0.8; pointer-events: none; }
@@ -206,7 +205,6 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .badge-name { display: flex; align-items: center; justify-content: center; padding: 0 8px; font-size: 0.6rem; font-weight: bold; color: white; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; }
 .badge-tier { display: flex; align-items: center; justify-content: center; padding: 0 8px; font-weight: bold; font-size: 0.75rem; border-left: 2px solid #444; text-shadow: 1px 1px 2px black; }
 
-/* FIX: ABILITY BADGE GLOBALLY STYLED */
 .ability-badge { border-color: #ff00ff !important; background: linear-gradient(90deg, rgba(255,0,255,0.2), rgba(0,0,0,0.8)) !important; height: 28px !important; }
 .hud .ability-badge { box-shadow: 0 0 15px rgba(255,0,255,0.6) !important; animation: pulseAbility 2s infinite; margin-bottom: 8px; }
 .ability-badge .badge-name { color: #ffbbff !important; font-size: 0.75rem !important; }
@@ -229,16 +227,22 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 #xp-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa); transition: width 0.2s; }
 #level-display { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; font-size: 0.9rem; text-shadow: 1px 1px 2px black; }
 
-.leaderboard { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px; width: 220px; transition: height 0.3s; }
+/* FIX: HUD RIGHT COLUMN - Linking Leaderboard and Minimap */
+.right-hud-column { position: absolute; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 15px; align-items: flex-end; pointer-events: none; }
+.leaderboard { position: relative; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px; width: 220px; transition: height 0.3s; pointer-events: auto; }
 .leaderboard h3 { font-size: 1rem; margin-bottom: 10px; color: var(--accent); text-align: center; }
 #leaderboard-list { list-style: none; font-size: 0.9rem; }
 #leaderboard-list li { display: flex; justify-content: space-between; margin-bottom: 5px; }
 
-/* FIX: DYNAMIC NOTIFICATION QUEUE STYLING */
-#notif-container { position: absolute; bottom: 40px; left: 20px; display: flex; flex-direction: column-reverse; gap: 10px; align-items: flex-start; z-index: 150; pointer-events: none; }
-.notif-box { padding: 12px 25px; border-radius: 8px; font-weight: bold; text-align: left; animation: slideIn 0.3s ease-out; opacity: 1; transition: opacity 0.5s, transform 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
-.notif-box.fade-out { opacity: 0; transform: translateY(20px); }
-@keyframes slideIn { from { transform: translateX(-150%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+#minimap-container { position: relative; width: 220px; background: rgba(0,0,0,0.5); border: 2px solid #444; border-radius: 10px; overflow: hidden; pointer-events: auto; }
+#minimap-canvas { width: 100%; height: 220px; display: block; }
+#player-count-display { text-align: center; padding: 8px; font-weight: bold; color: var(--accent); background: rgba(0,0,0,0.8); border-top: 2px solid #444; font-size: 1.2rem; letter-spacing: 2px; }
+
+/* FIX: NOTIFICATION QUEUE STYLING */
+#notif-queue { position: absolute; bottom: 40px; left: 20px; display: flex; flex-direction: column-reverse; gap: 15px; align-items: flex-start; z-index: 150; pointer-events: none; }
+.notif-box { display: none; padding: 12px 25px; border-radius: 8px; font-weight: bold; text-align: left; opacity: 0; transform: translateX(-150%); transition: all 0.4s ease; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+.notif-box.active { display: block; }
+.notif-box.show { opacity: 1; transform: translateX(0); }
 
 .notif-upgrade { background: linear-gradient(90deg, rgba(0,255,204,0.9), rgba(46,204,113,0.8)); border-left: 6px solid #00ffcc; }
 .notif-season { background: linear-gradient(90deg, rgba(255,230,0,0.9), rgba(255,245,150,0.9)); border-left: 6px solid var(--accent); }
@@ -246,6 +250,7 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .notif-season .notif-text { color: #000; text-shadow: none; }
 .notif-level { font-size: 1.2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); }
 .notif-season .notif-level { color: #000; text-shadow: none; }
+
 
 /* UPGRADES */
 #upgrade-ui { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 100; }
@@ -305,11 +310,6 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 
 #br-ui { pointer-events: none; position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh; z-index: 50;}
 
-/* FIX: MINIMAP POSITIONED FIXED TO BOTTOM RIGHT */
-#minimap-container { position: absolute; bottom: 20px; right: 20px; width: 220px; background: rgba(0,0,0,0.5); border: 2px solid #444; border-radius: 10px; overflow: hidden; pointer-events: auto; }
-#minimap-canvas { width: 100%; height: 220px; display: block; }
-#player-count-display { text-align: center; padding: 8px; font-weight: bold; color: var(--accent); background: rgba(0,0,0,0.8); border-top: 2px solid #444; font-size: 1.2rem; letter-spacing: 2px; }
-
 #black-fade-overlay { position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh; background: #000000; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 1.5s ease-in-out; }
 #black-fade-overlay.snap-black { transition: none; opacity: 1; pointer-events: all; }
 
@@ -342,17 +342,21 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
     #level-display { font-size: 0.7rem; }
     #fps-display { bottom: auto; top: max(10px, env(safe-area-inset-bottom)); left: 10px; font-size: 0.7rem; padding: 4px 8px; }
     .upgrade-badges-container { top: calc(max(10px, env(safe-area-inset-top)) + 45px); left: 10px; transform: scale(0.8); transform-origin: top left; }
-    .leaderboard { top: calc(max(10px, env(safe-area-inset-top)) + 45px); right: 10px; width: 110px; padding: 8px; background: rgba(0,0,0,0.7); }
+    
+    .right-hud-column { top: calc(max(10px, env(safe-area-inset-top)) + 45px); right: 10px; gap: 10px; }
+    .leaderboard { width: 110px; padding: 8px; background: rgba(0,0,0,0.7); }
     .leaderboard h3 { font-size: 0.7rem; margin-bottom: 5px; }
     #leaderboard-list { font-size: 0.65rem; }
     #leaderboard-list li { margin-bottom: 2px; }
-    #minimap-container { width: 100px; height: auto; bottom: 80px; top: auto; right: 10px; left: auto; transform: none; }
+    #minimap-container { width: 100px; height: 100px; }
     #minimap-canvas { width: 100px; height: 100px; }
     #player-count-display { font-size: 0.9rem; padding: 4px; }
+    
     #notif-queue { bottom: 120px; left: 10px; transform: scale(0.8); transform-origin: bottom left; }
     .notif-box { padding: 10px 20px; }
     .notif-text { font-size: 0.85rem; }
     .notif-level { font-size: 1rem; }
+    
     #upgrade-ui { top: auto; bottom: 20px; transform: translateX(-50%); width: 95%; max-width: 500px; z-index: 2000; }
     .upgrade-cards { flex-direction: row; gap: 8px; justify-content: center; width: 100%; }
     .card { flex: 1; padding: 12px 5px; margin: 0; min-height: 90px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; }
