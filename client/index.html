@@ -175,28 +175,34 @@
     </div>
 
     <div id="settings-modal" class="hidden">
-        <div class="settings-content">
+        <div class="settings-content wide-settings">
             <h2>SETTINGS</h2>
-            <div class="setting-row"><label for="set-volume">Master Volume</label><input type="range" id="set-volume" min="0" max="100" value="100" class="slider"></div>
-            <div class="setting-row"><label for="set-hq">High Quality Graphics</label><input type="checkbox" id="set-hq" checked></div>
-            <div class="setting-row"><label for="set-particles">Particle Effects</label><input type="checkbox" id="set-particles" checked></div>
-            <div class="setting-row"><label for="set-names">Show Player Names</label><input type="checkbox" id="set-names" checked></div>
-            <div class="setting-row"><label for="set-leaderboard">Show Leaderboard</label><input type="checkbox" id="set-leaderboard" checked></div>
-            <div class="setting-row"><label for="set-badges">Show Upgrade Badges</label><input type="checkbox" id="set-badges" checked></div>
-            <div class="setting-row"><label for="set-notifs">Show Notifications</label><input type="checkbox" id="set-notifs" checked></div>
-            <div class="setting-row"><label for="set-minimap">Show Minimap</label><input type="checkbox" id="set-minimap" checked></div>
-            <div class="setting-row"><label for="set-fps">Show FPS Counter</label><input type="checkbox" id="set-fps"></div>
+            
+            <div class="settings-layout">
+                <div class="settings-col">
+                    <div class="setting-row"><label for="set-volume">Master Volume</label><input type="range" id="set-volume" min="0" max="100" value="100" class="slider"></div>
+                    <div class="setting-row"><label for="set-hq">High Quality Graphics</label><input type="checkbox" id="set-hq" checked></div>
+                    <div class="setting-row"><label for="set-particles">Particle Effects</label><input type="checkbox" id="set-particles" checked></div>
+                    <div class="setting-row"><label for="set-names">Show Player Names</label><input type="checkbox" id="set-names" checked></div>
+                    <div class="setting-row"><label for="set-leaderboard">Show Leaderboard</label><input type="checkbox" id="set-leaderboard" checked></div>
+                    <div class="setting-row"><label for="set-badges">Show Upgrade Badges</label><input type="checkbox" id="set-badges" checked></div>
+                    <div class="setting-row"><label for="set-notifs">Show Notifications</label><input type="checkbox" id="set-notifs" checked></div>
+                    <div class="setting-row"><label for="set-minimap">Show Minimap</label><input type="checkbox" id="set-minimap" checked></div>
+                    <div class="setting-row"><label for="set-fps">Show FPS Counter</label><input type="checkbox" id="set-fps"></div>
+                </div>
 
-            <hr class="settings-divider">
-            <h3 class="controls-title">CONTROLS</h3>
-            <div class="setting-row"><label>Move Up</label><button class="keybind-btn" data-action="up">W</button></div>
-            <div class="setting-row"><label>Move Down</label><button class="keybind-btn" data-action="down">S</button></div>
-            <div class="setting-row"><label>Move Left</label><button class="keybind-btn" data-action="left">A</button></div>
-            <div class="setting-row"><label>Move Right</label><button class="keybind-btn" data-action="right">D</button></div>
-            <div class="setting-row"><label>Dash</label><button class="keybind-btn" data-action="dash">SPACE</button></div>
-            <div class="setting-row"><label>Use Ability</label><button class="keybind-btn ability-bind" data-action="ability">E</button></div>
+                <div class="settings-col mobile-controls-col">
+                    <h3 class="controls-title" style="margin-top: 0;">CONTROLS</h3>
+                    <div class="setting-row"><label>Move Up</label><button class="keybind-btn" data-action="up">W</button></div>
+                    <div class="setting-row"><label>Move Down</label><button class="keybind-btn" data-action="down">S</button></div>
+                    <div class="setting-row"><label>Move Left</label><button class="keybind-btn" data-action="left">A</button></div>
+                    <div class="setting-row"><label>Move Right</label><button class="keybind-btn" data-action="right">D</button></div>
+                    <div class="setting-row"><label>Dash</label><button class="keybind-btn" data-action="dash">SPACE</button></div>
+                    <div class="setting-row"><label>Use Ability</label><button class="keybind-btn ability-bind" data-action="ability">E</button></div>
+                </div>
+            </div>
 
-            <button id="close-settings-btn" class="footer-btn yellow-btn-solid" style="width:100%; height:45px; font-size:1rem; margin-top:10px;">APPLY & CLOSE</button>
+            <button id="close-settings-btn" class="footer-btn yellow-btn-solid" style="width:100%; height:45px; font-size:1rem; margin-top:20px;">APPLY & CLOSE</button>
         </div>
     </div>
 

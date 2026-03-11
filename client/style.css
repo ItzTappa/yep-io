@@ -96,6 +96,11 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .settings-content { background: #222; border: 2px solid var(--accent); padding: 30px; border-radius: 12px; width: 400px; max-height: 90vh; overflow-y: auto; box-shadow: 0 0 20px rgba(255, 230, 0, 0.2); pointer-events: auto; }
 .settings-content h2 { text-align: center; margin-bottom: 25px; color: var(--accent); letter-spacing: 2px; }
 
+/* FIX: Wide Settings Layout for 2 Columns */
+.settings-content.wide-settings { width: 750px; max-width: 95vw; overflow-y: hidden; }
+.settings-layout { display: flex; gap: 40px; width: 100%; }
+.settings-col { flex: 1; display: flex; flex-direction: column; }
+
 .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 1.1rem; }
 .setting-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer; }
 
@@ -146,6 +151,27 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .btn-claim.holding .fill { width: 100%; transition: width 1s linear; }
 .btn-claim.holding span { color: #000; text-shadow: none; }
 
+/* FIX: ADDED CLAIM ANIMATION KEYFRAMES BACK */
+@keyframes itemShake {
+    0% { transform: rotate(0deg); }
+    25% { transform: rotate(-5deg); }
+    50% { transform: rotate(5deg); }
+    75% { transform: rotate(-5deg); }
+    100% { transform: rotate(0deg); }
+}
+.store-item.shaking {
+    animation: itemShake 0.1s infinite;
+    border-color: white !important;
+}
+@keyframes itemPop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); box-shadow: 0 0 30px white; border-color: white; }
+    100% { transform: scale(1); }
+}
+.store-item.claimed-pop {
+    animation: itemPop 0.4s ease-out;
+}
+
 /* ==========================================
    STATS HISTORY
 ========================================== */
@@ -184,7 +210,6 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 #locker-back-btn:hover { background: var(--accent); color: black; }
 #locker-category-title { color: var(--accent); font-size: 1.5rem; letter-spacing: 2px; text-transform: uppercase; }
 
-/* FIX: Added margin-top to bump the circle down perfectly in line with the slots */
 .locker-preview-box { position: sticky; top: 140px; margin-top: 50px; width: 350px; height: 350px; background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; pointer-events: none; }
 .locker-preview-box canvas { display: block; }
 
@@ -430,7 +455,12 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
     .match-detail-label { font-size: 0.65rem; }
     .match-detail-val { font-size: 1.1rem; }
     .match-rank { font-size: 1.6rem; }
-    .settings-content { width: 90%; padding: 15px; }
+    
+    /* MOBILE WIDE SETTINGS FIX */
+    .settings-layout { flex-direction: column; gap: 10px; }
+    .settings-content.wide-settings { overflow-y: auto; max-height: 90vh; width: 90%; }
+    .mobile-controls-col h3.controls-title { margin-top: 15px !important; border-top: 2px solid #444; padding-top: 15px; }
+
     #preview-screen-title { font-size: 2rem; }
     #preview-screen-category { font-size: 1rem; margin-bottom: 15px; }
     .fullscreen-preview-box { width: 250px; height: 250px; margin-bottom: 20px; }
