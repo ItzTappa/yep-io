@@ -33,24 +33,36 @@ window.currentLobbyCode = null; // Globally available code
 window.lobbyPlayers = [];
 
 // Persistent Guest ID for those without an account
-if (!window.mySessionId) window.mySessionId = 'guest_' + Math.floor(Math.random()*1000000);
-function getMyUid() { return auth.currentUser ? auth.currentUser.uid : window.mySessionId; }
+if (!window.mySessionId) {
+    window.mySessionId = 'guest_' + Math.floor(Math.random() * 1000000);
+}
+
+function getMyUid() {
+    if (auth.currentUser) {
+        return auth.currentUser.uid;
+    }
+    return window.mySessionId;
+}
 
 // Utility to generate a random 5-char code
 function generateLobbyCode() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let code = '';
-    for (let i = 0; i < 5; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+    for (let i = 0; i < 5; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
     return code;
 }
 
 function setInGameStatus(isIngame) {
     if (auth.currentUser) {
-        updateDoc(doc(db, "users", auth.currentUser.uid), { inGame: isIngame }).catch(e=>{});
+        updateDoc(doc(db, "users", auth.currentUser.uid), {
+            inGame: isIngame
+        }).catch(e => console.error(e));
     }
 }
 
-// Clean out old local testing
+// Clean out the old local testing logic
 localStorage.removeItem('yepio_accounts');
 localStorage.removeItem('yepio_current_user');
 
@@ -65,6 +77,7 @@ function resetLocalStats() {
     window.myRequests = [];
     window.myInvites = [];
 }
+
 // Run immediately on boot so the UI never crashes looking for a missing 'Skin'
 resetLocalStats();
 
@@ -72,14 +85,17 @@ let unsubUser = null;
 let handledInvites = {};
 let friendCache = {};
 
-// Fetch stats & Start Listening for Live Updates
+// Fetch stats securely from the Cloud Database & Start Listening for Live Updates
 async function listenToUserData(uid) {
-    if (unsubUser) unsubUser();
+    if (unsubUser) {
+        unsubUser();
+    }
     
     unsubUser = onSnapshot(doc(db, "users", uid), async (docSnap) => {
         if (docSnap.exists()) {
             let data = docSnap.data();
             
+            // Base Stats
             window.globalAccountXP = data.xp || 0;
             window.globalAccountLevel = data.level || 1;
             window.equippedItems = data.equipped || { Skin: null, Trail: null, Banner: null, Color: null };
@@ -87,10 +103,12 @@ async function listenToUserData(uid) {
             window.matchHistory = data.history || [];
             window.lifetimeStats = data.stats || { matches: 0, kills: 0, time: 0, points: 0, distance: 0 };
             
+            // Friends & Requests
             window.myFriends = data.friends || [];
             window.myRequests = data.requestsIn || [];
             window.myInvites = data.invites || [];
             
+            // Process Live Invites
             const now = Date.now();
             window.myInvites.forEach(inv => {
                 if (now - inv.timestamp < 60000 && !handledInvites[inv.timestamp]) {
@@ -99,17 +117,18 @@ async function listenToUserData(uid) {
                 }
             });
 
+            // Re-render UI
             refreshAllUIs();
             renderFriendsUI(); 
             
         } else {
-            resetLocalStats(); 
+            resetLocalStats(); // Brand new account
             refreshAllUIs();
         }
     });
 }
 
-// Save stats securely to the Cloud
+// Save stats securely to the Cloud Database
 async function saveUserData() {
     if (auth.currentUser) {
         try {
@@ -123,28 +142,37 @@ async function saveUserData() {
                 stats: window.lifetimeStats,
                 lastActive: Date.now()
             }, { merge: true });
-        } catch(e) { console.error("Error saving profile:", e); }
+        } catch(e) { 
+            console.error("Error saving profile:", e); 
+        }
     }
 }
 
-// Keep "Online" status alive every 30s
+// Keep "Online" status alive every 30 seconds
 setInterval(() => {
-    if (auth.currentUser) saveUserData();
+    if (auth.currentUser) {
+        saveUserData();
+    }
 }, 30000);
 
+// Listen for Login/Logout events
 onAuthStateChanged(auth, (user) => {
     if (user) {
-        currentUser = user.email.split('@')[0];
+        currentUser = user.email.split('@')[0]; // Pulls the username out of the fake email
         setInGameStatus(false); // Reset inGame flag on fresh load
         listenToUserData(user.uid);
     } else {
         currentUser = null;
-        if (unsubUser) unsubUser();
+        if (unsubUser) {
+            unsubUser();
+        }
         resetLocalStats();
         refreshAllUIs();
     }
 });
 
+
+// Initialize all default device settings (These stay local)
 window.gameSettings = JSON.parse(localStorage.getItem('yepio_settings')) || { 
     highQuality: true, particles: true, showNames: true, showFps: false,
     volume: 1.0, showLeaderboard: true, showBadges: true, showNotifs: true, showMinimap: true,
@@ -170,8 +198,14 @@ function generateShop() {
         const base = stat.mult[item.rarity - 1];
         const variance = base * 0.2; 
         let req = Math.floor(base + (Math.random() * variance * 2) - variance);
-        if (stat.type === 'distance' || stat.type === 'points') req = Math.ceil(req / 100) * 100;
-        if (stat.type === 'time') req = Math.ceil(req / 10) * 10;
+        
+        if (stat.type === 'distance' || stat.type === 'points') {
+            req = Math.ceil(req / 100) * 100;
+        }
+        if (stat.type === 'time') {
+            req = Math.ceil(req / 10) * 10;
+        }
+        
         return { id: item.id, type: stat.type, req: req, label: stat.label };
     });
 
@@ -182,10 +216,14 @@ function generateShop() {
 function getShop() {
     const saved = localStorage.getItem('yep_shop');
     const currentHour = new Date().getHours();
+    
     if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.hour === currentHour) return parsed.items; 
+        if (parsed.hour === currentHour) {
+            return parsed.items; 
+        }
     }
+    
     window.hourlyStats = { kills: 0, time: 0, points: 0, distance: 0 }; 
     return generateShop();
 }
@@ -204,7 +242,11 @@ const canvas = document.getElementById('gameCanvas');
 const game = new GameEngine(canvas);
 window.game = game; 
 
-try { game.startDemo(); } catch(e) { console.error(e); }
+try { 
+    game.startDemo(); 
+} catch(e) { 
+    console.error(e); 
+}
 
 // ==========================================
 // REAL-TIME LOBBY SYSTEM
@@ -218,41 +260,22 @@ function renderLobbySlots(hostName = null) {
     let count = currentLobbyMode === 'duos' ? 2 : currentLobbyMode === 'trios' ? 3 : 4;
     container.innerHTML = '';
     
-    // If joining someone else's lobby
-    if (hostName) {
-        container.innerHTML += `
-            <div class="player-slot ready">
-                <div class="lobby-preview-canvas" style="display:flex; align-items:center; justify-content:center;">(HOST)</div>
-                <div class="name">${hostName}</div>
-                <div class="status">READY</div>
-            </div>`;
-        container.innerHTML += `
-            <div class="player-slot ready">
-                <div class="lobby-preview-canvas" style="display:flex; align-items:center; justify-content:center;">(YOU)</div>
-                <div class="name">${currentUser || 'GUEST'}</div>
-                <div class="status">READY</div>
-            </div>`;
-        for(let i=2; i<count; i++) {
+    for(let i=0; i<count; i++) {
+        const p = window.lobbyPlayers[i];
+        if (p) {
+            const isMe = p.uid === getMyUid();
             container.innerHTML += `
-                <div class="player-slot empty">
-                    <div class="lobby-preview-canvas">+</div>
-                    <div class="name" style="color:gray;">WAITING...</div>
+                <div class="player-slot ${p.ready ? 'ready' : ''}">
+                    <canvas class="lobby-preview-canvas" id="lobby-canvas-${i}"></canvas>
+                    <div class="name">${p.name} ${isMe ? '(YOU)' : ''}</div>
+                    <div class="status" style="color: ${p.ready ? '#00ffcc' : 'gray'}">${p.ready ? 'READY' : 'NOT READY'}</div>
                 </div>`;
-        }
-    } 
-    // If it's your own lobby
-    else {
-        container.innerHTML += `
-            <div class="player-slot ready">
-                <div class="lobby-preview-canvas" style="display:flex; align-items:center; justify-content:center;">(YOU)</div>
-                <div class="name">${currentUser || 'GUEST'}</div>
-                <div class="status">READY</div>
-            </div>`;
-        for(let i=1; i<count; i++) {
+        } else {
             container.innerHTML += `
                 <div class="player-slot empty">
-                    <div class="lobby-preview-canvas">+</div>
+                    <div class="lobby-preview-canvas" style="display:flex; align-items:center; justify-content:center; font-size:3rem; border: 2px dashed #555; border-radius:50%; color:#555;">+</div>
                     <div class="name" style="color:gray;">WAITING...</div>
+                    <div class="status"></div>
                 </div>`;
         }
     }
@@ -262,13 +285,19 @@ function renderLobbySlots(hostName = null) {
     const me = window.lobbyPlayers.find(pl => pl.uid === myUid);
     const leaveBtn = document.getElementById('leave-lobby-btn');
     if (leaveBtn) {
-        if (me && window.lobbyPlayers.length > 0) leaveBtn.classList.remove('hidden');
-        else leaveBtn.classList.add('hidden');
+        if (me && window.lobbyPlayers.length > 0) {
+            leaveBtn.classList.remove('hidden');
+        } else {
+            leaveBtn.classList.add('hidden');
+        }
     }
 }
 
 function listenToLobby(code) {
-    if (lobbyUnsub) lobbyUnsub();
+    if (lobbyUnsub) {
+        lobbyUnsub();
+    }
+    
     lobbyUnsub = onSnapshot(doc(db, "lobbies", code), (snap) => {
         if (snap.exists()) {
             const data = snap.data();
@@ -279,7 +308,9 @@ function listenToLobby(code) {
             // Sync mode UI
             document.querySelectorAll('.mode-select-btn').forEach(b => b.classList.remove('active'));
             const mBtn = document.querySelector(`.mode-select-btn[data-mode="${currentLobbyMode}"]`);
-            if (mBtn) mBtn.classList.add('active');
+            if (mBtn) {
+                mBtn.classList.add('active');
+            }
             
             renderLobbySlots();
 
@@ -323,15 +354,22 @@ async function leaveCurrentLobby() {
                 await updateDoc(doc(db, "lobbies", code), { players: arrayRemove(me) });
             }
         }
-    } catch(e) {}
+    } catch(e) {
+        console.error(e);
+    }
+    
     window.currentLobbyCode = null;
     window.lobbyPlayers = [];
-    if (lobbyUnsub) { lobbyUnsub(); lobbyUnsub = null; }
+    if (lobbyUnsub) { 
+        lobbyUnsub(); 
+        lobbyUnsub = null; 
+    }
 }
 
 async function joinLobbyByCode(code, sourceBtn) {
     const originalText = sourceBtn.innerText;
     sourceBtn.innerText = "JOINING...";
+    
     try {
         const snap = await getDoc(doc(db, "lobbies", code));
         if (!snap.exists()) {
@@ -339,6 +377,7 @@ async function joinLobbyByCode(code, sourceBtn) {
             setTimeout(() => sourceBtn.innerText = originalText, 2000);
             return false;
         }
+        
         const data = snap.data();
         const max = data.mode === 'duos' ? 2 : data.mode === 'trios' ? 3 : 4;
         
@@ -380,7 +419,6 @@ async function joinLobbyByCode(code, sourceBtn) {
     }
 }
 
-
 // ==========================================
 // GLOBAL UI HANDLER
 // ==========================================
@@ -399,10 +437,12 @@ document.addEventListener('click', async (e) => {
     const target = e.target;
 
     if (target.tagName === 'BUTTON' || target.closest('button')) {
-        if (sounds && sounds.play) sounds.play('click', 0.4 * (window.gameSettings.volume || 1.0));
+        if (sounds && sounds.play) {
+            sounds.play('click', 0.4 * (window.gameSettings.volume || 1.0));
+        }
     }
 
-    // Toggle Password
+    // Toggle Password Visibility
     const togglePassBtn = target.closest('#toggle-pass-btn');
     if (togglePassBtn) {
         const passInput = document.getElementById('acc-pass');
@@ -427,8 +467,8 @@ document.addEventListener('click', async (e) => {
         document.getElementById('friend-profile-view').classList.add('hidden');
         return;
     }
-    
-    // Back to Friends
+
+    // Back to Friends list from Friend Profile
     if (target.id === 'back-to-friends-btn') {
         document.getElementById('friend-profile-view').classList.add('hidden');
         document.getElementById('account-logged-in').classList.remove('hidden');
@@ -437,7 +477,9 @@ document.addEventListener('click', async (e) => {
 
     // Gamemode Selector (Host Only)
     if (target.classList.contains('mode-select-btn')) {
-        if (!window.lobbyPlayers || window.lobbyPlayers.length === 0 || window.lobbyPlayers[0].uid !== getMyUid()) return; // Must be host
+        if (!window.lobbyPlayers || window.lobbyPlayers.length === 0 || window.lobbyPlayers[0].uid !== getMyUid()) {
+            return; // Must be host
+        }
         
         document.querySelectorAll('.mode-select-btn').forEach(b => b.classList.remove('active'));
         target.classList.add('active');
@@ -466,12 +508,13 @@ document.addEventListener('click', async (e) => {
         }
         return;
     }
-    
+
     // Ready Up / Start Match
     if (target.id === 'ready-btn') {
         if (!window.currentLobbyCode) return;
         const myUid = getMyUid();
         const me = window.lobbyPlayers.find(p => p.uid === myUid);
+        
         if (me) {
             const isHost = window.lobbyPlayers[0].uid === myUid;
             const everyoneElseReady = window.lobbyPlayers.every(p => p.uid === myUid || p.ready);
@@ -531,8 +574,14 @@ document.addEventListener('click', async (e) => {
         const pass = document.getElementById('acc-pass').value;
         const errorText = document.getElementById('acc-error');
         
-        if (user.length < 3) { errorText.innerText = "Username must be at least 3 chars!"; return; }
-        if (pass.length < 6) { errorText.innerText = "Password must be at least 6 chars!"; return; }
+        if (user.length < 3) { 
+            errorText.innerText = "Username must be at least 3 chars!"; 
+            return; 
+        }
+        if (pass.length < 6) { 
+            errorText.innerText = "Password must be at least 6 chars!"; 
+            return; 
+        }
         
         errorText.innerText = "Creating account...";
         errorText.style.color = "white";
@@ -543,8 +592,11 @@ document.addEventListener('click', async (e) => {
             })
             .catch((error) => {
                 errorText.style.color = "#ff4444";
-                if(error.code === 'auth/email-already-in-use') errorText.innerText = "Username already taken!";
-                else errorText.innerText = error.message.replace("Firebase: ", "");
+                if(error.code === 'auth/email-already-in-use') {
+                    errorText.innerText = "Username already taken!";
+                } else {
+                    errorText.innerText = error.message.replace("Firebase: ", "");
+                }
             });
         return;
     }
@@ -555,7 +607,10 @@ document.addEventListener('click', async (e) => {
         const pass = document.getElementById('acc-pass').value;
         const errorText = document.getElementById('acc-error');
         
-        if (!user || !pass) { errorText.innerText = "Please enter username and password!"; return; }
+        if (!user || !pass) { 
+            errorText.innerText = "Please enter username and password!"; 
+            return; 
+        }
         
         errorText.innerText = "Logging in...";
         errorText.style.color = "white";
@@ -575,6 +630,7 @@ document.addEventListener('click', async (e) => {
     const logoutBtn = target.closest('#acc-logout-btn');
     if (logoutBtn) {
         logoutBtn.innerText = "LOGGING OUT...";
+        
         try {
             await saveUserData(); 
             await signOut(auth);  
@@ -597,7 +653,11 @@ document.addEventListener('click', async (e) => {
         const targetName = searchInput.value.trim();
         
         if (!targetName) return;
-        if (targetName === currentUser) { msg.innerText = "You can't add yourself!"; msg.style.color = "#ff4444"; return; }
+        if (targetName === currentUser) { 
+            msg.innerText = "You can't add yourself!"; 
+            msg.style.color = "#ff4444"; 
+            return; 
+        }
         
         msg.innerText = "Searching...";
         msg.style.color = "white";
@@ -731,6 +791,8 @@ document.addEventListener('click', async (e) => {
                     })
                 });
                 inviteBtn.innerText = "INVITE SENT! WAITING IN LOBBY...";
+                
+                // Immediately route the Sender to the Multiplayer Tab to wait
                 setTimeout(() => { 
                     document.getElementById('account-modal').classList.add('hidden');
                     document.querySelector('.tab-btn[data-target="multiplayer"]').click();
@@ -758,10 +820,16 @@ document.addEventListener('click', async (e) => {
             if (selectedClass === 'triangle') info.innerText = "JET: Fast & agile. Lower health. Good for hit-and-run.";
             if (selectedClass === 'square') info.innerText = "TANK: High health, slow speed. Excels in close-quarters brawls.";
             if (selectedClass === 'circle') info.innerText = "SOLDIER: Balanced speed and health. The perfect all-rounder.";
+            
             info.style.color = "var(--accent)";
             info.classList.remove('hidden', 'fade-out');
-            if (window.classInfoTimeout) clearTimeout(window.classInfoTimeout);
-            window.classInfoTimeout = setTimeout(() => { info.classList.add('fade-out'); }, 4000);
+            
+            if (window.classInfoTimeout) {
+                clearTimeout(window.classInfoTimeout);
+            }
+            window.classInfoTimeout = setTimeout(() => { 
+                info.classList.add('fade-out'); 
+            }, 4000);
         }
     }
 
@@ -770,7 +838,9 @@ document.addEventListener('click', async (e) => {
     if (equipBtn) {
         const itemId = equipBtn.dataset.id;
         if (!itemId) { 
-            if (currentLockerCategory) window.equippedItems[currentLockerCategory] = null;
+            if (currentLockerCategory) {
+                window.equippedItems[currentLockerCategory] = null;
+            }
         } else {
             const item = ITEMS_DB[itemId];
             if (item) {
@@ -845,8 +915,11 @@ document.addEventListener('click', async (e) => {
         const lobbyControls = document.getElementById('footer-center-lobby-controls');
         
         if (menuFooter) {
-            if (targetTab === 'locker') menuFooter.classList.add('hidden');
-            else menuFooter.classList.remove('hidden');
+            if (targetTab === 'locker') {
+                menuFooter.classList.add('hidden');
+            } else {
+                menuFooter.classList.remove('hidden');
+            }
         }
         
         if (targetTab === 'multiplayer') {
@@ -901,7 +974,10 @@ async function renderFriendsUI() {
             let data = friendCache[uid];
             if (!data) {
                 const s = await getDoc(doc(db, "users", uid));
-                if (s.exists()) { data = s.data(); friendCache[uid] = data; }
+                if (s.exists()) { 
+                    data = s.data(); 
+                    friendCache[uid] = data; 
+                }
             }
             if (data) {
                 reqList.innerHTML += `
@@ -944,7 +1020,10 @@ async function renderFriendsUI() {
             let data = friendCache[uid];
             if (!data) {
                 const s = await getDoc(doc(db, "users", uid));
-                if (s.exists()) { data = s.data(); friendCache[uid] = data; }
+                if (s.exists()) { 
+                    data = s.data(); 
+                    friendCache[uid] = data; 
+                }
             }
             if (data) {
                 const isOnline = (Date.now() - (data.lastActive || 0)) < 65000;
@@ -1007,7 +1086,9 @@ function showInviteNotification(senderName, code, hostUid) {
     queue.appendChild(clone);
     requestAnimationFrame(() => clone.classList.add('show'));
     
-    if(sounds && sounds.play) sounds.play('levelUp', 0.8);
+    if(sounds && sounds.play) {
+        sounds.play('levelUp', 0.8);
+    }
 
     setTimeout(() => {
         if(clone.parentNode) {
@@ -1023,17 +1104,23 @@ function showInviteNotification(senderName, code, hostUid) {
 const startClaim = (e) => {
     const btn = e.target.closest('.btn-claim');
     if (!btn) return;
+    
     e.preventDefault(); 
     btn.classList.add('holding');
     const storeItem = btn.closest('.store-item');
-    if (storeItem) storeItem.classList.add('shaking');
+    
+    if (storeItem) {
+        storeItem.classList.add('shaking');
+    }
 
     btn.claimTimeout = setTimeout(() => {
         const itemId = btn.dataset.id;
         window.claimedItems[itemId] = true;
         saveUserData(); 
         
-        if(sounds && sounds.play) sounds.play('levelUp', 0.6 * (window.gameSettings.volume || 1.0)); 
+        if(sounds && sounds.play) {
+            sounds.play('levelUp', 0.6 * (window.gameSettings.volume || 1.0)); 
+        }
         
         btn.classList.remove('holding');
         if (storeItem) {
@@ -1053,7 +1140,9 @@ const stopClaim = (e) => {
         clearTimeout(btn.claimTimeout);
         btn.classList.remove('holding');
         const storeItem = btn.closest('.store-item');
-        if (storeItem) storeItem.classList.remove('shaking');
+        if (storeItem) {
+            storeItem.classList.remove('shaking');
+        }
     });
 };
 
@@ -1088,7 +1177,9 @@ let previewAngle = 0;
 let previewDummy = new Player(0, 0, 'triangle', "");
 previewDummy.isPlayer = false; 
 
-if (window.previewAnimationId) cancelAnimationFrame(window.previewAnimationId);
+if (window.previewAnimationId) {
+    cancelAnimationFrame(window.previewAnimationId);
+}
 
 let previewLastTime = performance.now();
 let previewAccumulator = 0;
@@ -1110,10 +1201,14 @@ function renderPreview() {
         let needsTrail = false;
         
         const lockerTab = document.getElementById('locker');
-        if (lockerTab && lockerTab.classList.contains('active') && currentLockerCategory === 'Trail') needsTrail = true;
+        if (lockerTab && lockerTab.classList.contains('active') && currentLockerCategory === 'Trail') {
+            needsTrail = true;
+        }
         
         const itemPreviewScreen = document.getElementById('item-preview-screen');
-        if (itemPreviewScreen && !itemPreviewScreen.classList.contains('hidden') && window.activePreviewItem && ITEMS_DB[window.activePreviewItem] && ITEMS_DB[window.activePreviewItem].category === 'Trail') needsTrail = true;
+        if (itemPreviewScreen && !itemPreviewScreen.classList.contains('hidden') && window.activePreviewItem && ITEMS_DB[window.activePreviewItem] && ITEMS_DB[window.activePreviewItem].category === 'Trail') {
+            needsTrail = true;
+        }
         
         if (needsTrail) {
             previewDummy.vx = Math.cos(previewAngle) * 4;
@@ -1137,10 +1232,13 @@ function renderPreview() {
         lockerCtx.clearRect(0, 0, 300, 300);
         previewDummy.type = selectedClass || 'triangle';
         previewDummy.equipped = { ...window.equippedItems };
+        
         if (previewDummy.equipped.Color && ITEMS_DB[previewDummy.equipped.Color]) {
             const dbColor = ITEMS_DB[previewDummy.equipped.Color].value;
             previewDummy.color = dbColor === 'gold' ? '#ffe600' : dbColor; 
-        } else { previewDummy.color = '#d3d3d3'; }
+        } else { 
+            previewDummy.color = '#d3d3d3'; 
+        }
         
         previewDummy.angle = previewAngle; 
         previewDummy.size = 60; 
@@ -1155,14 +1253,19 @@ function renderPreview() {
         fsCtx.clearRect(0, 0, 350, 350);
         previewDummy.type = selectedClass || 'triangle';
         let equipState = { ...window.equippedItems };
+        
         if (window.activePreviewItem && ITEMS_DB[window.activePreviewItem]) {
             equipState[ITEMS_DB[window.activePreviewItem].category] = window.activePreviewItem;
         }
+        
         previewDummy.equipped = equipState;
+        
         if (previewDummy.equipped.Color && ITEMS_DB[previewDummy.equipped.Color]) {
             const dbColor = ITEMS_DB[previewDummy.equipped.Color].value;
             previewDummy.color = dbColor === 'gold' ? '#ffe600' : dbColor; 
-        } else { previewDummy.color = '#d3d3d3'; }
+        } else { 
+            previewDummy.color = '#d3d3d3'; 
+        }
         
         previewDummy.angle = previewAngle; 
         previewDummy.size = 70; 
@@ -1193,7 +1296,9 @@ function renderPreview() {
                 if (previewDummy.equipped.Color && ITEMS_DB[previewDummy.equipped.Color]) {
                     const dbColor = ITEMS_DB[previewDummy.equipped.Color].value;
                     previewDummy.color = dbColor === 'gold' ? '#ffe600' : dbColor; 
-                } else { previewDummy.color = '#d3d3d3'; }
+                } else { 
+                    previewDummy.color = '#d3d3d3'; 
+                }
                 
                 previewDummy.angle = previewAngle;
                 previewDummy.size = 35;
@@ -1228,8 +1333,11 @@ document.getElementById('close-settings-btn').addEventListener('click', () => {
 
     const fpsDisplay = document.getElementById('fps-display');
     if (fpsDisplay) {
-        if (window.gameSettings.showFps) fpsDisplay.classList.remove('hidden');
-        else fpsDisplay.classList.add('hidden');
+        if (window.gameSettings.showFps) {
+            fpsDisplay.classList.remove('hidden');
+        } else {
+            fpsDisplay.classList.add('hidden');
+        }
     }
     
     if (window.game) {
@@ -1247,6 +1355,7 @@ document.querySelectorAll('.keybind-btn').forEach(btn => {
         e.target.innerText = "PRESS KEY";
     });
 });
+
 let listeningAction = null;
 const formatKeyName = (key) => key === ' ' ? 'SPACE' : key.toUpperCase();
 
@@ -1271,11 +1380,18 @@ function updateMenuXPBar() {
     const progressPercent = Math.min(100, (window.globalAccountXP / xpRequired) * 100);
     const bar = document.getElementById('menu-xp-bar');
     const lvl = document.getElementById('menu-level');
-    if (bar) bar.style.width = `${progressPercent}%`;
-    if (lvl) lvl.innerText = window.globalAccountLevel;
+    
+    if (bar) {
+        bar.style.width = `${progressPercent}%`;
+    }
+    if (lvl) {
+        lvl.innerText = window.globalAccountLevel;
+    }
     
     const sBar = document.getElementById('season-progress-bar');
-    if (sBar) sBar.style.width = `${Math.min(100, (window.globalAccountLevel / 50) * 100)}%`;
+    if (sBar) {
+        sBar.style.width = `${Math.min(100, (window.globalAccountLevel / 50) * 100)}%`;
+    }
 }
 
 document.getElementById('play-btn').addEventListener('click', () => {
@@ -1290,11 +1406,16 @@ document.getElementById('play-btn').addEventListener('click', () => {
         }
         return;
     }
+    
     setInGameStatus(true); 
     document.getElementById('main-menu').classList.add('hidden');
     document.getElementById('game-ui').classList.remove('hidden');
+    
     const hud = document.querySelector('.hud');
-    if(hud) hud.classList.remove('hidden');
+    if(hud) {
+        hud.classList.remove('hidden');
+    }
+    
     window.isInMatch = true;
     game.start(selectedClass);
 });
@@ -1302,6 +1423,7 @@ document.getElementById('play-btn').addEventListener('click', () => {
 document.getElementById('return-lobby-btn').addEventListener('click', () => {
     setInGameStatus(false);
     window.isInMatch = false;
+    
     document.getElementById('game-over-screen').classList.add('hidden');
     document.getElementById('game-ui').classList.add('hidden');
     document.getElementById('main-menu').classList.remove('hidden');
@@ -1320,7 +1442,9 @@ document.getElementById('return-lobby-btn').addEventListener('click', () => {
         window.lifetimeStats.distance += window.lastMatchStats.distance || 0;
         
         window.matchHistory.unshift(window.lastMatchStats);
-        if (window.matchHistory.length > 20) window.matchHistory.pop();
+        if (window.matchHistory.length > 20) {
+            window.matchHistory.pop();
+        }
         window.lastMatchStats = null; 
         saveUserData(); 
     }
@@ -1375,6 +1499,7 @@ if (devInput) {
         if (e.key === 'Enter') {
             const val = devInput.value.trim();
             if (!val) return;
+            
             logDev(val);
             devInput.value = ''; 
             
@@ -1383,7 +1508,6 @@ if (devInput) {
             const arg = parseInt(parts[1]);
             const player = (window.game && !window.game.isDemo && !window.game.isGameOver) ? window.game.player : null;
 
-            // DEV COMMANDS START
             if (cmd === '/level' && !isNaN(arg)) {
                 window.globalAccountLevel = arg; 
                 window.globalAccountXP = 0; 
@@ -1392,96 +1516,188 @@ if (devInput) {
                 logDev(`[SUCCESS] Account Level set to ${arg}.`);
             }
             else if (cmd === '/god' || cmd === '/unkillable') {
-                if (player) { player.maxHealth = 9999999; player.health = 9999999; player.regen = 9999; logDev('[SUCCESS] God mode enabled.'); }
-                else { logDev('[ERROR] Must be in a match.'); }
+                if (player) { 
+                    player.maxHealth = 9999999; 
+                    player.health = 9999999; 
+                    player.regen = 9999; 
+                    logDev('[SUCCESS] God mode enabled.'); 
+                } else {
+                    logDev('[ERROR] Must be in a match.');
+                }
             }
             else if (cmd === '/score' && !isNaN(arg)) {
-                if(player) { player.points += arg; player.upgradeProgress += arg; logDev(`[SUCCESS] Added ${arg} score.`); }
+                if(player) { 
+                    player.points += arg; 
+                    player.upgradeProgress += arg; 
+                    logDev(`[SUCCESS] Added ${arg} score.`); 
+                }
             }
             else if (cmd === '/speed' && !isNaN(arg)) {
-                if(player) { player.speed = arg; logDev(`[SUCCESS] Speed set to ${arg}.`); }
+                if(player) { 
+                    player.speed = arg; 
+                    logDev(`[SUCCESS] Speed set to ${arg}.`); 
+                }
             }
             else if (cmd === '/damage' && !isNaN(arg)) {
-                if(player) { player.baseDamage = arg; logDev(`[SUCCESS] Damage set to ${arg}.`); }
+                if(player) { 
+                    player.baseDamage = arg; 
+                    logDev(`[SUCCESS] Damage set to ${arg}.`); 
+                }
             }
             else if (cmd === '/firerate' && !isNaN(arg)) {
-                if(player) { player.fireRate = arg; logDev(`[SUCCESS] Fire rate set to ${arg}.`); }
+                if(player) { 
+                    player.fireRate = arg; 
+                    logDev(`[SUCCESS] Fire rate set to ${arg}.`); 
+                }
             }
             else if (cmd === '/multishot' && !isNaN(arg)) {
-                if(player) { player.multiShot = arg; logDev(`[SUCCESS] Multishot set to ${arg}.`); }
+                if(player) { 
+                    player.multiShot = arg; 
+                    logDev(`[SUCCESS] Multishot set to ${arg}.`); 
+                }
             }
             else if (cmd === '/spikes' && !isNaN(arg)) {
-                if(player) { player.spikes = arg; player.frontVisual = 'spikes'; logDev(`[SUCCESS] Spikes set to ${arg}.`); }
+                if(player) { 
+                    player.spikes = arg; 
+                    player.frontVisual = 'spikes'; 
+                    logDev(`[SUCCESS] Spikes set to ${arg}.`); 
+                }
             }
             else if (cmd === '/orbiters' && !isNaN(arg)) {
-                if(player) { player.orbiters = arg; logDev(`[SUCCESS] Orbiters set to ${arg}.`); }
+                if(player) { 
+                    player.orbiters = arg; 
+                    logDev(`[SUCCESS] Orbiters set to ${arg}.`); 
+                }
             }
             else if (cmd === '/missiles' && !isNaN(arg)) {
-                if(player) { player.missiles = arg; logDev(`[SUCCESS] Missiles set to ${arg}.`); }
+                if(player) { 
+                    player.missiles = arg; 
+                    logDev(`[SUCCESS] Missiles set to ${arg}.`); 
+                }
             }
             else if (cmd === '/size' && !isNaN(arg)) {
-                if(player) { player.size = arg; logDev(`[SUCCESS] Size set to ${arg}.`); }
+                if(player) { 
+                    player.size = arg; 
+                    logDev(`[SUCCESS] Size set to ${arg}.`); 
+                }
             }
             else if (cmd === '/heal') {
-                if(player) { player.health = player.maxHealth; logDev('[SUCCESS] Health restored.'); }
+                if(player) { 
+                    player.health = player.maxHealth; 
+                    logDev('[SUCCESS] Health restored.'); 
+                }
             }
             else if (cmd === '/nuke') {
-                if(window.game && window.game.bots) { window.game.bots.forEach(b => b.health = 0); logDev('[SUCCESS] Destroyed all enemies.'); }
+                if(window.game && window.game.bots) { 
+                    window.game.bots.forEach(b => b.health = 0); 
+                    logDev('[SUCCESS] Destroyed all enemies.'); 
+                }
             }
             else if (cmd === '/shake' && !isNaN(arg)) {
-                if(window.game) { window.game.screenShake = arg; logDev(`[SUCCESS] Screen shake = ${arg}.`); }
+                if(window.game) { 
+                    window.game.screenShake = arg; 
+                    logDev(`[SUCCESS] Screen shake = ${arg}.`); 
+                }
             }
             else if (cmd === '/storm') {
-                if(window.game) { window.game.stormActive = true; window.game.stormRadius = arg || 1000; logDev(`[SUCCESS] Storm triggered.`); }
+                if(window.game) { 
+                    window.game.stormActive = true; 
+                    window.game.stormRadius = arg || 1000; 
+                    logDev(`[SUCCESS] Storm triggered.`); 
+                }
             }
             else if (cmd === '/ability') {
-                if(player) { player.activeAbility = parts[1]; window.game.updateUpgradeBadges(); logDev(`[SUCCESS] Ability set to ${parts[1]}.`); }
+                if(player) { 
+                    player.activeAbility = parts[1]; 
+                    window.game.updateUpgradeBadges(); 
+                    logDev(`[SUCCESS] Ability set to ${parts[1]}.`); 
+                }
             }
             else if (cmd === '/cooldown') {
-                if(player) { player.abilityMaxCooldown = arg || 0; player.dashMaxCooldown = arg || 0; logDev('[SUCCESS] Cooldowns modified.'); }
+                if(player) { 
+                    player.abilityMaxCooldown = arg || 0; 
+                    player.dashMaxCooldown = arg || 0; 
+                    logDev('[SUCCESS] Cooldowns modified.'); 
+                }
             }
             else if (cmd === '/maxupgrades') {
                 if(player && UPGRADE_POOL) {
-                    UPGRADE_POOL.forEach(u => { while(player.upgrades[u.id] < 5) { player.applyUpgrade(u.id); } });
-                    window.game.updateUpgradeBadges(); logDev('[SUCCESS] ALL UPGRADES MAXED!');
+                    UPGRADE_POOL.forEach(u => { 
+                        while(player.upgrades[u.id] < 5) { 
+                            player.applyUpgrade(u.id); 
+                        } 
+                    });
+                    window.game.updateUpgradeBadges(); 
+                    logDev('[SUCCESS] ALL UPGRADES MAXED!');
                 }
             }
             else if (cmd === '/suicide') {
-                if(player) { player.health = 0; logDev('[SUCCESS] Goodbye cruel world.'); }
+                if(player) { 
+                    player.health = 0; 
+                    logDev('[SUCCESS] Goodbye cruel world.'); 
+                }
             }
             else if (cmd === '/tiny') {
-                if(player) { player.size = 5; logDev('[SUCCESS] You are now tiny.'); }
+                if(player) { 
+                    player.size = 5; 
+                    logDev('[SUCCESS] You are now tiny.'); 
+                }
             }
             else if (cmd === '/giant') {
-                if(player) { player.size = 150; player.maxHealth += 5000; player.health += 5000; logDev('[SUCCESS] You are now a giant boss.'); }
+                if(player) { 
+                    player.size = 150; 
+                    player.maxHealth += 5000; 
+                    player.health += 5000; 
+                    logDev('[SUCCESS] You are now a giant boss.'); 
+                }
             }
             else if (cmd === '/freeze') {
-                if(window.game) { window.game.bots.forEach(b => b.speed = 0); logDev('[SUCCESS] Enemies frozen.'); }
+                if(window.game) { 
+                    window.game.bots.forEach(b => b.speed = 0); 
+                    logDev('[SUCCESS] Enemies frozen.'); 
+                }
             }
             else if (cmd === '/unfreeze') {
-                if(window.game) { window.game.bots.forEach(b => b.speed = 4.2); logDev('[SUCCESS] Enemies unfrozen.'); }
+                if(window.game) { 
+                    window.game.bots.forEach(b => b.speed = 4.2); 
+                    logDev('[SUCCESS] Enemies unfrozen.'); 
+                }
             }
             else if (cmd === '/statpoints' && !isNaN(arg)) {
-                window.hourlyStats.points = arg; renderMainStore(); logDev(`[SUCCESS] Hourly points set to ${arg}.`);
+                window.hourlyStats.points = arg; 
+                renderMainStore(); 
+                logDev(`[SUCCESS] Hourly points set to ${arg}.`);
             }
             else if (cmd === '/kills' && !isNaN(arg)) {
-                window.hourlyStats.kills = arg; renderMainStore(); logDev(`[SUCCESS] Hourly kills set to ${arg}.`);
+                window.hourlyStats.kills = arg; 
+                renderMainStore(); 
+                logDev(`[SUCCESS] Hourly kills set to ${arg}.`);
             }
             else if (cmd === '/dist' && !isNaN(arg)) {
-                window.hourlyStats.distance = arg; renderMainStore(); logDev(`[SUCCESS] Hourly distance set to ${arg}.`);
+                window.hourlyStats.distance = arg; 
+                renderMainStore(); 
+                logDev(`[SUCCESS] Hourly distance set to ${arg}.`);
             }
             else if (cmd === '/time' && !isNaN(arg)) {
-                window.hourlyStats.time = arg; renderMainStore(); logDev(`[SUCCESS] Hourly time set to ${arg}.`);
+                window.hourlyStats.time = arg; 
+                renderMainStore(); 
+                logDev(`[SUCCESS] Hourly time set to ${arg}.`);
             }
             else if (cmd === '/claimall') { 
                 Object.keys(ITEMS_DB).forEach(k => window.claimedItems[k] = true);
-                saveUserData(); refreshAllUIs(); logDev(`[SUCCESS] Unlocked all cosmetics!`);
+                saveUserData();
+                refreshAllUIs();
+                logDev(`[SUCCESS] Unlocked all cosmetics!`);
             }
             else if (cmd === '/reroll') {
-                localStorage.removeItem('yep_shop'); window.currentShopItems = getShop(); renderMainStore(); logDev(`[SUCCESS] Shop rerolled.`);
+                localStorage.removeItem('yep_shop'); 
+                window.currentShopItems = getShop(); 
+                renderMainStore(); 
+                logDev(`[SUCCESS] Shop rerolled.`);
             }
             else if (cmd === '/close' || cmd === '/exit') {
-                devConsole.classList.add('hidden'); devInput.blur();
+                devConsole.classList.add('hidden'); 
+                devInput.blur();
             }
             else if (cmd === '/help') {
                 logDev('Commands: /level, /kills, /dist, /time, /statpoints, /claimall, /reroll, /close, /god, /score, /speed, /damage, /firerate, /multishot, /spikes, /orbiters, /missiles, /size, /heal, /nuke, /shake, /storm, /ability [shield/overdrive], /cooldown, /maxupgrades, /suicide, /tiny, /giant, /freeze, /unfreeze');
