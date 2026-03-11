@@ -390,15 +390,21 @@ export class GameEngine {
                 if (notif) {
                     sounds.play('levelUp', 0.8 * this.getVol());
                     document.getElementById('account-notif-level-num').innerText = window.globalAccountLevel;
-                    notif.classList.add('active');
-                    setTimeout(() => notif.classList.add('show'), 50);
+                    
+                    // FIX: Make block element, then transition opacity
+                    notif.classList.add('active'); 
+                    setTimeout(() => {
+                        if(notif) notif.classList.add('show');
+                    }, 50);
                     
                     if (this.accountLevelUpTimeout) {
                         clearTimeout(this.accountLevelUpTimeout);
                     }
                     this.accountLevelUpTimeout = setTimeout(() => {
-                        notif.classList.remove('show');
-                        setTimeout(() => notif.classList.remove('active'), 500);
+                        if(notif) {
+                            notif.classList.remove('show');
+                            setTimeout(() => notif.classList.remove('active'), 500); // Wait for fade out
+                        }
                     }, 4000);
                 }
             }
@@ -485,7 +491,7 @@ export class GameEngine {
         const brUi = document.getElementById('br-ui');
         if (brUi) brUi.classList.remove('hidden');
         
-        this.worldSize = 8000; // 8k map size
+        this.worldSize = 8000; 
         this.stormActive = false; 
 
         this.isDemo = false; 
@@ -501,7 +507,6 @@ export class GameEngine {
         this.safeZones = [];
         this.safeZoneSpawnTimer = 0;
         
-        // Force them to be 4000 units apart
         for(let i = 0; i < 3; i++) {
             let pos = this.getSafeSpawnPosition(4000);
             this.safeZones.push(new SafeZone(pos.x, pos.y));
@@ -572,7 +577,6 @@ export class GameEngine {
         
         let matchSeed = Math.random();
         
-        // 49 Bots
         for(let i = 0; i < 49; i++) {
             const types = ['triangle', 'square', 'circle']; 
             const type = types[Math.floor(Math.random() * 3)]; 
@@ -586,7 +590,6 @@ export class GameEngine {
             this.bots.push(new Bot(spawn.x, spawn.y, type, startingPts));
         }
         
-        // Massive Density: 8000 Orbs
         for(let i = 0; i < 8000; i++) {
             const x = Math.random() * this.worldSize;
             const y = Math.random() * this.worldSize;
@@ -1069,16 +1072,22 @@ export class GameEngine {
             const notif = document.getElementById('level-up-notif');
             if (notif) {
                 sounds.play('upgradeReady', 0.6 * this.getVol()); 
-                notif.classList.add('active');
-                setTimeout(() => notif.classList.add('show'), 50);
+                
+                // FIX: Make block element, then transition opacity
+                notif.classList.add('active'); 
+                setTimeout(() => {
+                    if(notif) notif.classList.add('show');
+                }, 50);
                 
                 if (this.levelUpTimeout) {
                     clearTimeout(this.levelUpTimeout);
                 }
                 
                 this.levelUpTimeout = setTimeout(() => {
-                    notif.classList.remove('show');
-                    setTimeout(() => notif.classList.remove('active'), 500);
+                    if(notif) {
+                        notif.classList.remove('show');
+                        setTimeout(() => notif.classList.remove('active'), 500); // Wait for fade out
+                    }
                 }, 3000);
             }
         }
@@ -1266,12 +1275,28 @@ export class GameEngine {
             }
         }
 
-        // CONTINUOUS ORB SPAWNING (MASSIVE DENSITY - Up to 8000!)
+        const allPlayers = (this.isDemo || this.isGameOver) ? [...this.bots] : [this.player, ...this.bots];
+
+        // CONTINUOUS ORB SPAWNING (TARGETED TO KEEP ACTION HIGH!)
         let desiredOrbs = this.isDemo ? 1000 : 8000;
         if (this.orbs.length < desiredOrbs) {
             let spawnCount = Math.min(100, desiredOrbs - this.orbs.length);
             for(let i = 0; i < spawnCount; i++) {
-                this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
+                let ox, oy;
+                // 60% chance to spawn near an existing player/bot so areas don't stay empty
+                if (Math.random() < 0.60 && allPlayers.length > 0) {
+                    let refPlayer = allPlayers[Math.floor(Math.random() * allPlayers.length)];
+                    let ang = Math.random() * Math.PI * 2;
+                    let dist = Math.random() * 1500; 
+                    ox = refPlayer.x + Math.cos(ang) * dist;
+                    oy = refPlayer.y + Math.sin(ang) * dist;
+                    ox = Math.max(0, Math.min(this.worldSize, ox));
+                    oy = Math.max(0, Math.min(this.worldSize, oy));
+                } else {
+                    ox = Math.random() * this.worldSize;
+                    oy = Math.random() * this.worldSize;
+                }
+                this.orbs.push(new Orb(ox, oy, 'xp', 1, null, 0));
             }
         }
 
@@ -1289,7 +1314,6 @@ export class GameEngine {
             }
         }
 
-        const allPlayers = (this.isDemo || this.isGameOver) ? [...this.bots] : (this.player ? [this.player, ...this.bots] : [...this.bots]);
 
         // ==========================================
         // MASSIVE NEW ABILITIES LOGIC (Explosions, Lasers, Etc)
@@ -2116,6 +2140,7 @@ export class GameEngine {
         ctx.clearRect(0, 0, 220, 220);
         const scale = 220 / this.worldSize;
 
+        // Minimap safe zones are now TRUE SIZE! (Removed the * 4)
         this.safeZones.forEach(sz => {
             ctx.fillStyle = sz.state === 'active' ? 'rgba(0, 255, 204, 0.4)' : 'rgba(0, 255, 204, 0.15)';
             ctx.beginPath();

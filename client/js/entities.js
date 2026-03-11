@@ -77,7 +77,6 @@ export class Entity {
         } else if (type === 'square') {
             this.speed = 4.2; 
             this.size = 28; 
-            // Nerfed Square health to prevent unkillable late-game sponges
             this.maxHealth = 380; 
             this.fireRate = 55; 
             this.baseDamage = 35; 
@@ -103,9 +102,7 @@ export class Entity {
         this.upgrades = {};
         if (UPGRADE_POOL) {
             UPGRADE_POOL.forEach(upg => { 
-                if (upg && upg.id) {
-                    this.upgrades[upg.id] = 0; 
-                }
+                if (upg && upg.id) this.upgrades[upg.id] = 0; 
             });
         }
         
@@ -1244,14 +1241,14 @@ export class Entity {
         if (this.isPlayer && this.frontVisual !== 'gun' && this.frontVisual !== 'spikes' && !this.isCloaked) {
             ctx.save(); 
             ctx.translate(this.x, this.y); 
-            ctx.rotate(this.angle);
+            ctx.rotate(this.angle); 
             ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'; 
-            ctx.beginPath();
+            ctx.beginPath(); 
             let arrowOffset = (this.type === 'square' ? this.size / 2 : this.size) + armorOffset + 6; 
-            ctx.moveTo(arrowOffset, -5);
-            ctx.lineTo(arrowOffset + 10, 0);
-            ctx.lineTo(arrowOffset, 5);
-            ctx.fill();
+            ctx.moveTo(arrowOffset, -5); 
+            ctx.lineTo(arrowOffset + 10, 0); 
+            ctx.lineTo(arrowOffset, 5); 
+            ctx.fill(); 
             ctx.restore();
         }
 
@@ -1392,20 +1389,26 @@ export class Bot extends Entity {
         this.changeTargetTimer = 0; 
         this.isTeammate = false; 
 
-        // MASSIVE LIST OF REALISTIC BOT NAMES (Including funny/inappropriate, random, and singles!)
-        const rNames = [
-            "ProGamer", "Sniper", "Shadow", "Vortex", "Rogue", "Noob", "King", "Queen", "Titan", "Spectre",
-            "Ghost", "Dragon", "Wolf", "Demon", "Angel", "Slayer", "Hunter", "Warrior", "Tank", "Healer",
-            "Ninja", "Samurai", "Pirate", "Cyborg", "Alien", "Mutant", "Zombie", "Vampire", "Reaper",
-            "Death", "Chaos", "Havoc", "Panic", "Terror", "Fear", "Horror", "Phantom", "Spirit", "Soul",
-            "I_LAG_A_LOT", "mom_pull_the_plug", "ur_trash_kid", "free_xp", "plz_dont_kill", "TTV_Sweat",
-            "discord_mod", "touch_grass", "ping_999", "hacker_man", "aimbot.exe", "wallhack", "pay_to_win",
-            "deez_nuts", "ligma", "sugma", "bofa", "joe_mama", "ben_dover", "dixon_cyder", "mike_hunt",
-            "A", "B", "X", "Y", "Z", "Q", "W", "E",
-            "qwerty", "asdfgh", "123456", "zxcvbn", "poiuyt", "user7712", "guest_999", "guest_1234"
-        ];
-        let bName = rNames[Math.floor(Math.random() * rNames.length)];
-        this.name = Math.random() > 0.5 ? bName + Math.floor(Math.random() * 9999) : bName;
+        // Probability-based Realistic Bot Names
+        const realNames = ["John", "Sarah", "Mike", "Emily", "David", "Jessica", "Chris", "Ashley", "Matthew", "Amanda", "Joshua", "Megan", "Andrew", "Brittany", "James", "Samantha", "Daniel", "Lauren", "Joseph", "Nicole", "Kevin", "Kayla", "Jason", "Tyler", "Brian", "Rachel", "Eric", "Elizabeth", "Ryan", "Jacob", "Gary", "Nicholas", "Adam", "Justin", "Brandon", "Kelly", "Frank", "Christina", "Scott", "Melissa", "Larry", "Rebecca", "Stephen", "Victoria", "Timothy", "Stephanie", "Richard", "Amy", "Patrick", "Laura", "Edward", "Mary", "Colin", "Michelle", "Peter", "Tiffany", "Mark", "Katherine", "Walter", "Andrea"];
+        const gamerTags = ["ProGamer", "Sniper", "Shadow", "Vortex", "Rogue", "Noob", "King", "Queen", "Titan", "Spectre", "Ghost", "Dragon", "Wolf", "Demon", "Angel", "Slayer", "Hunter", "Warrior", "Tank", "Healer", "Ninja", "Samurai", "Pirate", "Cyborg", "Alien", "Mutant", "Zombie", "Vampire", "Reaper", "Death", "Chaos", "Havoc", "Phantom", "Spirit", "Soul", "TTV_Sweat", "discord_mod", "hacker_man", "aimbot.exe", "wallhack", "pay_to_win"];
+        const funnyNames = ["I_LAG_A_LOT", "mom_pull_the_plug", "ur_trash_kid", "free_xp", "plz_dont_kill", "touch_grass", "ping_999", "deez_nuts", "ligma", "sugma", "bofa", "joe_mama", "ben_dover", "dixon_cyder", "mike_hunt", "qwerty", "asdfgh", "123456", "zxcvbn", "poiuyt", "user7712", "guest_999", "guest_1234", "bruh", "im_lagging"];
+        const superRare = ["Penis", "penis", "A", "B", "C", "X", "Y", "Z", "1", "7", "Q", "God"];
+        
+        let roll = Math.random();
+        let bName = "";
+        if (roll < 0.01) { // 1% chance for super rare
+            bName = superRare[Math.floor(Math.random() * superRare.length)];
+        } else if (roll < 0.15) { // 14% chance for funny
+            bName = funnyNames[Math.floor(Math.random() * funnyNames.length)];
+        } else if (roll < 0.50) { // 35% chance for gamertags
+            bName = gamerTags[Math.floor(Math.random() * gamerTags.length)];
+            if (Math.random() > 0.5) bName += Math.floor(Math.random() * 9999);
+        } else { // 50% chance for real names
+            bName = realNames[Math.floor(Math.random() * realNames.length)];
+            if (Math.random() > 0.7) bName += Math.floor(Math.random() * 99); 
+        }
+        this.name = bName;
         
         this.points = startingPoints; 
         this.upgradeProgress = startingPoints; 
@@ -1475,7 +1478,6 @@ export class Bot extends Entity {
             this.upgradeProgress -= decay;
             if (this.upgradeProgress < 0) this.upgradeProgress = 0;
         } else if (this.points < targetScore) {
-            // New 0-point bots gain a bigger catch-up boost so they don't stay at 0 forever!
             let catchUpGain = (targetScore - this.points) * 0.0015;
             this.points += 0.2 + catchUpGain; 
             this.upgradeProgress += 0.2 + catchUpGain;
@@ -1517,7 +1519,6 @@ export class Bot extends Entity {
             
             let currentSpeed = this.speed * (this.abilityTimer > 0 && (this.activeAbility === 'overdrive' || this.activeAbility === 'sonic_boom') ? 2.5 : 1.0);
             
-            // 20% OF BOTS ARE BERSERKERS (Flee Threshold = 0)
             let isBerserker = this.personality > 0.8;
             let fleeThreshold = isBerserker ? 0 : 0.15 + (this.personality * 0.20); 
             
@@ -1664,7 +1665,6 @@ export class SafeZone {
 }
 
 export class Projectile {
-    // Added isNuke flag
     constructor(x, y, angle, owner, isMissile = false, isNuke = false) {
         this.x = x + Math.cos(angle) * (owner.size + 5); 
         this.y = y + Math.sin(angle) * (owner.size + 5); 
