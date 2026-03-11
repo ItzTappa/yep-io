@@ -131,7 +131,7 @@ async function listenToUserData(uid) {
             refreshAllUIs();
         }
     }, (error) => {
-        console.error("Firebase Snapshot Error (Offline?):", error);
+        console.error("Firebase Snapshot Error:", error);
         resetLocalStats();
         refreshAllUIs();
     });
@@ -167,7 +167,7 @@ setInterval(() => {
 onAuthStateChanged(auth, (user) => {
     if (user) {
         currentUser = user.email.split('@')[0];
-        setInGameStatus(false); // Reset inGame flag on fresh load
+        setInGameStatus(false); 
         listenToUserData(user.uid);
     } else {
         currentUser = null;
@@ -258,7 +258,7 @@ try {
 // ==========================================
 let lobbyUnsub = null;
 
-function renderLobbySlots() {
+function renderLobbySlots(hostName = null) {
     const container = document.getElementById('player-slots-container');
     if (!container) return;
     
@@ -291,7 +291,6 @@ function renderLobbySlots() {
         }
     }
 
-    // Toggle LEAVE button visibility
     const myUid = getMyUid();
     const me = (window.lobbyPlayers || []).find(pl => pl.uid === myUid);
     const leaveBtn = document.getElementById('leave-lobby-btn');
@@ -316,7 +315,6 @@ function listenToLobby(code) {
             currentLobbyMode = data.mode || 'duos';
             document.getElementById('lobby-code-display').innerText = code;
             
-            // Sync mode UI
             document.querySelectorAll('.mode-select-btn').forEach(b => b.classList.remove('active'));
             const mBtn = document.querySelector(`.mode-select-btn[data-mode="${currentLobbyMode}"]`);
             if (mBtn) {
@@ -325,7 +323,6 @@ function listenToLobby(code) {
             
             renderLobbySlots();
 
-            // Auto-start game if host triggered it
             if (data.inGame && !window.isInMatch) {
                 window.isInMatch = true;
                 document.getElementById('main-menu').classList.add('hidden');
@@ -340,7 +337,6 @@ function listenToLobby(code) {
                 game.start(selectedClass);
             }
         } else {
-            // Lobby deleted/expired
             window.currentLobbyCode = null;
             window.lobbyPlayers = [];
             renderLobbySlots();
@@ -452,13 +448,283 @@ async function joinLobbyByCode(code, sourceBtn) {
 }
 
 // ==========================================
+// RENDERERS (CRITICAL FIX: Fully Restored)
+// ==========================================
+function renderLocker() {
+    const slotsView = document.getElementById('locker-slots-view');
+    const itemsView = document.getElementById('locker-items-view');
+    if (!slotsView || !itemsView) return;
+    
+    if (currentLockerCategory === null) {
+        slotsView.classList.remove('hidden'); 
+        itemsView.classList.add('hidden');
+        slotsView.innerHTML = '';
+        
+        ['Skin', 'Trail', 'Banner', 'Color'].forEach(cat => {
+            const itemId = window.equippedItems ? window.equippedItems[cat] : null;
+            const item = itemId && ITEMS_DB ? ITEMS_DB[itemId] : null;
+            let color = item ? (item.color || RARITY_COLORS[item.rarity]) : '#888';
+            
+            slotsView.innerHTML += `
+                <div class="locker-slot" data-category="${cat}" style="--slot-color: ${color};">
+                    <div class="slot-header">${cat}</div>
+                    <div class="slot-icon">${item?.icon || '✖'}</div>
+                    <div class="slot-name">${item?.name || 'Default'}</div>
+                </div>`;
+        });
+    } else {
+        slotsView.classList.add('hidden'); 
+        itemsView.classList.remove('hidden');
+        const titleEl = document.getElementById('locker-category-title');
+        if (titleEl) {
+            titleEl.innerText = `CHOOSE ${currentLockerCategory}`;
+        }
+        
+        const grid = document.getElementById('locker-item-grid'); 
+        grid.innerHTML = '';
+        
+        const isDefault = window.equippedItems ? !window.equippedItems[currentLockerCategory] : true;
+        
+        grid.innerHTML += `
+            <div class="store-item unlocked" style="--rarity-color: #888;">
+                <div class="item-icon" style="cursor: pointer;">✖</div>
+                <div style="font-size: 0.8rem; color: #888; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px;">DEFAULT</div>
+                <div class="item-name">None</div>
+                <button class="btn-equip ${isDefault ? 'equipped' : ''}" data-id="">${isDefault ? '✓ EQUIPPED' : 'EQUIP'}</button>
+            </div>`;
+        
+        if (ITEMS_DB && window.claimedItems) {
+            const sortedItems = Object.keys(window.claimedItems)
+                .map(id => ITEMS_DB[id]).filter(item => item && item.category === currentLockerCategory)
+                .sort((a, b) => (b.rarity || 1) - (a.rarity || 1));
+
+            sortedItems.forEach(item => {
+                let color = item.color || RARITY_COLORS[item.rarity];
+                const isEquipped = window.equippedItems && window.equippedItems[item.category] === item.id;
+                
+                grid.innerHTML += `
+                    <div class="store-item unlocked" style="--rarity-color: ${color};">
+                        <div class="item-icon" data-id="${item.id}" style="cursor: pointer;" title="Click to Preview">${item.icon}</div>
+                        <div style="font-size: 0.8rem; color: ${color}; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px;">${item.category}</div>
+                        <div class="item-name">${item.name}</div>
+                        <button class="btn-equip ${isEquipped ? 'equipped' : ''}" data-id="${item.id}">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button>
+                    </div>`;
+            });
+        }
+    }
+}
+
+function renderStats() {
+    const now = Date.now();
+    const ONE_DAY = 24 * 60 * 60 * 1000;
+    let historyChanged = false;
+
+    if (window.matchHistory) {
+        window.matchHistory = window.matchHistory.filter(match => {
+            if (!match.timestamp) match.timestamp = now; 
+            const isValid = (now - match.timestamp) < ONE_DAY;
+            if (!isValid) historyChanged = true;
+            return isValid;
+        });
+    } else {
+        window.matchHistory = [];
+    }
+
+    if (historyChanged) saveUserData();
+
+    const el1 = document.getElementById('stat-account-level'); if(el1) el1.innerText = window.globalAccountLevel || 1;
+    const el2 = document.getElementById('stat-matches'); if(el2) el2.innerText = window.lifetimeStats?.matches || 0;
+    const el3 = document.getElementById('stat-kills'); if(el3) el3.innerText = window.lifetimeStats?.kills || 0;
+    const el4 = document.getElementById('stat-points'); if(el4) el4.innerText = Math.floor(window.lifetimeStats?.points || 0);
+    const el5 = document.getElementById('stat-time'); if(el5) el5.innerText = formatTime(window.lifetimeStats?.time || 0);
+    
+    const historyList = document.getElementById('match-history-list');
+    if (!historyList) return;
+    
+    if (!window.matchHistory || window.matchHistory.length === 0) {
+        historyList.innerHTML = '<p style="color: #aaa; text-align: center; padding: 20px; grid-column: span 5;">Play a match to see your history!</p>';
+        return;
+    }
+    
+    historyList.innerHTML = '';
+    
+    const activeAbilities = ['shield','overdrive','bullet_nova','blink','emp','cloak','repulsor','sonic_boom','phase_strike','strafe_run','juggernaut','missile_swarm','earthshatter','minigun','tactical_nuke','blade_ring'];
+
+    window.matchHistory.forEach(match => {
+        let rankColor = '#a0a0a0'; 
+        let rank = match.rank ? match.rank : '?';
+        
+        if (rank === 1) rankColor = '#ffe600'; 
+        else if (rank !== '?' && rank <= 5) rankColor = '#00ffcc'; 
+        
+        let suffix = "th";
+        if (rank !== '?') {
+            let r = parseInt(rank);
+            if (r % 10 === 1 && r % 100 !== 11) suffix = "st";
+            else if (r % 10 === 2 && r % 100 !== 12) suffix = "nd";
+            else if (r % 10 === 3 && r % 100 !== 13) suffix = "rd";
+        }
+        
+        let displayRank = rank === '?' ? '?' : `${rank}${suffix}`;
+        let pClass = match.playerClass ? match.playerClass.charAt(0).toUpperCase() + match.playerClass.slice(1) : 'Unknown';
+
+        let upgradesHtml = '';
+        if (match.upgrades) {
+            for(let key in match.upgrades) {
+                let tier = match.upgrades[key];
+                if (tier > 0) {
+                    let def = UPGRADE_POOL ? UPGRADE_POOL.find(u => u && u.id === key) : null;
+                    let title = def ? def.title.toUpperCase() : key.toUpperCase();
+                    
+                    if (activeAbilities.includes(key) || (def && def.isActiveAbility)) {
+                        upgradesHtml += `
+                            <div class="upgrade-badge ability-badge" style="position: relative; top: auto; left: auto; display: flex; height: 24px; box-shadow: none;">
+                                <div class="badge-name" style="font-size: 0.65rem; padding: 0 8px;">⭐ ${title.replace('ACTIVE: ', '')}</div>
+                                <div class="badge-tier" style="font-size: 0.75rem; padding: 0 6px;">ACTIVE</div>
+                            </div>`;
+                    } else {
+                        let tClass = tier === 1 ? 'badge-t1' : tier === 2 ? 'badge-t2' : tier === 3 ? 'badge-t3' : tier === 4 ? 'badge-t4' : 'badge-t5';
+                        upgradesHtml += `
+                            <div class="upgrade-badge ${tClass}" style="position: relative; top: auto; left: auto; display: flex; height: 24px; box-shadow: none;">
+                                <div class="badge-name" style="font-size: 0.65rem; padding: 0 8px;">${title}</div>
+                                <div class="badge-tier" style="font-size: 0.75rem; padding: 0 6px;">T${tier}</div>
+                            </div>`;
+                    }
+                }
+            }
+        }
+
+        historyList.innerHTML += `
+            <div class="match-card" onclick="this.classList.toggle('expanded')" style="border-left-color: ${rankColor};">
+                <div class="match-card-main">
+                    <div class="match-detail-item">
+                        <span class="match-detail-label">RANK</span>
+                        <div class="match-rank" style="color: ${rankColor};">${displayRank}</div>
+                    </div>
+                    <div class="match-detail-item">
+                        <span class="match-detail-label">CLASS</span>
+                        <span class="match-detail-val" style="color: #bbb;">${pClass}</span>
+                    </div>
+                    <div class="match-detail-item">
+                        <span class="match-detail-label">KILLS</span>
+                        <span class="match-detail-val">${match.kills || 0}</span>
+                    </div>
+                    <div class="match-detail-item">
+                        <span class="match-detail-label">POINTS</span>
+                        <span class="match-detail-val">${Math.floor(match.points || 0)}</span>
+                    </div>
+                    <div class="match-detail-item">
+                        <span class="match-detail-label">TIME ALIVE</span>
+                        <span class="match-detail-val">${formatTime(match.time || 0)}</span>
+                    </div>
+                </div>
+                <div class="match-upgrades" style="grid-column: span 5; display:none; flex-wrap:wrap; justify-content:center; gap:5px; padding-top:15px; border-top:1px solid #333; margin-top:5px;">
+                    ${upgradesHtml || '<span style="color:#666; font-size:0.8rem; font-style:italic;">No upgrades acquired.</span>'}
+                </div>
+            </div>`;
+    });
+}
+
+function renderSeasonStore() {
+    const grid = document.getElementById('season-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    
+    const pb = document.getElementById('season-progress-bar');
+    if (pb) {
+        pb.style.width = `${Math.min(100, ((window.globalAccountLevel || 1) / 50) * 100)}%`;
+    }
+    
+    const sItems = ['s_banner', 's_trail', 's_skin1', 's_skin2'];
+
+    sItems.forEach(id => {
+        const item = ITEMS_DB ? ITEMS_DB[id] : null;
+        if (!item) return;
+        
+        const isUnlocked = (window.globalAccountLevel || 1) >= item.req;
+        const isClaimed = window.claimedItems && window.claimedItems[item.id];
+        const isEquipped = window.equippedItems && window.equippedItems[item.category] === item.id;
+        
+        let buttonHtml = '';
+        if (isUnlocked && !isClaimed) {
+            buttonHtml = `<button class="btn-claim" data-id="${item.id}"><div class="fill"></div><span>HOLD TO CLAIM</span></button>`;
+        } else if (isClaimed) {
+            buttonHtml = `<button class="btn-equip ${isEquipped ? 'equipped' : ''}" data-id="${item.id}">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button>`;
+        }
+
+        let isPreviewable = item.category !== 'Banner';
+        let cursorStyle = isPreviewable ? 'cursor: pointer;' : 'cursor: default;';
+        let titleAttr = isPreviewable ? 'title="Click to Preview"' : '';
+
+        grid.innerHTML += `
+            <div class="store-item ${isUnlocked ? 'unlocked' : 'locked'}" style="--rarity-color: ${item.color};">
+                <div class="item-icon" data-id="${item.id}" style="${cursorStyle}" ${titleAttr}>${item.icon}</div>
+                <div style="font-size: 0.8rem; color: ${item.color}; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px; text-shadow: 0 0 5px ${item.color}40;">${item.category}</div>
+                <div class="item-name">${item.name}</div>
+                <div class="item-req" style="color: ${item.color};">${isClaimed ? '✓ CLAIMED' : isUnlocked ? 'UNLOCKED!' : `Requires Level ${item.req}`}</div>
+                ${buttonHtml}
+            </div>`;
+    });
+}
+
+function renderMainStore() {
+    const grid = document.getElementById('main-store-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    
+    let shopItems = [...(window.currentShopItems || [])];
+    shopItems.sort((a, b) => {
+        const rA = ITEMS_DB && ITEMS_DB[a.id] ? (ITEMS_DB[a.id].rarity || 1) : 1;
+        const rB = ITEMS_DB && ITEMS_DB[b.id] ? (ITEMS_DB[b.id].rarity || 1) : 1;
+        return rB - rA;
+    });
+
+    shopItems.forEach(shopItem => {
+        const item = ITEMS_DB ? ITEMS_DB[shopItem.id] : null;
+        if (!item) return;
+        
+        const currentValue = window.hourlyStats ? (window.hourlyStats[shopItem.type] || 0) : 0;
+        const isUnlocked = currentValue >= shopItem.req;
+        const isClaimed = window.claimedItems && window.claimedItems[item.id];
+        const isEquipped = window.equippedItems && window.equippedItems[item.category] === item.id;
+        const progressPercent = Math.min(100, (currentValue / shopItem.req) * 100);
+        const color = RARITY_COLORS ? RARITY_COLORS[item.rarity] : '#fff';
+        
+        let buttonHtml = '';
+        if (isUnlocked && !isClaimed) {
+            buttonHtml = `<button class="btn-claim" data-id="${item.id}"><div class="fill"></div><span>HOLD TO CLAIM</span></button>`;
+        } else if (isClaimed) {
+            buttonHtml = `<button class="btn-equip ${isEquipped ? 'equipped' : ''}" data-id="${item.id}">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button>`;
+        } else {
+            buttonHtml = `
+                <div class="item-progress-bg">
+                    <div class="item-progress-fill" style="width: ${progressPercent}%; background: ${color}; box-shadow: 0 0 10px ${color};"></div>
+                </div>`;
+        }
+        
+        let isPreviewable = item.category !== 'Banner';
+        let cursorStyle = isPreviewable ? 'cursor: pointer;' : 'cursor: default;';
+        let titleAttr = isPreviewable ? 'title="Click to Preview"' : '';
+
+        grid.innerHTML += `
+            <div class="store-item ${isUnlocked ? 'unlocked' : 'locked'}" style="--rarity-color: ${color};">
+                <div class="item-icon" data-id="${item.id}" style="${cursorStyle}" ${titleAttr}>${item.icon}</div>
+                <div style="font-size: 0.8rem; color: ${color}; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px; text-shadow: 0 0 5px ${color}40;">${item.category}</div>
+                <div class="item-name">${item.name}</div>
+                <div class="item-req" style="color: ${color};">${isClaimed ? '✓ CLAIMED' : isUnlocked ? 'UNLOCKED!' : `${Math.floor(currentValue)} / ${shopItem.req} ${shopItem.label}`}</div>
+                ${buttonHtml}
+            </div>`;
+    });
+}
+
+// ==========================================
 // GLOBAL UI HANDLER
 // ==========================================
 let currentLockerCategory = null;
 window.activePreviewItem = null;
 
 function refreshAllUIs() {
-    // 🚨 FAILSAFE: Guarantee variables exist before rendering so UI never crashes
+    // 🚨 FAILSAFE: Guarantee equippedItems exists before rendering so UI never crashes
     if (!window.equippedItems || typeof window.equippedItems !== 'object') {
         window.equippedItems = { Skin: null, Trail: null, Banner: null, Color: null };
     }
@@ -892,6 +1158,11 @@ document.addEventListener('click', async (e) => {
     if (equipBtn) {
         const itemId = equipBtn.dataset.id;
         
+        // 🚨 FAILSAFE
+        if (!window.equippedItems) {
+            window.equippedItems = { Skin: null, Trail: null, Banner: null, Color: null };
+        }
+
         if (!itemId) { 
             if (currentLockerCategory) {
                 window.equippedItems[currentLockerCategory] = null;
@@ -986,7 +1257,6 @@ document.addEventListener('click', async (e) => {
             
             if (!window.currentLobbyCode) {
                 window.currentLobbyCode = generateLobbyCode();
-                document.getElementById('lobby-code-display').innerText = window.currentLobbyCode;
                 
                 const myPlayerObj = {
                     uid: getMyUid(),
