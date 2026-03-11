@@ -10,7 +10,7 @@ import { lobbyUI } from './networkLobby.js';
 // ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, arrayUnion, arrayRemove, query, collection, where, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
 // YOUR REAL FIREBASE KEYS
 const firebaseConfig = {
@@ -28,8 +28,9 @@ const db = getFirestore(app);
 
 let selectedClass = null; 
 let currentUser = null;
+let currentLobbyMode = 'duos'; 
 
-// Clean out the old local testing logic
+// Clean out old local testing
 localStorage.removeItem('yepio_accounts');
 localStorage.removeItem('yepio_current_user');
 
@@ -40,32 +41,55 @@ function resetLocalStats() {
     window.claimedItems = {};
     window.matchHistory = [];
     window.lifetimeStats = { matches: 0, kills: 0, time: 0, points: 0, distance: 0 };
+    window.myFriends = [];
+    window.myRequests = [];
 }
-
-// 🚨 FIX: We run this immediately on boot so the UI never crashes looking for a missing 'Skin'
 resetLocalStats();
 
-// Fetch stats securely from the Cloud Database
-async function loadUserData(uid) {
-    try {
-        const docRef = doc(db, "users", uid);
-        const docSnap = await getDoc(docRef);
+let unsubUser = null;
+let handledInvites = {};
+let friendCache = {}; // Caches friend data to avoid spamming the DB
+
+// Fetch stats & Start Listening for Live Updates (Friends/Invites)
+async function listenToUserData(uid) {
+    if (unsubUser) unsubUser();
+    
+    unsubUser = onSnapshot(doc(db, "users", uid), async (docSnap) => {
         if (docSnap.exists()) {
             let data = docSnap.data();
+            
+            // Base Stats
             window.globalAccountXP = data.xp || 0;
             window.globalAccountLevel = data.level || 1;
             window.equippedItems = data.equipped || { Skin: null, Trail: null, Banner: null, Color: null };
             window.claimedItems = data.unlocked || {};
             window.matchHistory = data.history || [];
             window.lifetimeStats = data.stats || { matches: 0, kills: 0, time: 0, points: 0, distance: 0 };
+            
+            // Friends & Requests
+            window.myFriends = data.friends || [];
+            window.myRequests = data.requestsIn || [];
+            
+            // Process Live Invites
+            const invites = data.invites || [];
+            const now = Date.now();
+            invites.forEach(inv => {
+                // Only show invites less than 60 seconds old that we haven't seen yet
+                if (now - inv.timestamp < 60000 && !handledInvites[inv.timestamp]) {
+                    handledInvites[inv.timestamp] = true;
+                    showInviteNotification(inv.fromName, inv.code);
+                }
+            });
+
+            // Re-render UI
+            refreshAllUIs();
+            renderFriendsUI(); 
+            
         } else {
-            resetLocalStats(); // Brand new account
+            resetLocalStats(); 
+            refreshAllUIs();
         }
-    } catch(e) { 
-        console.error("Error loading profile:", e); 
-        resetLocalStats(); 
-    }
-    refreshAllUIs();
+    });
 }
 
 // Save stats securely to the Cloud Database
@@ -79,25 +103,30 @@ async function saveUserData() {
                 equipped: window.equippedItems,
                 unlocked: window.claimedItems,
                 history: window.matchHistory,
-                stats: window.lifetimeStats
+                stats: window.lifetimeStats,
+                lastActive: Date.now()
             }, { merge: true });
         } catch(e) { console.error("Error saving profile:", e); }
     }
 }
 
-// Listen for Login/Logout events
+// Keep "Online" status alive every 30 seconds
+setInterval(() => {
+    if (auth.currentUser) saveUserData();
+}, 30000);
+
 onAuthStateChanged(auth, (user) => {
     if (user) {
-        currentUser = user.email.split('@')[0]; // Pulls the username out of the fake email
-        loadUserData(user.uid);
+        currentUser = user.email.split('@')[0];
+        listenToUserData(user.uid);
     } else {
         currentUser = null;
+        if (unsubUser) unsubUser();
         resetLocalStats();
         refreshAllUIs();
     }
 });
 
-// Initialize all default device settings (These stay local)
 window.gameSettings = JSON.parse(localStorage.getItem('yepio_settings')) || { 
     highQuality: true, particles: true, showNames: true, showFps: false,
     volume: 1.0, showLeaderboard: true, showBadges: true, showNotifs: true, showMinimap: true,
@@ -137,12 +166,10 @@ function generateShop() {
 function getShop() {
     const saved = localStorage.getItem('yep_shop');
     const currentHour = new Date().getHours();
-    
     if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.hour === currentHour) return parsed.items; 
     }
-    
     window.hourlyStats = { kills: 0, time: 0, points: 0, distance: 0 }; 
     return generateShop();
 }
@@ -177,14 +204,40 @@ function refreshAllUIs() {
     updateMenuXPBar();
 }
 
-document.addEventListener('click', (e) => {
+// Visual Lobby Slots Mockup
+function renderLobbySlots() {
+    const container = document.getElementById('player-slots-container');
+    if (!container) return;
+    
+    let count = currentLobbyMode === 'duos' ? 2 : currentLobbyMode === 'trios' ? 3 : 4;
+    container.innerHTML = '';
+    
+    for(let i=0; i<count; i++) {
+        if(i === 0) {
+            container.innerHTML += `
+                <div class="player-slot ready">
+                    <div class="lobby-preview-canvas" style="display:flex; align-items:center; justify-content:center;">(YOU)</div>
+                    <div class="name">${currentUser || 'GUEST'}</div>
+                    <div class="status">READY</div>
+                </div>`;
+        } else {
+            container.innerHTML += `
+                <div class="player-slot empty">
+                    <div class="lobby-preview-canvas">+</div>
+                    <div class="name" style="color:gray;">WAITING...</div>
+                </div>`;
+        }
+    }
+}
+
+document.addEventListener('click', async (e) => {
     const target = e.target;
 
     if (target.tagName === 'BUTTON' || target.closest('button')) {
         if (sounds && sounds.play) sounds.play('click', 0.4 * (window.gameSettings.volume || 1.0));
     }
 
-    // Toggle Password Visibility
+    // Toggle Password
     const togglePassBtn = target.closest('#toggle-pass-btn');
     if (togglePassBtn) {
         const passInput = document.getElementById('acc-pass');
@@ -206,6 +259,37 @@ document.addEventListener('click', (e) => {
     }
     if (target.id === 'close-account-btn') {
         document.getElementById('account-modal').classList.add('hidden');
+        document.getElementById('friend-profile-view').classList.add('hidden');
+        return;
+    }
+    
+    // Back to Friends list from Friend Profile
+    if (target.id === 'back-to-friends-btn') {
+        document.getElementById('friend-profile-view').classList.add('hidden');
+        document.getElementById('account-logged-in').classList.remove('hidden');
+        return;
+    }
+
+    // Accept Invite Button Notification
+    if (target.classList.contains('accept-invite-btn')) {
+        const code = target.dataset.code;
+        document.querySelector('.tab-btn[data-target="multiplayer"]').click();
+        const codeInput = document.getElementById('join-code-input');
+        const joinBtn = document.getElementById('join-lobby-btn');
+        if (codeInput && joinBtn) {
+            codeInput.value = code;
+            joinBtn.click();
+        }
+        target.closest('.notif-box').remove();
+        return;
+    }
+
+    // Gamemode Selector
+    if (target.classList.contains('mode-select-btn')) {
+        document.querySelectorAll('.mode-select-btn').forEach(b => b.classList.remove('active'));
+        target.classList.add('active');
+        currentLobbyMode = target.dataset.mode;
+        renderLobbySlots();
         return;
     }
 
@@ -214,14 +298,17 @@ document.addEventListener('click', (e) => {
         const accModal = document.getElementById('account-modal');
         const loggedOutView = document.getElementById('account-logged-out');
         const loggedInView = document.getElementById('account-logged-in');
+        const friendProfileView = document.getElementById('friend-profile-view');
         const errorText = document.getElementById('acc-error');
         
         errorText.innerText = "";
+        friendProfileView.classList.add('hidden');
         
         if (auth.currentUser) {
             loggedOutView.classList.add('hidden');
             loggedInView.classList.remove('hidden');
             document.getElementById('acc-display-name').innerText = currentUser;
+            renderFriendsUI(); 
         } else {
             loggedOutView.classList.remove('hidden');
             loggedInView.classList.add('hidden');
@@ -281,23 +368,149 @@ document.addEventListener('click', (e) => {
         return;
     }
 
-    // Firebase Logout (🚨 FIX: Fire-and-forget save prevents freezing)
+    // Firebase Logout
     const logoutBtn = target.closest('#acc-logout-btn');
     if (logoutBtn) {
         logoutBtn.innerText = "LOGGING OUT...";
-        
-        saveUserData(); // Sends the save in the background
-        
-        signOut(auth).then(() => {
+        try {
+            await saveUserData(); 
+            await signOut(auth);  
             document.getElementById('account-modal').classList.add('hidden');
-            logoutBtn.innerText = "LOG OUT";
-        }).catch(e => {
-            console.error("Logout Error:", e);
+        } catch (error) {
+            console.error("Logout Error:", error);
             document.getElementById('account-modal').classList.add('hidden');
+        } finally {
             logoutBtn.innerText = "LOG OUT";
-        });
+        }
         return;
     }
+
+    // --- FRIENDS SYSTEM ---
+    
+    // Send Friend Request
+    if (target.id === 'add-friend-btn') {
+        const searchInput = document.getElementById('friend-search-input');
+        const msg = document.getElementById('friend-search-msg');
+        const targetName = searchInput.value.trim();
+        
+        if (!targetName) return;
+        if (targetName === currentUser) { msg.innerText = "You can't add yourself!"; msg.style.color = "#ff4444"; return; }
+        
+        msg.innerText = "Searching...";
+        msg.style.color = "white";
+
+        const q = query(collection(db, "users"), where("username", "==", targetName));
+        const snap = await getDocs(q);
+        
+        if (snap.empty) {
+            msg.innerText = "Player not found!";
+            msg.style.color = "#ff4444";
+        } else {
+            const targetDoc = snap.docs[0];
+            const targetUid = targetDoc.id;
+            
+            if (window.myFriends.includes(targetUid)) {
+                msg.innerText = "Already friends!";
+                msg.style.color = "#ff4444";
+                return;
+            }
+
+            try {
+                await updateDoc(doc(db, "users", targetUid), {
+                    requestsIn: arrayUnion(auth.currentUser.uid)
+                });
+                msg.innerText = "Friend request sent!";
+                msg.style.color = "#00ffcc";
+                searchInput.value = "";
+            } catch(e) {
+                msg.innerText = "Error sending request.";
+                msg.style.color = "#ff4444";
+            }
+        }
+        return;
+    }
+
+    // Accept Request
+    if (target.classList.contains('accept-req-btn')) {
+        const friendUid = target.dataset.uid;
+        target.innerText = "...";
+        try {
+            // Remove request, add to friends
+            await updateDoc(doc(db, "users", auth.currentUser.uid), {
+                requestsIn: arrayRemove(friendUid),
+                friends: arrayUnion(friendUid)
+            });
+            // Reciprocate
+            await updateDoc(doc(db, "users", friendUid), {
+                friends: arrayUnion(auth.currentUser.uid)
+            });
+        } catch(e) { console.error(e); }
+        return;
+    }
+
+    // Deny Request
+    if (target.classList.contains('deny-req-btn')) {
+        const friendUid = target.dataset.uid;
+        try {
+            await updateDoc(doc(db, "users", auth.currentUser.uid), {
+                requestsIn: arrayRemove(friendUid)
+            });
+        } catch(e) { console.error(e); }
+        return;
+    }
+
+    // Click Friend -> View Profile
+    const friendItem = target.closest('.friend-item');
+    if (friendItem && !target.classList.contains('friend-action-btn')) {
+        const fUid = friendItem.dataset.uid;
+        if (!friendCache[fUid]) return;
+        
+        const fData = friendCache[fUid];
+        
+        document.getElementById('account-logged-in').classList.add('hidden');
+        const pv = document.getElementById('friend-profile-view');
+        pv.classList.remove('hidden');
+        
+        document.getElementById('fp-username').innerText = fData.username;
+        document.getElementById('fp-level').innerText = fData.level || 1;
+        document.getElementById('fp-kills').innerText = (fData.stats && fData.stats.kills) || 0;
+        document.getElementById('fp-matches').innerText = (fData.stats && fData.stats.matches) || 0;
+        
+        // Count Wins
+        let wins = 0;
+        if (fData.history) {
+            wins = fData.history.filter(m => m.rank === 1).length;
+        }
+        document.getElementById('fp-wins').innerText = wins;
+
+        // Hook up Invite Button
+        const inviteBtn = document.getElementById('invite-friend-btn');
+        inviteBtn.onclick = async () => {
+            const lobbyCode = document.getElementById('lobby-code-display').innerText;
+            if (!lobbyCode || lobbyCode === '-----') {
+                inviteBtn.innerText = "GO TO LOBBY TAB FIRST!";
+                setTimeout(() => { inviteBtn.innerText = "INVITE TO MULTIPLAYER"; }, 2000);
+                return;
+            }
+            
+            inviteBtn.innerText = "SENDING...";
+            try {
+                await updateDoc(doc(db, "users", fUid), {
+                    invites: arrayUnion({
+                        fromName: currentUser,
+                        code: lobbyCode,
+                        timestamp: Date.now()
+                    })
+                });
+                inviteBtn.innerText = "INVITE SENT!";
+            } catch(e) {
+                inviteBtn.innerText = "ERROR!";
+            }
+            setTimeout(() => { inviteBtn.innerText = "INVITE TO MULTIPLAYER"; }, 2000);
+        };
+        return;
+    }
+
 
     // Equipment Logic
     const equipBtn = target.closest('.btn-equip');
@@ -315,7 +528,7 @@ document.addEventListener('click', (e) => {
                 }
             }
         }
-        saveUserData(); // Saves instantly to cloud
+        saveUserData(); 
         renderLocker();
         renderSeasonStore();
         renderMainStore();
@@ -349,6 +562,7 @@ document.addEventListener('click', (e) => {
         return;
     }
 
+    // TAB SWITCHING
     if (target.classList.contains('tab-btn')) {
         const targetTab = target.dataset.target;
         
@@ -373,13 +587,25 @@ document.addEventListener('click', (e) => {
         
         window.activePreviewItem = null; 
 
-        // Hide whole footer while in locker tab
+        // Menu Footer Visibility Rules
         const menuFooter = document.querySelector('.menu-footer');
+        const gmSelector = document.getElementById('gamemode-selector');
+        
         if (menuFooter) {
             if (targetTab === 'locker') {
-                menuFooter.classList.add('hidden');
+                menuFooter.classList.add('hidden'); // Hide completely in locker
             } else {
                 menuFooter.classList.remove('hidden');
+            }
+        }
+        
+        // Gamemode Selector ONLY in Multiplayer
+        if (gmSelector) {
+            if (targetTab === 'multiplayer') {
+                gmSelector.classList.remove('hidden');
+                renderLobbySlots(); 
+            } else {
+                gmSelector.classList.add('hidden');
             }
         }
         
@@ -389,6 +615,104 @@ document.addEventListener('click', (e) => {
         if (targetTab === 'stats') renderStats(); 
     }
 });
+
+
+// ==========================================
+// FRIENDS LIST RENDERING
+// ==========================================
+async function renderFriendsUI() {
+    const reqContainer = document.getElementById('friend-requests-container');
+    const reqList = document.getElementById('friend-requests-list');
+    const fList = document.getElementById('friends-list');
+    if (!reqContainer || !reqList || !fList) return;
+
+    // Render Pending Requests
+    if (window.myRequests.length > 0) {
+        reqContainer.classList.remove('hidden');
+        reqList.innerHTML = '';
+        for (let uid of window.myRequests) {
+            let data = friendCache[uid];
+            if (!data) {
+                const s = await getDoc(doc(db, "users", uid));
+                if (s.exists()) { data = s.data(); friendCache[uid] = data; }
+            }
+            if (data) {
+                reqList.innerHTML += `
+                    <div class="friend-item" style="border-color:#555; background:rgba(0,0,0,0.5);">
+                        <div class="friend-name" style="margin-left:5px;">${data.username}</div>
+                        <div class="friend-actions">
+                            <button class="friend-action-btn accept-req-btn yellow-btn-solid" data-uid="${uid}">✓</button>
+                            <button class="friend-action-btn deny-req-btn dark-btn-outline" data-uid="${uid}">✖</button>
+                        </div>
+                    </div>`;
+            }
+        }
+    } else {
+        reqContainer.classList.add('hidden');
+        reqList.innerHTML = '';
+    }
+
+    // Render Friends List
+    if (window.myFriends.length > 0) {
+        fList.innerHTML = '';
+        for (let uid of window.myFriends) {
+            let data = friendCache[uid];
+            if (!data) {
+                const s = await getDoc(doc(db, "users", uid));
+                if (s.exists()) { data = s.data(); friendCache[uid] = data; }
+            }
+            if (data) {
+                const isOnline = (Date.now() - (data.lastActive || 0)) < 65000;
+                const dotClass = isOnline ? '' : 'offline';
+                
+                // Get Banner Icon if equipped
+                let avatarIcon = '';
+                if (data.equipped && data.equipped.Banner && ITEMS_DB[data.equipped.Banner]) {
+                    avatarIcon = ITEMS_DB[data.equipped.Banner].icon;
+                }
+                
+                fList.innerHTML += `
+                    <div class="friend-item" data-uid="${uid}">
+                        <div class="friend-avatar">
+                            ${avatarIcon}
+                            <div class="friend-online-dot ${dotClass}"></div>
+                        </div>
+                        <div class="friend-name">${data.username}</div>
+                        <span style="color:gray; font-size:0.8rem; font-weight:bold;">❯</span>
+                    </div>`;
+            }
+        }
+    } else {
+        fList.innerHTML = '<p style="color:gray; font-style:italic; font-size:0.9rem;">No friends yet. Add someone above!</p>';
+    }
+}
+
+// Show In-Game Invite Notification
+function showInviteNotification(senderName, code) {
+    const queue = document.getElementById('notif-queue');
+    const template = document.getElementById('invite-template');
+    if (!queue || !template) return;
+
+    const clone = template.cloneNode(true);
+    clone.id = "";
+    clone.classList.remove('hidden');
+    clone.querySelector('.invite-sender-name').innerText = `From: ${senderName}`;
+    clone.querySelector('.accept-invite-btn').dataset.code = code;
+    
+    queue.appendChild(clone);
+    requestAnimationFrame(() => clone.classList.add('show'));
+    
+    if(sounds && sounds.play) sounds.play('levelUp', 0.8);
+
+    // Auto dismiss after 15s
+    setTimeout(() => {
+        if(clone.parentNode) {
+            clone.classList.remove('show');
+            setTimeout(() => clone.remove(), 400);
+        }
+    }, 15000);
+}
+
 
 // ==========================================
 // HOLD-TO-CLAIM
@@ -699,7 +1023,7 @@ document.getElementById('return-lobby-btn').addEventListener('click', () => {
     document.getElementById('main-menu').classList.remove('hidden');
     
     if (window.lastMatchStats) {
-        window.lastMatchStats.timestamp = Date.now(); // ADD TIMESTAMP TO MATCH
+        window.lastMatchStats.timestamp = Date.now();
         
         window.hourlyStats.kills += window.lastMatchStats.kills || 0;
         window.hourlyStats.time += window.lastMatchStats.time || 0;
@@ -718,7 +1042,7 @@ document.getElementById('return-lobby-btn').addEventListener('click', () => {
         }
         window.lastMatchStats = null; 
         
-        saveUserData(); // Save stats to cloud after every game!
+        saveUserData(); 
     }
     
     updateMenuXPBar(); 
@@ -791,17 +1115,14 @@ function renderStats() {
     const ONE_DAY = 24 * 60 * 60 * 1000;
     let historyChanged = false;
 
-    // Filter out matches older than 24 hours
     window.matchHistory = window.matchHistory.filter(match => {
-        if (!match.timestamp) match.timestamp = now; // Retroactively assign a timestamp to old matches so they don't break
+        if (!match.timestamp) match.timestamp = now; 
         const isValid = (now - match.timestamp) < ONE_DAY;
         if (!isValid) historyChanged = true;
         return isValid;
     });
 
-    if (historyChanged) {
-        saveUserData(); // Update the cloud if matches expired while you were away!
-    }
+    if (historyChanged) saveUserData();
 
     const el1 = document.getElementById('stat-account-level'); if(el1) el1.innerText = window.globalAccountLevel;
     const el2 = document.getElementById('stat-matches'); if(el2) el2.innerText = window.lifetimeStats.matches;
@@ -1020,7 +1341,7 @@ function logDev(msg) {
 }
 
 document.addEventListener('keydown', (e) => {
-    if ((e.key === '/' || e.key === '`') && document.activeElement !== devInput) {
+    if ((e.key === '/' || e.key === '`') && document.activeElement !== devInput && document.activeElement.tagName !== 'INPUT') {
         e.preventDefault(); 
         if (devConsole && devInput) {
             devConsole.classList.remove('hidden');
