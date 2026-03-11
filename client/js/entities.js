@@ -396,7 +396,6 @@ export class Entity {
     draw(ctx) {
         if (!ctx || !window.gameSettings) return;
 
-        // Detect if this is a UI canvas so we can hide gameplay-only elements like the arrow and health bar
         let isPreviewCanvas = false;
         if (ctx.canvas && ctx.canvas.id) {
             let cid = ctx.canvas.id.toLowerCase();
@@ -453,13 +452,11 @@ export class Entity {
             }
         });
 
-        // ACTIVE CAMO VISUALS
         let oldAlpha = ctx.globalAlpha;
         if (this.isCloaked) {
             ctx.globalAlpha = 0.2;
         }
 
-        // ABILITY VISUALS
         if (this.abilityTimer > 0) {
             ctx.save(); 
             ctx.translate(this.x, this.y);
@@ -1289,15 +1286,8 @@ export class Entity {
             ctx.shadowBlur = 0; 
         }
 
-        // =====================================
-        // NEW: FLOATING FACING ARROW (DRAWN LAST)
-        // =====================================
         if (this.isPlayer && this.frontVisual !== 'gun' && this.frontVisual !== 'spikes' && !this.isCloaked && !isPreviewCanvas) {
-            
-            // Subtly reduced the bob amplitude and speed
             let timeBob = Math.sin(Date.now() / 300) * 1.5; 
-            
-            // Greatly reduced the glide/sway distance so it is barely noticeable
             let localVx = this.vx * Math.cos(-this.angle) - this.vy * Math.sin(-this.angle);
             let localVy = this.vx * Math.sin(-this.angle) + this.vy * Math.cos(-this.angle);
             let swayX = Math.max(-3, Math.min(3, -localVx * 0.3));
@@ -1334,13 +1324,9 @@ export class Entity {
             ctx.restore();
         }
         
-        // =====================================
-        // HUD (HEALTH/DASH BARS) DYNAMIC SPACING
-        // =====================================
         let isMenuDummy = (!this.isPlayer && this.name === "");
         if (!isMenuDummy && !this.isCloaked && !isPreviewCanvas) {
             
-            // Calculate how far down we need to push the health bars so they don't overlap shields/orbiters
             let bottomOffset = armorOffset;
             let topOffset = armorOffset;
 
@@ -1757,6 +1743,7 @@ export class Projectile {
         this.owner = owner; 
         this.isMissile = isMissile; 
         this.isNuke = isNuke; 
+        this.isRailgun = false; // Initialized to false, engine overrides it when spawning
         this.pierce = owner.pierceAmmo || 0; 
         this.hitTargets = []; 
         this.sizeScale = 1 + (owner.heavyArt * 0.5);
@@ -1808,7 +1795,8 @@ export class Projectile {
                 }
             }
         } 
-        else if (!this.isMissile && !this.isNuke && this.owner.isPlayer && targets) {
+        // Railguns do NOT auto-aim, they require pure skill since they are so devastating
+        else if (!this.isMissile && !this.isNuke && !this.isRailgun && this.owner.isPlayer && targets) {
             let nearest = null; 
             let minDist = 350; 
             
@@ -1844,7 +1832,8 @@ export class Projectile {
         ctx.scale(this.sizeScale, this.sizeScale);
         
         if (window.gameSettings && window.gameSettings.highQuality) { 
-            ctx.shadowBlur = 10; 
+            // Give the railgun a much larger glowing aura
+            ctx.shadowBlur = this.isRailgun ? 20 : 10; 
             ctx.shadowColor = this.color; 
         } else { 
             ctx.shadowBlur = 0; 
@@ -1857,6 +1846,15 @@ export class Projectile {
             ctx.lineTo(-8, 6); 
             ctx.lineTo(-8, -6); 
             ctx.fill(); 
+        } else if (this.isRailgun) {
+            // The massive glowing plasma laser
+            ctx.fillStyle = this.color; 
+            ctx.fillRect(-15, -4, 50, 8); 
+            
+            // The blinding hot inner core (white, no shadow so it looks intensely hot)
+            ctx.fillStyle = '#ffffff'; 
+            ctx.shadowBlur = 0; 
+            ctx.fillRect(-10, -1.5, 40, 3);
         } else { 
             ctx.fillStyle = '#fff'; 
             ctx.fillRect(-10, -3, 20, 6); 
