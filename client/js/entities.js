@@ -103,7 +103,9 @@ export class Entity {
         this.upgrades = {};
         if (UPGRADE_POOL) {
             UPGRADE_POOL.forEach(upg => { 
-                if (upg && upg.id) this.upgrades[upg.id] = 0; 
+                if (upg && upg.id) {
+                    this.upgrades[upg.id] = 0; 
+                }
             });
         }
         
@@ -474,7 +476,7 @@ export class Entity {
                 ctx.stroke();
             } else if (this.activeAbility === 'repulsor') {
                 ctx.beginPath(); 
-                ctx.arc(0, 0, 250, 0, Math.PI * 2); 
+                ctx.arc(0, 0, 250, 0, Math.PI * 2); // Massive Forcefield
                 ctx.fillStyle = 'rgba(0, 255, 255, 0.1)'; 
                 ctx.fill(); 
                 ctx.strokeStyle = 'rgba(0, 255, 255, 0.4)'; 
@@ -703,7 +705,9 @@ export class Entity {
         }
         ctx.restore();
         
-        // DRAW SKINS
+        // =====================================
+        // FULL SKIN DRAWING LOGIC (EXPANDED)
+        // =====================================
         if (this.equipped.Skin && ITEMS_DB && ITEMS_DB[this.equipped.Skin]) {
             const skinType = ITEMS_DB[this.equipped.Skin].value;
             ctx.save(); 
@@ -711,7 +715,9 @@ export class Entity {
             ctx.rotate(this.angle); 
             
             if (['spectre', 'luminescent', 'celestial', 'voidwalker', 'inferno', 'neon', 'dark', 'glitch'].includes(skinType)) { 
-                if (window.gameSettings && window.gameSettings.highQuality) ctx.shadowBlur = 20; 
+                if (window.gameSettings && window.gameSettings.highQuality) {
+                    ctx.shadowBlur = 20; 
+                }
             }
 
             if (skinType === 'ghost') { 
@@ -1238,14 +1244,14 @@ export class Entity {
         if (this.isPlayer && this.frontVisual !== 'gun' && this.frontVisual !== 'spikes' && !this.isCloaked) {
             ctx.save(); 
             ctx.translate(this.x, this.y); 
-            ctx.rotate(this.angle); 
+            ctx.rotate(this.angle);
             ctx.fillStyle = 'rgba(255, 255, 255, 0.7)'; 
-            ctx.beginPath(); 
+            ctx.beginPath();
             let arrowOffset = (this.type === 'square' ? this.size / 2 : this.size) + armorOffset + 6; 
-            ctx.moveTo(arrowOffset, -5); 
-            ctx.lineTo(arrowOffset + 10, 0); 
-            ctx.lineTo(arrowOffset, 5); 
-            ctx.fill(); 
+            ctx.moveTo(arrowOffset, -5);
+            ctx.lineTo(arrowOffset + 10, 0);
+            ctx.lineTo(arrowOffset, 5);
+            ctx.fill();
             ctx.restore();
         }
 
