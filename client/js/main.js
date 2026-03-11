@@ -9,8 +9,10 @@ window.globalAccountXP = parseInt(localStorage.getItem('yepio_xp')) || 0;
 window.globalAccountLevel = parseInt(localStorage.getItem('yepio_level')) || 1;
 window.equippedItems = JSON.parse(localStorage.getItem('yepio_equipped')) || { Skin: null, Trail: null, Banner: null, Color: null };
 window.unlockedItems = JSON.parse(localStorage.getItem('yepio_unlocked')) || [];
-window.matchHistory = JSON.parse(localStorage.getItem('yepio_history')) || [];
-window.gameStats = JSON.parse(localStorage.getItem('yepio_stats')) || { matches: 0, kills: 0, points: 0, time: 0 };
+
+// RESET STATS ON PAGE RELOAD
+window.matchHistory = [];
+window.gameStats = { matches: 0, kills: 0, points: 0, time: 0 };
 
 window.gameSettings = JSON.parse(localStorage.getItem('yepio_settings')) || {
     volume: 100,
@@ -30,8 +32,6 @@ function saveData() {
     localStorage.setItem('yepio_level', window.globalAccountLevel);
     localStorage.setItem('yepio_equipped', JSON.stringify(window.equippedItems));
     localStorage.setItem('yepio_unlocked', JSON.stringify(window.unlockedItems));
-    localStorage.setItem('yepio_history', JSON.stringify(window.matchHistory));
-    localStorage.setItem('yepio_stats', JSON.stringify(window.gameStats));
     localStorage.setItem('yepio_settings', JSON.stringify(window.gameSettings));
 }
 
@@ -84,6 +84,7 @@ document.querySelectorAll('.class-btn').forEach(btn => {
         else if (selectedClass === 'square') info.innerText = "TANK: Slow, massive health, fires slow heavy shots.";
         else if (selectedClass === 'circle') info.innerText = "SOLDIER: Balanced speed, health, and damage.";
         
+        info.style.color = "white"; // Reset color in case it was red
         info.classList.remove('hidden', 'fade-out');
         setTimeout(() => info.classList.add('fade-out'), 2000);
     });
@@ -91,7 +92,14 @@ document.querySelectorAll('.class-btn').forEach(btn => {
 
 document.getElementById('play-btn').addEventListener('click', () => {
     if (!selectedClass) {
-        alert("Please select a class first!");
+        const info = document.getElementById('class-info');
+        info.innerText = "PLEASE SELECT A CLASS!";
+        info.style.color = "#ff4444"; // RED TEXT WARNING
+        info.classList.remove('hidden', 'fade-out');
+        setTimeout(() => {
+            info.classList.add('fade-out');
+            setTimeout(() => info.style.color = "white", 500);
+        }, 2000);
         return;
     }
     sounds.play('click', 0.8 * (window.gameSettings.volume/100));
@@ -136,12 +144,19 @@ document.getElementById('return-lobby-btn').addEventListener('click', () => {
 let currentLobbyCode = null;
 let isHost = false;
 let lobbyPlayers = [];
-let lobbyAnimationIds = {}; // for rotating previews
+let lobbyAnimationIds = {}; 
 
 document.querySelectorAll('.mode-card').forEach(card => {
     card.addEventListener('click', (e) => {
         if (!selectedClass) {
-            alert("Please select a class first!");
+            const info = document.getElementById('class-info');
+            info.innerText = "PLEASE SELECT A CLASS BEFORE JOINING MULTIPLAYER!";
+            info.style.color = "#ff4444"; 
+            info.classList.remove('hidden', 'fade-out');
+            setTimeout(() => { info.classList.add('fade-out'); setTimeout(() => info.style.color = "white", 500); }, 2000);
+            
+            // Auto switch to lobby tab so they see the warning
+            document.querySelectorAll('.tab-btn')[0].click();
             return;
         }
         if (!socket) {
@@ -158,7 +173,12 @@ document.querySelectorAll('.mode-card').forEach(card => {
 
 document.getElementById('join-lobby-btn').addEventListener('click', () => {
     if (!selectedClass) {
-        alert("Please select a class first!");
+        const info = document.getElementById('class-info');
+        info.innerText = "PLEASE SELECT A CLASS!";
+        info.style.color = "#ff4444"; 
+        info.classList.remove('hidden', 'fade-out');
+        setTimeout(() => { info.classList.add('fade-out'); setTimeout(() => info.style.color = "white", 500); }, 2000);
+        document.querySelectorAll('.tab-btn')[0].click();
         return;
     }
     if (!socket) return;
@@ -323,7 +343,7 @@ function startLobbyPreviewLoop(canvas, pClass, pColor, slotIndex) {
             return;
         }
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        angle += 0.015; // Smooth rotation
+        angle += 0.015; 
         
         ctx.save();
         ctx.translate(canvas.width / 2, canvas.height / 2);
@@ -394,7 +414,6 @@ function renderStats() {
         for(let key in m.upgrades) {
             let tier = m.upgrades[key];
             
-            // FIX: Pink active abilities in match history!
             if (abilities.includes(key)) {
                 upgHtml += `
                     <div class="upgrade-badge ability-badge">
@@ -415,7 +434,7 @@ function renderStats() {
         card.className = 'match-card';
         card.innerHTML = `
             <div class="match-card-main">
-                <div><span class="match-detail-label">RANK</span><span class="match-detail-val">${m.rank}<span>${getOrdinal(m.rank)}</span> / ${m.totalPlayers}</span></div>
+                <div><span class="match-detail-label">RANK</span><span class="match-detail-val">${m.rank}<span>${getOrdinal(m.rank)}</span></span></div>
                 <div><span class="match-detail-label">CLASS</span><span class="match-detail-val" style="text-transform:capitalize;">${m.playerClass}</span></div>
                 <div><span class="match-detail-label">KILLS</span><span class="match-detail-val">${m.kills}</span></div>
                 <div><span class="match-detail-label">POINTS</span><span class="match-detail-val">${Math.floor(m.points)}</span></div>
@@ -450,19 +469,11 @@ function renderShop() {
     if (seasonGrid) seasonGrid.innerHTML = '';
     if (mainGrid) mainGrid.innerHTML = '';
 
+    // FIX: PROPER FILTERING FOR SHOP ITEMS
     Object.values(ITEMS_DB).forEach(item => {
-        let isLevelItem = item.reqType === 'level';
-        let isPointItem = item.reqType === 'points';
-        
-        // If reqType is somehow missing, fall back based on category
-        if (!item.reqType) {
-            if (item.category === 'Skin' || item.category === 'Color') isLevelItem = true;
-            else isPointItem = true;
-        }
-
         const isEquipped = window.equippedItems[item.category] === item.id;
         
-        if (isLevelItem && seasonGrid) {
+        if (item.reqType === 'level' && seasonGrid) {
             let reqVal = item.reqVal || 1;
             const isUnlocked = window.globalAccountLevel >= reqVal || window.unlockedItems.includes(item.id);
             
@@ -477,7 +488,7 @@ function renderShop() {
                     ${btnHTML}
                 </div>`;
         } 
-        else if (isPointItem && mainGrid) {
+        else if (item.reqType === 'points' && mainGrid) {
             let reqVal = item.reqVal || 1000;
             const isUnlocked = window.gameStats.points >= reqVal || window.unlockedItems.includes(item.id);
             let progressPct = Math.min(100, (window.gameStats.points / reqVal) * 100);
@@ -574,14 +585,14 @@ function renderLocker() {
         let equippedId = window.equippedItems[cat];
         let item = equippedId ? ITEMS_DB[equippedId] : null;
         
-        let icon = item ? item.icon : '❌'; // Standard X emoji
+        let icon = item ? item.icon : '❌'; 
         let name = item ? item.name : 'NONE';
         let rColor = item ? getRarityColor(item.rarity) : '#444';
         
         slotsView.innerHTML += `
             <div class="locker-slot" data-targetcat="${cat}" style="--slot-color: ${rColor}">
                 <div class="slot-header">${cat}</div>
-                <div class="slot-icon">${icon}</div>
+                <div class="slot-icon" style="${!item ? 'color:#ff4444; font-family:sans-serif;' : ''}">${icon}</div>
                 <div class="slot-name">${name}</div>
             </div>
         `;
@@ -609,14 +620,18 @@ function openLockerCategory(category) {
     grid.innerHTML += `
         <div class="store-item unlocked" style="--rarity-color: #555;">
             <div class="item-name">Unequip</div>
-            <div class="item-icon">❌</div>
+            <div class="item-icon" style="color:#ff4444; font-family:sans-serif;">❌</div>
             <button class="btn-equip ${noneEquipped ? 'equipped' : ''}" data-id="null" data-cat="${category}">${noneEquipped ? 'EQUIPPED' : 'EQUIP'}</button>
         </div>
     `;
 
     Object.values(ITEMS_DB).filter(i => i.category === category).forEach(item => {
-        let reqVal = item.reqVal || 1;
-        let isUnlocked = window.unlockedItems.includes(item.id) || (item.reqType === 'level' && window.globalAccountLevel >= reqVal);
+        let isUnlocked = false;
+        if (item.reqType === 'level') {
+            isUnlocked = window.globalAccountLevel >= (item.reqVal || 1) || window.unlockedItems.includes(item.id);
+        } else if (item.reqType === 'points') {
+            isUnlocked = window.gameStats.points >= (item.reqVal || 1000) || window.unlockedItems.includes(item.id);
+        }
         
         if (isUnlocked) {
             const isEquipped = window.equippedItems[category] === item.id;
@@ -701,7 +716,7 @@ function startPreviewLoop(canvas, specificItem = null) {
         }
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        previewAngle += 0.015; // Smooth rotation
+        previewAngle += 0.015; 
         
         drawPreview(ctx, canvas.width, canvas.height, previewAngle, specificItem);
         previewAnimationId = requestAnimationFrame(loop);
@@ -785,7 +800,7 @@ function drawPreview(ctx, w, h, angle, specificItem = null) {
         else if (skinType === 'inferno') { ctx.fillStyle='#fbbf24'; ctx.beginPath(); ctx.arc(0,0,size*0.6,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#dc2626'; ctx.shadowColor='#dc2626'; ctx.shadowBlur=25; ctx.beginPath(); ctx.arc(0,0,size*0.4,0,Math.PI*2); ctx.fill(); }
         else if (skinType === 'warlord') { ctx.strokeStyle='#444'; ctx.lineWidth=6; ctx.beginPath(); ctx.moveTo(-size*0.5,-size*0.5); ctx.lineTo(size*0.5,size*0.5); ctx.moveTo(size*0.5,-size*0.5); ctx.lineTo(-size*0.5,size*0.5); ctx.stroke(); }
         else if (skinType === 'spectre') { ctx.fillStyle='rgba(168,85,247,0.8)'; ctx.shadowColor='#a855f7'; ctx.shadowBlur=30; ctx.beginPath(); ctx.arc(0,0,size*0.7,0,Math.PI*2); ctx.fill(); }
-        else if (skinType === 'phantom') { ctx.strokeStyle='rgba(59,130,246,0.8)'; ctx.lineWidth=4; ctx.shadowColor='#3b82f6'; ctx.shadowBlur=15; ctx.beginPath(); ctx.arc(0,0,size*0.8,0,Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(0,0,size*0.4,0,Math.PI*2); ctx.stroke(); }
+        else if (skinType === 'phantom') { ctx.strokeStyle='rgba(59, 130, 246, 0.8)'; ctx.lineWidth=4; ctx.shadowColor='#3b82f6'; ctx.shadowBlur=15; ctx.beginPath(); ctx.arc(0,0,size*0.8,0,Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(0,0,size*0.4,0,Math.PI*2); ctx.stroke(); }
         else if (skinType === 'target') { ctx.save(); ctx.beginPath(); if(pClass==='circle') ctx.arc(0,0,size,0,Math.PI*2); else if(pClass==='square') ctx.rect(-size/2,-size/2,size,size); else { ctx.moveTo(size,0); ctx.lineTo(-size/2,-size*0.866); ctx.lineTo(-size/2,size*0.866); ctx.closePath(); } ctx.clip(); ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=6; ctx.beginPath(); ctx.arc(0,0,size*0.6,0,Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(0,0,size*0.2,0,Math.PI*2); ctx.stroke(); ctx.restore(); }
         else if (skinType === 'stripes') { ctx.save(); ctx.beginPath(); if(pClass==='circle') ctx.arc(0,0,size,0,Math.PI*2); else if(pClass==='square') ctx.rect(-size/2,-size/2,size,size); else { ctx.moveTo(size,0); ctx.lineTo(-size/2,-size*0.866); ctx.lineTo(-size/2,size*0.866); ctx.closePath(); } ctx.clip(); ctx.fillStyle='rgba(255,255,255,0.3)'; for(let i=-size; i<size; i+=15) { ctx.fillRect(i,-size,8,size*2); } ctx.restore(); }
         else if (skinType === 'checker') { ctx.save(); ctx.beginPath(); if(pClass==='circle') ctx.arc(0,0,size,0,Math.PI*2); else if(pClass==='square') ctx.rect(-size/2,-size/2,size,size); else { ctx.moveTo(size,0); ctx.lineTo(-size/2,-size*0.866); ctx.lineTo(-size/2,size*0.866); ctx.closePath(); } ctx.clip(); ctx.fillStyle='rgba(0,0,0,0.3)'; let sq=size*0.25; for(let x=-size;x<=size;x+=sq){ for(let y=-size;y<=size;y+=sq){ if(Math.abs(Math.round(x/sq)+Math.round(y/sq))%2===0) ctx.fillRect(x,y,sq,sq); } } ctx.restore(); }
@@ -808,8 +823,7 @@ function drawPreview(ctx, w, h, angle, specificItem = null) {
         }
         ctx.restore();
     }
-    
-    ctx.restore(); // Ensure the clip from the shape is closed out.
+    ctx.restore(); 
 
     if (hasBanner) {
         ctx.save();
@@ -880,8 +894,9 @@ window.addEventListener('keydown', (e) => {
         }
         
         const gameUi = document.getElementById('game-ui');
-        if (!gameUi.classList.contains('hidden') && !engine.isGameOver && !engine.isDemo) {
-            engine.handleGameOver(null);
+        if (!gameUi.classList.contains('hidden') && !engine.isGameOver && !engine.isDemo && engine.player) {
+            // TRIGGER SPECTATOR MODE
+            engine.player.health = 0;
         }
     }
 });
