@@ -130,6 +130,10 @@ async function listenToUserData(uid) {
             resetLocalStats(); 
             refreshAllUIs();
         }
+    }, (error) => {
+        console.error("Firebase Snapshot Error (Offline?):", error);
+        resetLocalStats();
+        refreshAllUIs();
     });
 }
 
@@ -254,61 +258,45 @@ try {
 // ==========================================
 let lobbyUnsub = null;
 
-function renderLobbySlots(hostName = null) {
+function renderLobbySlots() {
     const container = document.getElementById('player-slots-container');
     if (!container) return;
     
     let count = currentLobbyMode === 'duos' ? 2 : currentLobbyMode === 'trios' ? 3 : 4;
     container.innerHTML = '';
     
-    // If joining someone else's lobby
-    if (hostName) {
-        container.innerHTML += `
-            <div class="player-slot ready">
-                <div class="lobby-preview-canvas" style="display:flex; align-items:center; justify-content:center;">(HOST)</div>
-                <div class="name">${hostName}</div>
-                <div class="status">READY</div>
-            </div>`;
+    const players = window.lobbyPlayers || [];
+    
+    for (let i = 0; i < count; i++) {
+        const p = players[i];
+        if (p) {
+            const isMe = p.uid === getMyUid();
+            const isHost = i === 0;
+            let roleTag = isHost ? '(HOST)' : '(PLAYER)';
+            if (isMe) roleTag = '(YOU)';
             
-        container.innerHTML += `
-            <div class="player-slot ready">
-                <div class="lobby-preview-canvas" style="display:flex; align-items:center; justify-content:center;">(YOU)</div>
-                <div class="name">${currentUser || 'GUEST'}</div>
-                <div class="status">READY</div>
-            </div>`;
-            
-        for(let i = 2; i < count; i++) {
             container.innerHTML += `
-                <div class="player-slot empty">
-                    <div class="lobby-preview-canvas">+</div>
-                    <div class="name" style="color:gray;">WAITING...</div>
+                <div class="player-slot ${p.ready ? 'ready' : ''}">
+                    <canvas class="lobby-preview-canvas" id="lobby-canvas-${i}"></canvas>
+                    <div class="name">${p.name} <span style="font-size:0.7rem; color:gray;">${roleTag}</span></div>
+                    <div class="status" style="color: ${p.ready ? '#00ffcc' : 'gray'}">${p.ready ? 'READY' : 'NOT READY'}</div>
                 </div>`;
-        }
-    } 
-    // If it's your own lobby
-    else {
-        container.innerHTML += `
-            <div class="player-slot ready">
-                <div class="lobby-preview-canvas" style="display:flex; align-items:center; justify-content:center;">(YOU)</div>
-                <div class="name">${currentUser || 'GUEST'}</div>
-                <div class="status">READY</div>
-            </div>`;
-            
-        for(let i = 1; i < count; i++) {
+        } else {
             container.innerHTML += `
                 <div class="player-slot empty">
-                    <div class="lobby-preview-canvas">+</div>
+                    <div class="lobby-preview-canvas" style="display:flex; align-items:center; justify-content:center; font-size:3rem; border: 2px dashed #555; border-radius:50%; color:#555;">+</div>
                     <div class="name" style="color:gray;">WAITING...</div>
+                    <div class="status"></div>
                 </div>`;
         }
     }
 
     // Toggle LEAVE button visibility
     const myUid = getMyUid();
-    const me = window.lobbyPlayers.find(pl => pl.uid === myUid);
+    const me = (window.lobbyPlayers || []).find(pl => pl.uid === myUid);
     const leaveBtn = document.getElementById('leave-lobby-btn');
     if (leaveBtn) {
-        if (me && window.lobbyPlayers.length > 0) {
+        if (me && window.lobbyPlayers && window.lobbyPlayers.length > 0) {
             leaveBtn.classList.remove('hidden');
         } else {
             leaveBtn.classList.add('hidden');
@@ -470,9 +458,12 @@ let currentLockerCategory = null;
 window.activePreviewItem = null;
 
 function refreshAllUIs() {
-    // 🚨 FAILSAFE: Guarantee equippedItems exists before rendering so UI never crashes
-    if (!window.equippedItems) {
+    // 🚨 FAILSAFE: Guarantee variables exist before rendering so UI never crashes
+    if (!window.equippedItems || typeof window.equippedItems !== 'object') {
         window.equippedItems = { Skin: null, Trail: null, Banner: null, Color: null };
+    }
+    if (!window.claimedItems) {
+        window.claimedItems = {};
     }
     
     renderLocker();
@@ -516,7 +507,7 @@ document.addEventListener('click', async (e) => {
         document.getElementById('friend-profile-view').classList.add('hidden');
         return;
     }
-    
+
     // Back to Friends list from Friend Profile
     if (target.id === 'back-to-friends-btn') {
         document.getElementById('friend-profile-view').classList.add('hidden');
@@ -901,11 +892,6 @@ document.addEventListener('click', async (e) => {
     if (equipBtn) {
         const itemId = equipBtn.dataset.id;
         
-        // 🚨 FAILSAFE
-        if (!window.equippedItems) {
-            window.equippedItems = { Skin: null, Trail: null, Banner: null, Color: null };
-        }
-
         if (!itemId) { 
             if (currentLockerCategory) {
                 window.equippedItems[currentLockerCategory] = null;
@@ -1000,6 +986,7 @@ document.addEventListener('click', async (e) => {
             
             if (!window.currentLobbyCode) {
                 window.currentLobbyCode = generateLobbyCode();
+                document.getElementById('lobby-code-display').innerText = window.currentLobbyCode;
                 
                 const myPlayerObj = {
                     uid: getMyUid(),
@@ -1032,7 +1019,6 @@ document.addEventListener('click', async (e) => {
         if (targetTab === 'stats') renderStats(); 
     }
 });
-
 
 // ==========================================
 // FRIENDS LIST RENDERING
@@ -1833,4 +1819,13 @@ if (devInput) {
             }
         }
     });
+}
+
+// ==========================================
+// INITIAL RENDER
+// ==========================================
+try {
+    refreshAllUIs();
+} catch(e) {
+    console.error("Initial render error:", e);
 }
