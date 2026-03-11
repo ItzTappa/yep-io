@@ -3,18 +3,19 @@ import { sounds } from './soundManager.js';
 import { ITEMS_DB } from './items.js';
 
 // ==========================================
-// GLOBALS & LOCAL STORAGE
+// GLOBALS & GAME STATE (STRICT RESET)
 // ==========================================
-window.globalAccountXP = parseInt(localStorage.getItem('yepio_xp')) || 0;
-window.globalAccountLevel = parseInt(localStorage.getItem('yepio_level')) || 1;
-window.equippedItems = JSON.parse(localStorage.getItem('yepio_equipped')) || { Skin: null, Trail: null, Banner: null, Color: null };
-window.unlockedItems = JSON.parse(localStorage.getItem('yepio_unlocked')) || [];
+// FORCE WIPE BROWSER CACHE ON REFRESH SO XP IS NEVER STUCK!
+localStorage.clear();
 
-// RESET STATS ON PAGE RELOAD
+window.globalAccountXP = 0;
+window.globalAccountLevel = 1;
+window.equippedItems = { Skin: null, Trail: null, Banner: null, Color: null };
+window.unlockedItems = [];
 window.matchHistory = [];
 window.gameStats = { matches: 0, kills: 0, points: 0, time: 0 };
 
-window.gameSettings = JSON.parse(localStorage.getItem('yepio_settings')) || {
+window.gameSettings = {
     volume: 100,
     highQuality: true,
     particles: true,
@@ -28,10 +29,7 @@ window.gameSettings = JSON.parse(localStorage.getItem('yepio_settings')) || {
 };
 
 function saveData() {
-    localStorage.setItem('yepio_xp', window.globalAccountXP);
-    localStorage.setItem('yepio_level', window.globalAccountLevel);
-    localStorage.setItem('yepio_equipped', JSON.stringify(window.equippedItems));
-    localStorage.setItem('yepio_unlocked', JSON.stringify(window.unlockedItems));
+    // Only saving settings so your keybinds persist, everything else stays fresh
     localStorage.setItem('yepio_settings', JSON.stringify(window.gameSettings));
 }
 
@@ -484,16 +482,12 @@ function renderShop() {
     if (seasonGrid) seasonGrid.innerHTML = '';
     if (mainGrid) mainGrid.innerHTML = '';
 
+    // STRICT SHOP FILTERING
     Object.values(ITEMS_DB).forEach(item => {
-        let isSeason = item.reqType === 'level' || item.levelReq !== undefined;
-        let isMain = item.reqType === 'points' || item.cost !== undefined;
-        
-        if (!isSeason && !isMain) isSeason = true; 
-
         const isEquipped = window.equippedItems[item.category] === item.id;
         
-        if (isSeason && seasonGrid) {
-            let reqVal = item.levelReq || item.reqVal || 1;
+        if (item.reqType === 'level' && seasonGrid) {
+            let reqVal = item.reqVal || 1;
             const isUnlocked = window.globalAccountLevel >= reqVal || window.unlockedItems.includes(item.id);
             
             let btnHTML = isUnlocked 
@@ -507,8 +501,8 @@ function renderShop() {
                     ${btnHTML}
                 </div>`;
         } 
-        else if (isMain && mainGrid) {
-            let reqVal = item.cost || item.reqVal || 1000;
+        else if (item.reqType === 'points' && mainGrid) {
+            let reqVal = item.reqVal || 1000;
             const isUnlocked = window.gameStats.points >= reqVal || window.unlockedItems.includes(item.id);
             let progressPct = Math.min(100, (window.gameStats.points / reqVal) * 100);
             
@@ -545,7 +539,6 @@ function bindShopButtons() {
             } else {
                 window.equippedItems[cat] = id === "null" ? null : id; 
             }
-            saveData();
             renderShop();
             renderLocker();
         });
@@ -566,7 +559,6 @@ function bindShopButtons() {
                 if (!window.unlockedItems.includes(id)) {
                     window.unlockedItems.push(id);
                     sounds.play('levelUp', 0.5 * (window.gameSettings.volume/100));
-                    saveData();
                     btn.classList.remove('holding');
                     renderShop();
                     renderLocker();
@@ -646,12 +638,10 @@ function openLockerCategory(category) {
 
     Object.values(ITEMS_DB).filter(i => i.category === category).forEach(item => {
         let isUnlocked = false;
-        if (item.reqType === 'level' || item.levelReq !== undefined) {
-            let reqVal = item.reqVal || item.levelReq || 1;
-            isUnlocked = window.globalAccountLevel >= reqVal || window.unlockedItems.includes(item.id);
-        } else {
-            let reqVal = item.reqVal || item.cost || 1000;
-            isUnlocked = window.gameStats.points >= reqVal || window.unlockedItems.includes(item.id);
+        if (item.reqType === 'level') {
+            isUnlocked = window.globalAccountLevel >= (item.reqVal || 1) || window.unlockedItems.includes(item.id);
+        } else if (item.reqType === 'points') {
+            isUnlocked = window.gameStats.points >= (item.reqVal || 1000) || window.unlockedItems.includes(item.id);
         }
         
         if (isUnlocked) {
@@ -916,6 +906,7 @@ window.addEventListener('keydown', (e) => {
         
         const gameUi = document.getElementById('game-ui');
         if (!gameUi.classList.contains('hidden') && !engine.isGameOver && !engine.isDemo && engine.player && !engine.player.isDead) {
+            // TRIGGER GAME OVER/SPECTATOR
             engine.processDeath(engine.player, null);
         }
     }
