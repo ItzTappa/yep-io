@@ -217,7 +217,7 @@
 
     <div id="dev-console" class="hidden">
         <div id="dev-log"><div class="dev-startup">Developer Console Started. Press ` or / to close. Type /help for commands.</div></div>
-        <input type="text" id="dev-input" placeholder="Enter command (e.g., /level 50)" autocomplete="off">
+        <input type="text" id="dev-input" aria-label="Developer Console Command" placeholder="Enter command (e.g., /level 50)" autocomplete="off">
     </div>
 
     <div id="lobby-screen" class="hidden full-screen-overlay">
@@ -225,7 +225,7 @@
             <h2 class="lobby-title">MULTIPLAYER LOBBY</h2>
             <div class="lobby-header-controls">
                 <div class="control-box"><div class="code-label">CODE: <span id="lobby-code-display">-----</span></div><button id="copy-code-btn" class="control-btn dark-btn">COPY</button></div>
-                <div class="control-box"><input type="text" id="join-code-input" placeholder="ENTER CODE" maxlength="5"><button id="join-lobby-btn" class="control-btn yellow-btn">JOIN</button></div>
+                <div class="control-box"><input type="text" id="join-code-input" aria-label="Enter Lobby Code" placeholder="ENTER CODE" maxlength="5"><button id="join-lobby-btn" class="control-btn yellow-btn">JOIN</button></div>
             </div>
         </div>
         <div id="player-slots-container" class="player-slots"></div>
