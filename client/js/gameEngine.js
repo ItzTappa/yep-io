@@ -315,10 +315,12 @@ export class GameEngine {
             y = Math.random() * this.worldSize;
             isSafe = true;
             
+            // Keep away from player
             if (this.player && distance(x, y, this.player.x, this.player.y) < 1000) {
                 isSafe = false;
             }
             
+            // Keep away from other safe zones
             if (isSafe && minDistFromOthers > 0) {
                 for (let sz of this.safeZones) {
                     if (distance(x, y, sz.x, sz.y) < minDistFromOthers) {
@@ -391,7 +393,7 @@ export class GameEngine {
                     sounds.play('levelUp', 0.8 * this.getVol());
                     document.getElementById('account-notif-level-num').innerText = window.globalAccountLevel;
                     
-                    // FIX: Make block element, then transition opacity
+                    // Display Notification dynamically
                     notif.classList.add('active'); 
                     setTimeout(() => {
                         if(notif) notif.classList.add('show');
@@ -403,7 +405,7 @@ export class GameEngine {
                     this.accountLevelUpTimeout = setTimeout(() => {
                         if(notif) {
                             notif.classList.remove('show');
-                            setTimeout(() => notif.classList.remove('active'), 500); // Wait for fade out
+                            setTimeout(() => notif.classList.remove('active'), 500);
                         }
                     }, 4000);
                 }
@@ -577,6 +579,7 @@ export class GameEngine {
         
         let matchSeed = Math.random();
         
+        // 49 Bots
         for(let i = 0; i < 49; i++) {
             const types = ['triangle', 'square', 'circle']; 
             const type = types[Math.floor(Math.random() * 3)]; 
@@ -590,7 +593,8 @@ export class GameEngine {
             this.bots.push(new Bot(spawn.x, spawn.y, type, startingPts));
         }
         
-        for(let i = 0; i < 8000; i++) {
+        // REBALANCED ORB COUNT: 3,000 total (allows for better spacing)
+        for(let i = 0; i < 3000; i++) {
             const x = Math.random() * this.worldSize;
             const y = Math.random() * this.worldSize;
             this.orbs.push(new Orb(x, y, 'xp', 1, null, 0));
@@ -754,7 +758,8 @@ export class GameEngine {
             this.bots = [...this.teammates]; 
         }
 
-        for(let i = 0; i < 8000; i++) {
+        // REBALANCED ORBS
+        for(let i = 0; i < 3000; i++) {
             this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
         }
         
@@ -1068,12 +1073,18 @@ export class GameEngine {
     triggerUpgradeReady() {
         if (this.isDemo || this.isGameOver) return;
         
+        // ADDED LEVEL UP FLASH ANIMATION TO XP BAR
+        const xpBarContainer = document.querySelector('.xp-bar-container');
+        if (xpBarContainer) {
+            xpBarContainer.classList.add('level-up-flash');
+            setTimeout(() => xpBarContainer.classList.remove('level-up-flash'), 500);
+        }
+
         if (!window.gameSettings || window.gameSettings.showNotifs !== false) {
             const notif = document.getElementById('level-up-notif');
             if (notif) {
                 sounds.play('upgradeReady', 0.6 * this.getVol()); 
                 
-                // FIX: Make block element, then transition opacity
                 notif.classList.add('active'); 
                 setTimeout(() => {
                     if(notif) notif.classList.add('show');
@@ -1086,7 +1097,7 @@ export class GameEngine {
                 this.levelUpTimeout = setTimeout(() => {
                     if(notif) {
                         notif.classList.remove('show');
-                        setTimeout(() => notif.classList.remove('active'), 500); // Wait for fade out
+                        setTimeout(() => notif.classList.remove('active'), 500); 
                     }
                 }, 3000);
             }
@@ -1178,7 +1189,6 @@ export class GameEngine {
             let isSinglePlayer = !this.lobbyCode;
             
             if (!this.isDemo && !this.stormActive && (this.isHost || isSinglePlayer)) { 
-                // NEW RESPAWN AT ZERO POINTS LOGIC!
                 setTimeout(() => {
                     if (this.isGameOver) return;
                     
@@ -1277,17 +1287,19 @@ export class GameEngine {
 
         const allPlayers = (this.isDemo || this.isGameOver) ? [...this.bots] : [this.player, ...this.bots];
 
+        // ==========================================
         // CONTINUOUS ORB SPAWNING (TARGETED TO KEEP ACTION HIGH!)
-        let desiredOrbs = this.isDemo ? 1000 : 8000;
+        // 3000 Max Orbs. 60% chance to spawn near an existing player!
+        // ==========================================
+        let desiredOrbs = this.isDemo ? 1000 : 3000;
         if (this.orbs.length < desiredOrbs) {
             let spawnCount = Math.min(100, desiredOrbs - this.orbs.length);
             for(let i = 0; i < spawnCount; i++) {
                 let ox, oy;
-                // 60% chance to spawn near an existing player/bot so areas don't stay empty
                 if (Math.random() < 0.60 && allPlayers.length > 0) {
                     let refPlayer = allPlayers[Math.floor(Math.random() * allPlayers.length)];
                     let ang = Math.random() * Math.PI * 2;
-                    let dist = Math.random() * 1500; 
+                    let dist = 300 + (Math.random() * 1700); // 300 to 2000 units away
                     ox = refPlayer.x + Math.cos(ang) * dist;
                     oy = refPlayer.y + Math.sin(ang) * dist;
                     ox = Math.max(0, Math.min(this.worldSize, ox));
@@ -1313,7 +1325,6 @@ export class GameEngine {
                 }
             }
         }
-
 
         // ==========================================
         // MASSIVE NEW ABILITIES LOGIC (Explosions, Lasers, Etc)
@@ -2140,7 +2151,7 @@ export class GameEngine {
         ctx.clearRect(0, 0, 220, 220);
         const scale = 220 / this.worldSize;
 
-        // Minimap safe zones are now TRUE SIZE! (Removed the * 4)
+        // TRUE SIZE MINIMAP SAFE ZONES!
         this.safeZones.forEach(sz => {
             ctx.fillStyle = sz.state === 'active' ? 'rgba(0, 255, 204, 0.4)' : 'rgba(0, 255, 204, 0.15)';
             ctx.beginPath();
