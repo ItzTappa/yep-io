@@ -150,3 +150,5 @@ export const ITEMS_DB = {
     'r_col_29': { id: 'r_col_29', name: 'Abyss',      category: 'Color',  icon: '🌊', rarity: 5, value: '#0f172a', isRotating: true },
     'r_col_30': { id: 'r_col_30', name: 'Amethyst',   category: 'Color',  icon: '🔮', rarity: 5, value: '#c084fc', isRotating: true }
 };
+
+// Stable Version - Important Backup

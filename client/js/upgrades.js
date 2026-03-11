@@ -153,3 +153,5 @@ export const UPGRADE_POOL = [
     { id: 'tactical_nuke', title: 'Tactical Nuke', desc: 'Active: Fires a slow, devastating explosive bomb.', weight: 6, maxTier: 1, classes: ['circle'], isActiveAbility: true, apply: (e) => { e.activeAbility = 'tactical_nuke'; } },
     { id: 'blade_ring', title: 'Blade Ring', desc: 'Active: Expand and retract a massive ring of blades.', weight: 6, maxTier: 1, classes: ['circle'], isActiveAbility: true, apply: (e) => { e.activeAbility = 'blade_ring'; } }
 ];
+
+// Stable Version - Important Backup
