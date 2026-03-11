@@ -150,6 +150,27 @@
         <button id="close-preview-btn" class="footer-btn dark-btn-outline">BACK TO SHOP</button>
     </div>
 
+    <div id="mastery-modal" class="hidden">
+        <div class="settings-content wide-settings">
+            <h2 id="mastery-class-title">CLASS MASTERY</h2>
+            <p class="store-desc text-center" style="margin-bottom:15px;">Earn kills and play matches to unlock the ultimate Golden Mastery Skin for this class.</p>
+            
+            <div class="lifetime-stats-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 30px;">
+                <div class="stat-box"><div>CLASS KILLS</div><div id="mastery-kills" class="stat-val">0</div></div>
+                <div class="stat-box"><div>MATCHES PLAYED</div><div id="mastery-matches" class="stat-val">0</div></div>
+            </div>
+
+            <div class="mastery-reward-box" style="text-align: center; background: rgba(0,0,0,0.4); border: 2px solid #555; padding: 20px; border-radius: 8px;">
+                <h3 style="color: #ffe600; letter-spacing: 2px; margin-bottom: 10px;">REWARD: GOLDEN SKIN</h3>
+                <div class="season-progress"><div id="mastery-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #ffcc00, #ffe600); transition: width 0.5s ease-out;"></div></div>
+                <p id="mastery-req-text" class="store-desc" style="margin-bottom: 15px;">Requires 100 Class Kills</p>
+                <button id="mastery-equip-btn" class="footer-btn dark-btn-outline" style="width: 100%; height: 45px; font-size: 1rem;" disabled>LOCKED</button>
+            </div>
+
+            <button id="close-mastery-btn" class="footer-btn dark-btn-outline" style="width: 100%; height:45px; margin-top: 15px; font-size:1rem;">CLOSE</button>
+        </div>
+    </div>
+
     <div id="account-modal" class="hidden">
         <div class="settings-content wide-settings">
             
@@ -243,6 +264,21 @@
         </div>
     </div>
 
+    <div id="slot-machine-ui" class="hidden">
+        <div class="slot-container">
+            <h2 class="slot-title">LUCKY SLOT MACHINE</h2>
+            <div class="slot-reels">
+                <div class="reel" id="reel-1">?</div>
+                <div class="reel" id="reel-2">?</div>
+                <div class="reel" id="reel-3">?</div>
+            </div>
+            <p id="slot-status-text" class="store-desc" style="margin-top: 15px;">Pull the lever for a chance at legendary upgrades!</p>
+            <button id="slot-spin-btn" class="footer-btn yellow-btn-solid" style="margin-top: 15px;">SPIN!</button>
+            <div id="slot-result" class="hidden"></div>
+            <button id="slot-close-btn" class="footer-btn dark-btn-outline hidden" style="margin-top: 15px;">CONTINUE</button>
+        </div>
+    </div>
+
     <div id="game-ui" class="hidden">
         <div class="hud">
             <div id="fps-display" class="hidden">60 FPS</div>
@@ -303,6 +339,10 @@
                 <div>Kills: <span id="go-kills">0</span></div>
                 <div>Time Alive: <span id="go-time">0s</span></div>
             </div>
+            
+            <div id="go-awards-container" class="awards-grid hidden">
+                </div>
+
             <div id="go-xp-container" class="xp-gained">Season Level XP Earned: <span id="go-xp" class="accent-text">+0</span></div>
             <button id="return-lobby-btn">Return to Menu</button>
         </div>
@@ -324,5 +364,3 @@
     <script type="module" src="js/main.js"></script>
 </body>
 </html>
-
-<!--  Stable Version - Important Backup -->
