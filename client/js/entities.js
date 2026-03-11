@@ -396,7 +396,16 @@ export class Entity {
     draw(ctx) {
         if (!ctx || !window.gameSettings) return;
 
-        // DRAW TRAILS
+        // Detect if this is a UI canvas so we can hide gameplay-only elements like the arrow and health bar
+        let isPreviewCanvas = false;
+        if (ctx.canvas && ctx.canvas.id) {
+            let cid = ctx.canvas.id.toLowerCase();
+            if (cid.includes('preview') || cid.includes('lobby')) isPreviewCanvas = true;
+        }
+        if (ctx.canvas && ctx.canvas.classList && ctx.canvas.classList.contains('lobby-preview-canvas')) {
+            isPreviewCanvas = true;
+        }
+
         this.trail.forEach(t => {
             if (t.type === 'fire') {
                 ctx.save(); 
@@ -702,9 +711,6 @@ export class Entity {
         }
         ctx.restore();
         
-        // =====================================
-        // FULL SKIN DRAWING LOGIC (ALL EXPANDED)
-        // =====================================
         if (this.equipped.Skin && ITEMS_DB && ITEMS_DB[this.equipped.Skin]) {
             const skinType = ITEMS_DB[this.equipped.Skin].value;
             ctx.save(); 
@@ -1237,52 +1243,7 @@ export class Entity {
         
         ctx.globalAlpha = oldAlpha;
 
-        // NEW: Transparent, floating/gliding facing arrow (DRAWN LAST)
-        if (this.isPlayer && this.frontVisual !== 'gun' && this.frontVisual !== 'spikes' && !this.isCloaked) {
-            
-            // Calculate a floating "bob" effect for the arrow
-            let timeBob = Math.sin(Date.now() / 200) * 3; 
-            
-            // Calculate dynamic sway (glide) based on velocity relative to facing angle
-            let localVx = this.vx * Math.cos(-this.angle) - this.vy * Math.sin(-this.angle);
-            let localVy = this.vx * Math.sin(-this.angle) + this.vy * Math.cos(-this.angle);
-            let swayX = Math.max(-10, Math.min(10, -localVx * 1.5));
-            let swayY = Math.max(-10, Math.min(10, -localVy * 1.5));
-
-            let dynamicOffset = 0;
-            if (this.abilityTimer > 0) {
-                if (this.activeAbility === 'shield') dynamicOffset = 18;
-                else if (this.activeAbility === 'overdrive' || this.activeAbility === 'sonic_boom') dynamicOffset = 10;
-                else if (this.activeAbility === 'juggernaut') dynamicOffset = 15;
-            }
-            if (this.auraVisual === 'regen') dynamicOffset = Math.max(dynamicOffset, 15);
-
-            ctx.save(); 
-            ctx.translate(this.x, this.y); 
-            ctx.rotate(this.angle);
-            
-            let arrowOffset = (this.type === 'square' ? this.size / 2 : this.size) + armorOffset + dynamicOffset + 12 + timeBob; 
-            
-            // Add sway translation so it glides
-            ctx.translate(swayX, swayY);
-
-            // Make it highly transparent!
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.25)'; 
-            if (window.gameSettings && window.gameSettings.highQuality) {
-                ctx.shadowBlur = 5;
-                ctx.shadowColor = 'rgba(255, 255, 255, 0.5)';
-            }
-            
-            ctx.beginPath(); 
-            ctx.moveTo(arrowOffset, -6); 
-            ctx.lineTo(arrowOffset + 12, 0); 
-            ctx.lineTo(arrowOffset, 6); 
-            ctx.fill(); 
-            
-            ctx.restore();
-        }
-
-        if (this.orbiters > 0 && !this.isCloaked) {
+        if (this.orbiters > 0 && !this.isCloaked && !isPreviewCanvas) {
             ctx.fillStyle = '#a855f7'; 
             if (window.gameSettings && window.gameSettings.highQuality) { 
                 ctx.shadowBlur = 10; 
@@ -1327,9 +1288,80 @@ export class Entity {
             }
             ctx.shadowBlur = 0; 
         }
+
+        // =====================================
+        // NEW: FLOATING FACING ARROW (DRAWN LAST)
+        // =====================================
+        if (this.isPlayer && this.frontVisual !== 'gun' && this.frontVisual !== 'spikes' && !this.isCloaked && !isPreviewCanvas) {
+            
+            // Subtly reduced the bob amplitude and speed
+            let timeBob = Math.sin(Date.now() / 300) * 1.5; 
+            
+            // Greatly reduced the glide/sway distance so it is barely noticeable
+            let localVx = this.vx * Math.cos(-this.angle) - this.vy * Math.sin(-this.angle);
+            let localVy = this.vx * Math.sin(-this.angle) + this.vy * Math.cos(-this.angle);
+            let swayX = Math.max(-3, Math.min(3, -localVx * 0.3));
+            let swayY = Math.max(-3, Math.min(3, -localVy * 0.3));
+
+            let dynamicOffset = 0;
+            if (this.abilityTimer > 0) {
+                if (this.activeAbility === 'shield') dynamicOffset = 18;
+                else if (this.activeAbility === 'overdrive' || this.activeAbility === 'sonic_boom') dynamicOffset = 10;
+                else if (this.activeAbility === 'juggernaut') dynamicOffset = 15;
+            }
+            if (this.auraVisual === 'regen') dynamicOffset = Math.max(dynamicOffset, 15);
+
+            ctx.save(); 
+            ctx.translate(this.x, this.y); 
+            ctx.rotate(this.angle);
+            
+            let arrowOffset = (this.type === 'square' ? this.size / 2 : this.size) + armorOffset + dynamicOffset + 12 + timeBob; 
+            
+            ctx.translate(swayX, swayY);
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.25)'; 
+            if (window.gameSettings && window.gameSettings.highQuality) {
+                ctx.shadowBlur = 5;
+                ctx.shadowColor = 'rgba(255, 255, 255, 0.5)';
+            }
+            
+            ctx.beginPath(); 
+            ctx.moveTo(arrowOffset, -6); 
+            ctx.lineTo(arrowOffset + 12, 0); 
+            ctx.lineTo(arrowOffset, 6); 
+            ctx.fill(); 
+            
+            ctx.restore();
+        }
         
+        // =====================================
+        // HUD (HEALTH/DASH BARS) DYNAMIC SPACING
+        // =====================================
         let isMenuDummy = (!this.isPlayer && this.name === "");
-        if (!isMenuDummy && !this.isCloaked) {
+        if (!isMenuDummy && !this.isCloaked && !isPreviewCanvas) {
+            
+            // Calculate how far down we need to push the health bars so they don't overlap shields/orbiters
+            let bottomOffset = armorOffset;
+            let topOffset = armorOffset;
+
+            if (this.abilityTimer > 0) {
+                if (this.activeAbility === 'shield' || this.activeAbility === 'juggernaut') {
+                    bottomOffset = Math.max(bottomOffset, 20);
+                    topOffset = Math.max(topOffset, 20);
+                } else if (this.activeAbility === 'overdrive' || this.activeAbility === 'sonic_boom' || this.activeAbility === 'phase_strike') {
+                    bottomOffset = Math.max(bottomOffset, 12);
+                    topOffset = Math.max(topOffset, 12);
+                }
+            }
+            if (this.auraVisual === 'regen') {
+                bottomOffset = Math.max(bottomOffset, 18);
+                topOffset = Math.max(topOffset, 18);
+            }
+            if (this.orbiters > 0) {
+                bottomOffset = Math.max(bottomOffset, 38);
+                topOffset = Math.max(topOffset, 38);
+            }
+
             if (window.gameSettings && window.gameSettings.showNames && this.name !== "") {
                 ctx.fillStyle = 'white'; 
                 ctx.font = 'bold 12px sans-serif'; 
@@ -1344,47 +1376,47 @@ export class Entity {
                 if (this.equipped.Banner && ITEMS_DB && ITEMS_DB[this.equipped.Banner]) { 
                     displayName = `${ITEMS_DB[this.equipped.Banner].value} ${this.name}`; 
                 }
-                ctx.fillText(displayName, this.x, this.y - this.size - 20 - armorOffset); 
+                ctx.fillText(displayName, this.x, this.y - this.size - 20 - topOffset); 
                 ctx.shadowBlur = 0; 
             }
 
             if (this.health < this.maxHealth || this.isPlayer) {
                 ctx.fillStyle = 'rgba(255, 0, 0, 0.7)'; 
-                ctx.fillRect(this.x - 20, this.y + this.size + 15 + armorOffset, 40, 5);
+                ctx.fillRect(this.x - 20, this.y + this.size + 15 + bottomOffset, 40, 5);
                 
                 ctx.fillStyle = '#00ffcc'; 
-                ctx.fillRect(this.x - 20, this.y + this.size + 15 + armorOffset, 40 * (this.health / this.maxHealth), 5);
+                ctx.fillRect(this.x - 20, this.y + this.size + 15 + bottomOffset, 40 * (this.health / this.maxHealth), 5);
             }
             
             ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'; 
-            ctx.fillRect(this.x - 20, this.y + this.size + 22 + armorOffset, 40, 3);
+            ctx.fillRect(this.x - 20, this.y + this.size + 22 + bottomOffset, 40, 3);
             
             let dashCost = Math.max(0, 2 - this.efficiency); 
             if (this.dashCooldown <= 0) {
                 if (this.points >= dashCost) { 
                     ctx.fillStyle = '#ffe600'; 
-                    ctx.fillRect(this.x - 20, this.y + this.size + 22 + armorOffset, 40, 3); 
+                    ctx.fillRect(this.x - 20, this.y + this.size + 22 + bottomOffset, 40, 3); 
                 } else { 
                     ctx.fillStyle = '#888888'; 
-                    ctx.fillRect(this.x - 20, this.y + this.size + 22 + armorOffset, 40, 3); 
+                    ctx.fillRect(this.x - 20, this.y + this.size + 22 + bottomOffset, 40, 3); 
                 }
             } else {
                 ctx.fillStyle = '#ffffff'; 
                 const pct = Math.max(0, 1 - (this.dashCooldown / this.dashMaxCooldown));
-                ctx.fillRect(this.x - 20, this.y + this.size + 22 + armorOffset, Math.min(40 * pct, 38), 3);
+                ctx.fillRect(this.x - 20, this.y + this.size + 22 + bottomOffset, Math.min(40 * pct, 38), 3);
             }
 
             if (this.activeAbility) {
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'; 
-                ctx.fillRect(this.x - 20, this.y + this.size + 28 + armorOffset, 40, 3);
+                ctx.fillRect(this.x - 20, this.y + this.size + 28 + bottomOffset, 40, 3);
                 
                 if (this.abilityCooldown <= 0) { 
                     ctx.fillStyle = '#ff00ff'; 
-                    ctx.fillRect(this.x - 20, this.y + this.size + 28 + armorOffset, 40, 3); 
+                    ctx.fillRect(this.x - 20, this.y + this.size + 28 + bottomOffset, 40, 3); 
                 } else { 
                     ctx.fillStyle = '#ffffff'; 
                     const aPct = Math.max(0, 1 - (this.abilityCooldown / this.abilityMaxCooldown)); 
-                    ctx.fillRect(this.x - 20, this.y + this.size + 28 + armorOffset, Math.min(40 * aPct, 38), 3); 
+                    ctx.fillRect(this.x - 20, this.y + this.size + 28 + bottomOffset, Math.min(40 * aPct, 38), 3); 
                 }
             }
         }
