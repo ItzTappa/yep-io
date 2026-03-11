@@ -71,7 +71,7 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .class-btn { padding: 10px 20px; background: var(--panel-bg); border: 2px solid transparent; color: white; cursor: pointer; font-weight: bold; border-radius: 5px; }
 .class-btn.active { border-color: var(--accent); background: rgba(255, 230, 0, 0.2); }
 
-#class-info { position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%); width: 100%; pointer-events: none; font-size: 1.2rem; font-weight: bold; transition: opacity 0.5s ease-in-out; letter-spacing: 1px; text-shadow: 1px 1px 2px black; text-align: center; }
+#class-info { margin-top: 15px; font-size: 1.2rem; font-weight: bold; transition: opacity 0.5s ease-in-out, color 0.2s; text-shadow: 1px 1px 2px black; text-align: center; color: white; }
 #class-info.fade-out { opacity: 0; pointer-events: none; }
 
 #play-btn { padding: 15px 50px; font-size: 1.5rem; font-weight: bold; background: var(--accent); color: black; border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 0 15px var(--accent); transition: transform 0.1s; }
@@ -131,7 +131,7 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .btn-equip { padding: 10px; background: transparent; border: 2px solid var(--rarity-color); color: var(--rarity-color); border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 5px; transition: all 0.2s; pointer-events: auto; }
 .btn-equip.equipped { background: var(--rarity-color); color: #000; box-shadow: 0 0 15px var(--rarity-color); }
 
-/* FIX: HOLD TO CLAIM ANIMATION */
+/* HOLD TO CLAIM ANIMATION */
 .btn-claim { padding: 10px; background: transparent; border: 2px solid var(--rarity-color); border-radius: 5px; cursor: pointer; margin-top: 5px; position: relative; overflow: hidden; pointer-events: auto; }
 .btn-claim span { position: relative; z-index: 2; font-weight: bold; color: var(--rarity-color); text-shadow: 1px 1px 2px black; pointer-events: none; transition: color 0.2s; }
 .btn-claim .fill { position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: var(--rarity-color); transition: width 0.1s linear; z-index: 0; opacity: 0.8; pointer-events: none; }
@@ -192,7 +192,6 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .fullscreen-preview-box canvas { display: block; }
 #close-preview-btn { width: 250px; position: relative; z-index: 1000; pointer-events: auto; cursor: pointer; }
 
-
 /* ==========================================
    GAME HUD (IN-MATCH UI)
 ========================================== */
@@ -219,12 +218,11 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .badge-t4 { border-color: #00ffcc; box-shadow: 0 0 12px rgba(0,255,204,0.4); } .badge-t4 .badge-tier { border-left-color: #00ffcc; color: #00ffcc; background: rgba(0,255,204,0.15); }
 .badge-t5 { border-color: #ff00ff; box-shadow: 0 0 15px rgba(255,0,255,0.5); } .badge-t5 .badge-tier { border-left-color: #ff00ff; color: #ff00ff; background: rgba(255,0,255,0.15); }
 
-/* Match History overrides for badges */
 .match-upgrades .upgrade-badge { top: auto !important; left: auto !important; display: flex !important; height: 24px !important; box-shadow: none !important; animation: none !important; margin: 0 !important;}
 .match-upgrades .badge-name { font-size: 0.65rem !important; padding: 0 8px !important; }
 .match-upgrades .badge-tier { font-size: 0.75rem !important; padding: 0 6px !important; }
 
-/* === NEW XP BAR LEVEL UP SHAKE & GLOW === */
+/* XP BAR LEVEL UP SHAKE & GLOW */
 .xp-bar-container { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 400px; height: 25px; background: rgba(0,0,0,0.6); border: 2px solid #444; border-radius: 12px; overflow: hidden; transition: all 0.3s; }
 #xp-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa); transition: width 0.2s, background 0.3s; }
 #level-display { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-weight: bold; font-size: 0.9rem; text-shadow: 1px 1px 2px black; pointer-events: none; }
@@ -247,7 +245,7 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
     100% { transform: translateX(-50%) scale(1); }
 }
 
-/* FIX: HUD RIGHT COLUMN - Linking Leaderboard and Minimap */
+/* RIGHT HUD COLUMN - Linking Leaderboard and Minimap */
 .right-hud-column { position: absolute; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 15px; align-items: flex-end; pointer-events: none; }
 .leaderboard { position: relative; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px; width: 220px; transition: height 0.3s; pointer-events: auto; }
 .leaderboard h3 { font-size: 1rem; margin-bottom: 10px; color: var(--accent); text-align: center; }
@@ -258,7 +256,7 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 #minimap-canvas { width: 100%; height: 220px; display: block; }
 #player-count-display { text-align: center; padding: 8px; font-weight: bold; color: var(--accent); background: rgba(0,0,0,0.8); border-top: 2px solid #444; font-size: 1.2rem; letter-spacing: 2px; }
 
-/* FIX: NOTIFICATION QUEUE STYLING */
+/* NOTIFICATION QUEUE STYLING */
 #notif-queue { position: absolute; bottom: 40px; left: 20px; display: flex; flex-direction: column-reverse; gap: 15px; align-items: flex-start; z-index: 150; pointer-events: none; }
 .notif-box { display: none; padding: 12px 25px; border-radius: 8px; font-weight: bold; text-align: left; opacity: 0; transform: translateX(-150%); transition: all 0.4s ease; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
 .notif-box.active { display: block; }
@@ -270,7 +268,6 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .notif-season .notif-text { color: #000; text-shadow: none; }
 .notif-level { font-size: 1.2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); }
 .notif-season .notif-level { color: #000; text-shadow: none; }
-
 
 /* UPGRADES */
 #upgrade-ui { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 100; pointer-events: none; }
