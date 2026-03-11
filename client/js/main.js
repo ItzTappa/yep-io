@@ -3,16 +3,17 @@ import { sounds } from './soundManager.js';
 import { ITEMS_DB } from './items.js';
 
 // ==========================================
-// GLOBALS & LOCAL STORAGE
+// GLOBALS & GAME STATE (RESETS ON REFRESH)
 // ==========================================
-window.globalAccountXP = parseInt(localStorage.getItem('yepio_xp')) || 0;
-window.globalAccountLevel = parseInt(localStorage.getItem('yepio_level')) || 1;
-window.equippedItems = JSON.parse(localStorage.getItem('yepio_equipped')) || { Skin: null, Trail: null, Banner: null, Color: null };
-window.unlockedItems = JSON.parse(localStorage.getItem('yepio_unlocked')) || [];
-window.matchHistory = JSON.parse(localStorage.getItem('yepio_history')) || [];
-window.gameStats = JSON.parse(localStorage.getItem('yepio_stats')) || { matches: 0, kills: 0, points: 0, time: 0 };
+// Removed localStorage fetching so the game completely resets on refresh
+window.globalAccountXP = 0;
+window.globalAccountLevel = 1;
+window.equippedItems = { Skin: null, Trail: null, Banner: null, Color: null };
+window.unlockedItems = [];
+window.matchHistory = [];
+window.gameStats = { matches: 0, kills: 0, points: 0, time: 0 };
 
-window.gameSettings = JSON.parse(localStorage.getItem('yepio_settings')) || {
+window.gameSettings = {
     volume: 100,
     highQuality: true,
     particles: true,
@@ -25,22 +26,12 @@ window.gameSettings = JSON.parse(localStorage.getItem('yepio_settings')) || {
     keybinds: { up: 'w', down: 's', left: 'a', right: 'd', dash: ' ', ability: 'e' }
 };
 
-function saveData() {
-    localStorage.setItem('yepio_xp', window.globalAccountXP);
-    localStorage.setItem('yepio_level', window.globalAccountLevel);
-    localStorage.setItem('yepio_equipped', JSON.stringify(window.equippedItems));
-    localStorage.setItem('yepio_unlocked', JSON.stringify(window.unlockedItems));
-    localStorage.setItem('yepio_history', JSON.stringify(window.matchHistory));
-    localStorage.setItem('yepio_stats', JSON.stringify(window.gameStats));
-    localStorage.setItem('yepio_settings', JSON.stringify(window.gameSettings));
-}
-
 // ==========================================
 // ENGINE INITIALIZATION
 // ==========================================
 const canvas = document.getElementById('gameCanvas');
 const engine = new GameEngine(canvas);
-let selectedClass = 'triangle';
+let selectedClass = null; 
 
 let socket = null;
 if (typeof io !== 'undefined') {
@@ -49,6 +40,19 @@ if (typeof io !== 'undefined') {
 }
 
 engine.startDemo();
+
+// ==========================================
+// SHOP ROTATION TIMER
+// ==========================================
+setInterval(() => {
+    let d = new Date();
+    let m = 59 - d.getMinutes();
+    let s = 59 - d.getSeconds();
+    const timerEl = document.getElementById('shop-timer');
+    if (timerEl) {
+        timerEl.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+}, 1000);
 
 // ==========================================
 // UI BINDINGS: TABS & CLASS SELECTION
@@ -84,12 +88,24 @@ document.querySelectorAll('.class-btn').forEach(btn => {
         else if (selectedClass === 'square') info.innerText = "TANK: Slow, massive health, fires slow heavy shots.";
         else if (selectedClass === 'circle') info.innerText = "SOLDIER: Balanced speed, health, and damage.";
         
+        info.style.color = "white"; 
         info.classList.remove('hidden', 'fade-out');
         setTimeout(() => info.classList.add('fade-out'), 2000);
     });
 });
 
 document.getElementById('play-btn').addEventListener('click', () => {
+    if (!selectedClass) {
+        const info = document.getElementById('class-info');
+        info.innerText = "PLEASE SELECT A CLASS!";
+        info.style.color = "#ff4444"; 
+        info.classList.remove('hidden', 'fade-out');
+        setTimeout(() => {
+            info.classList.add('fade-out');
+            setTimeout(() => info.style.color = "white", 500);
+        }, 2000);
+        return;
+    }
     sounds.play('click', 0.8 * (window.gameSettings.volume/100));
     document.getElementById('main-menu').style.display = 'none';
     engine.start(selectedClass);
@@ -117,8 +133,6 @@ document.getElementById('return-lobby-btn').addEventListener('click', () => {
 
         window.matchHistory.unshift(stats);
         if (window.matchHistory.length > 20) window.matchHistory.pop();
-        
-        saveData();
     }
     
     updateMenuXPBar();
@@ -132,9 +146,20 @@ document.getElementById('return-lobby-btn').addEventListener('click', () => {
 let currentLobbyCode = null;
 let isHost = false;
 let lobbyPlayers = [];
+let lobbyAnimationIds = {}; 
 
 document.querySelectorAll('.mode-card').forEach(card => {
     card.addEventListener('click', (e) => {
+        if (!selectedClass) {
+            const info = document.getElementById('class-info');
+            info.innerText = "PLEASE SELECT A CLASS BEFORE JOINING MULTIPLAYER!";
+            info.style.color = "#ff4444"; 
+            info.classList.remove('hidden', 'fade-out');
+            setTimeout(() => { info.classList.add('fade-out'); setTimeout(() => info.style.color = "white", 500); }, 2000);
+            
+            document.querySelectorAll('.tab-btn')[0].click();
+            return;
+        }
         if (!socket) {
             alert("Multiplayer server is offline.");
             return;
@@ -148,6 +173,15 @@ document.querySelectorAll('.mode-card').forEach(card => {
 });
 
 document.getElementById('join-lobby-btn').addEventListener('click', () => {
+    if (!selectedClass) {
+        const info = document.getElementById('class-info');
+        info.innerText = "PLEASE SELECT A CLASS!";
+        info.style.color = "#ff4444"; 
+        info.classList.remove('hidden', 'fade-out');
+        setTimeout(() => { info.classList.add('fade-out'); setTimeout(() => info.style.color = "white", 500); }, 2000);
+        document.querySelectorAll('.tab-btn')[0].click();
+        return;
+    }
     if (!socket) return;
     let code = document.getElementById('join-code-input').value.toUpperCase().trim();
     if (code.length === 5) {
@@ -188,13 +222,13 @@ document.getElementById('ready-btn').addEventListener('click', () => {
 
 if (socket) {
     socket.on('lobbyCreated', (data) => {
-        currentLobbyCode = data.code;
+        currentLobbyCode = data.code || data.lobbyCode;
         isHost = true;
         showLobbyScreen(data);
     });
 
     socket.on('lobbyJoined', (data) => {
-        currentLobbyCode = data.code;
+        currentLobbyCode = data.code || data.lobbyCode;
         isHost = false;
         showLobbyScreen(data);
     });
@@ -248,7 +282,11 @@ function getEquippedColor() {
 }
 
 function showLobbyScreen(data) {
-    document.getElementById('lobby-code-display').innerText = data.code;
+    // FIXED: Properly display lobby code
+    let displayCode = data.code || data.lobbyCode;
+    if (!displayCode && typeof data === 'string') displayCode = data;
+    document.getElementById('lobby-code-display').innerText = displayCode || "ERROR";
+    
     document.getElementById('lobby-screen').classList.remove('hidden');
     renderLobbySlots(data);
 }
@@ -270,7 +308,7 @@ function renderLobbySlots(data) {
                 <div class="status">${p.isReady ? 'READY' : 'NOT READY'}</div>
             `;
             container.appendChild(slot);
-            drawLobbyPreview(document.getElementById(`lobby-canvas-${i}`), p.classType, p.color);
+            startLobbyPreviewLoop(document.getElementById(`lobby-canvas-${i}`), p.classType, p.color, i);
         } else {
             slot.className = 'player-slot empty';
             slot.innerHTML = `
@@ -295,55 +333,60 @@ function renderLobbySlots(data) {
     }
 }
 
-function drawLobbyPreview(canvas, pClass, pColor) {
+function startLobbyPreviewLoop(canvas, pClass, pColor, slotIndex) {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let angle = 0;
     
-    ctx.save();
-    ctx.translate(canvas.width / 2, canvas.height / 2);
-    ctx.rotate(-Math.PI / 2);
-    
-    let size = 45;
-    ctx.fillStyle = pColor;
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = pColor;
-    if (pColor === '#111111' || pColor === '#000000') {
-        ctx.shadowColor = '#ffffff';
-        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-        ctx.lineWidth = 4;
-    }
-
-    ctx.beginPath();
-    if (pClass === 'circle') {
-        ctx.arc(0, 0, size, 0, Math.PI * 2);
-        ctx.fill();
-        if (pColor === '#111111') ctx.stroke();
-    } else if (pClass === 'square') {
-        size = 55;
-        ctx.rect(-size/2, -size/2, size, size);
-        ctx.fill();
-        if (pColor === '#111111') ctx.stroke();
-    } else {
-        ctx.moveTo(size, 0);
-        ctx.lineTo(-size/2, -size*0.866);
-        ctx.lineTo(-size/2, size*0.866);
-        ctx.closePath();
-        ctx.fill();
-        if (pColor === '#111111') ctx.stroke();
+    if (lobbyAnimationIds[slotIndex]) {
+        cancelAnimationFrame(lobbyAnimationIds[slotIndex]);
     }
     
-    // Default Arrow
-    ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    ctx.shadowBlur = 0;
-    ctx.beginPath();
-    let arrowOffset = size + 15;
-    ctx.moveTo(arrowOffset, -8);
-    ctx.lineTo(arrowOffset + 15, 0);
-    ctx.lineTo(arrowOffset, 8);
-    ctx.fill();
+    const loop = () => {
+        if (canvas.offsetParent === null) {
+            lobbyAnimationIds[slotIndex] = requestAnimationFrame(loop);
+            return;
+        }
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        angle += 0.015; 
+        
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(angle);
+        
+        let size = 45;
+        ctx.fillStyle = pColor;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = pColor;
+        if (pColor === '#111111' || pColor === '#000000') {
+            ctx.shadowColor = '#ffffff';
+            ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+            ctx.lineWidth = 4;
+        }
 
-    ctx.restore();
+        ctx.beginPath();
+        if (pClass === 'circle') {
+            ctx.arc(0, 0, size, 0, Math.PI * 2);
+            ctx.fill();
+            if (pColor === '#111111') ctx.stroke();
+        } else if (pClass === 'square') {
+            size = 55;
+            ctx.rect(-size/2, -size/2, size, size);
+            ctx.fill();
+            if (pColor === '#111111') ctx.stroke();
+        } else {
+            ctx.moveTo(size, 0);
+            ctx.lineTo(-size/2, -size*0.866);
+            ctx.lineTo(-size/2, size*0.866);
+            ctx.closePath();
+            ctx.fill();
+            if (pColor === '#111111') ctx.stroke();
+        }
+        
+        ctx.restore();
+        lobbyAnimationIds[slotIndex] = requestAnimationFrame(loop);
+    };
+    loop();
 }
 
 // ==========================================
@@ -376,32 +419,36 @@ function renderStats() {
         for(let key in m.upgrades) {
             let tier = m.upgrades[key];
             
-            // FIX: Pink active abilities in match history!
-            if (abilities.includes(key)) {
-                upgHtml += `
-                    <div class="upgrade-badge ability-badge">
-                        <div class="badge-name">⭐ ${key.replace('_',' ').toUpperCase()}</div>
-                        <div class="badge-tier">ACTIVE</div>
-                    </div>`;
-            } else {
-                let tc = tier === 1 ? 'badge-t1' : tier === 2 ? 'badge-t2' : tier === 3 ? 'badge-t3' : tier === 4 ? 'badge-t4' : 'badge-t5';
-                upgHtml += `
-                    <div class="upgrade-badge ${tc}">
-                        <div class="badge-name">${key.toUpperCase()}</div>
-                        <div class="badge-tier">T${tier}</div>
-                    </div>`;
+            // FIX: ONLY show upgrades that were actually leveled up!
+            if (tier > 0) {
+                if (abilities.includes(key)) {
+                    upgHtml += `
+                        <div class="upgrade-badge ability-badge">
+                            <div class="badge-name">⭐ ${key.replace('_',' ').toUpperCase()}</div>
+                            <div class="badge-tier">ACTIVE</div>
+                        </div>`;
+                } else {
+                    let tc = tier === 1 ? 'badge-t1' : tier === 2 ? 'badge-t2' : tier === 3 ? 'badge-t3' : tier === 4 ? 'badge-t4' : 'badge-t5';
+                    upgHtml += `
+                        <div class="upgrade-badge ${tc}">
+                            <div class="badge-name">${key.toUpperCase()}</div>
+                            <div class="badge-tier">T${tier}</div>
+                        </div>`;
+                }
             }
         }
 
         let card = document.createElement('div');
         card.className = 'match-card';
+        
+        // FIX: Match History explicit RANK format
         card.innerHTML = `
             <div class="match-card-main">
-                <div class="match-rank">${m.rank}<span>${getOrdinal(m.rank)}</span> / ${m.totalPlayers}</div>
-                <div><span class="match-detail-label">Class</span><span class="match-detail-val" style="text-transform:capitalize;">${m.playerClass}</span></div>
-                <div><span class="match-detail-label">Kills</span><span class="match-detail-val">${m.kills}</span></div>
-                <div><span class="match-detail-label">Points</span><span class="match-detail-val">${Math.floor(m.points)}</span></div>
-                <div><span class="match-detail-label">Time</span><span class="match-detail-val">${Math.floor(m.time/60)}m ${m.time%60}s</span></div>
+                <div><span class="match-detail-label">RANK</span><span class="match-detail-val">${m.rank}<span>${getOrdinal(m.rank)}</span></span></div>
+                <div><span class="match-detail-label">CLASS</span><span class="match-detail-val" style="text-transform:capitalize;">${m.playerClass}</span></div>
+                <div><span class="match-detail-label">KILLS</span><span class="match-detail-val">${m.kills}</span></div>
+                <div><span class="match-detail-label">POINTS</span><span class="match-detail-val">${Math.floor(m.points)}</span></div>
+                <div><span class="match-detail-label">TIME</span><span class="match-detail-val">${Math.floor(m.time/60)}m ${m.time%60}s</span></div>
             </div>
             <div class="match-upgrades" style="display:none; flex-wrap:wrap; gap:5px; margin-top:15px; padding-top:10px; border-top:1px solid #333;">
                 ${upgHtml || '<span style="color:gray; font-size:0.8rem;">No Upgrades</span>'}
@@ -427,15 +474,27 @@ let previewAngle = 0;
 
 function renderShop() {
     const seasonGrid = document.getElementById('season-grid');
-    if (seasonGrid) {
-        seasonGrid.innerHTML = '';
-        Object.values(ITEMS_DB).filter(i => i.reqType === 'level').forEach(item => {
-            const isUnlocked = window.globalAccountLevel >= item.reqVal || window.unlockedItems.includes(item.id);
-            const isEquipped = window.equippedItems[item.category] === item.id;
+    const mainGrid = document.getElementById('main-store-grid');
+    
+    if (seasonGrid) seasonGrid.innerHTML = '';
+    if (mainGrid) mainGrid.innerHTML = '';
+
+    Object.values(ITEMS_DB).forEach(item => {
+        // FIX: Properly route items to Season (level required) or Main Shop (points required)
+        let isSeason = item.levelReq !== undefined || item.reqType === 'level';
+        let isMain = item.cost !== undefined || item.reqType === 'points';
+        
+        if (!isSeason && !isMain) isSeason = true; // Fallback
+
+        const isEquipped = window.equippedItems[item.category] === item.id;
+        
+        if (isSeason && seasonGrid) {
+            let reqVal = item.levelReq || item.reqVal || 1;
+            const isUnlocked = window.globalAccountLevel >= reqVal || window.unlockedItems.includes(item.id);
             
             let btnHTML = isUnlocked 
                 ? `<button class="btn-equip ${isEquipped ? 'equipped' : ''}" data-id="${item.id}" data-cat="${item.category}">${isEquipped ? 'EQUIPPED' : 'EQUIP'}</button>` 
-                : `<button class="btn-claim locked" data-id="${item.id}"><span>REACH LVL ${item.reqVal}</span><div class="fill"></div></button>`;
+                : `<button class="btn-claim locked" data-id="${item.id}"><span>REACH LVL ${reqVal}</span><div class="fill"></div></button>`;
                 
             seasonGrid.innerHTML += `
                 <div class="store-item ${isUnlocked ? 'unlocked' : 'locked'}" style="--rarity-color: ${getRarityColor(item.rarity)}">
@@ -443,24 +502,18 @@ function renderShop() {
                     <div class="item-icon" data-id="${item.id}">${item.icon}</div>
                     ${btnHTML}
                 </div>`;
-        });
-    }
-
-    const mainGrid = document.getElementById('main-store-grid');
-    if (mainGrid) {
-        mainGrid.innerHTML = '';
-        Object.values(ITEMS_DB).filter(i => i.reqType === 'points').forEach(item => {
-            const isUnlocked = window.gameStats.points >= item.reqVal || window.unlockedItems.includes(item.id);
-            const isEquipped = window.equippedItems[item.category] === item.id;
-            
-            let progressPct = Math.min(100, (window.gameStats.points / item.reqVal) * 100);
+        } 
+        else if (isMain && mainGrid) {
+            let reqVal = item.cost || item.reqVal || 1000;
+            const isUnlocked = window.gameStats.points >= reqVal || window.unlockedItems.includes(item.id);
+            let progressPct = Math.min(100, (window.gameStats.points / reqVal) * 100);
             
             let btnHTML = isUnlocked 
                 ? `<button class="btn-equip ${isEquipped ? 'equipped' : ''}" data-id="${item.id}" data-cat="${item.category}">${isEquipped ? 'EQUIPPED' : 'EQUIP'}</button>` 
                 : `<div class="item-progress-bg"><div class="item-progress-fill" style="background:${getRarityColor(item.rarity)}; width:${progressPct}%"></div></div>
-                   <button class="btn-claim locked"><span>${Math.floor(window.gameStats.points)} / ${item.reqVal} PTS</span><div class="fill"></div></button>`;
+                   <button class="btn-claim locked"><span>${Math.floor(window.gameStats.points)} / ${reqVal} PTS</span><div class="fill"></div></button>`;
 
-            if (window.gameStats.points >= item.reqVal && !window.unlockedItems.includes(item.id)) {
+            if (window.gameStats.points >= reqVal && !window.unlockedItems.includes(item.id)) {
                 btnHTML = `<button class="btn-claim claimable" data-id="${item.id}"><span>HOLD TO CLAIM</span><div class="fill"></div></button>`;
             }
 
@@ -470,8 +523,8 @@ function renderShop() {
                     <div class="item-icon" data-id="${item.id}">${item.icon}</div>
                     ${btnHTML}
                 </div>`;
-        });
-    }
+        }
+    });
 
     bindShopButtons();
 }
@@ -488,13 +541,11 @@ function bindShopButtons() {
             } else {
                 window.equippedItems[cat] = id === "null" ? null : id; 
             }
-            saveData();
             renderShop();
             renderLocker();
         });
     });
 
-    // FIX: PROPER HOLD TO CLAIM LOGIC
     document.querySelectorAll('.btn-claim.claimable').forEach(btn => {
         let holdTimer = null;
         let isHolding = false;
@@ -509,13 +560,12 @@ function bindShopButtons() {
                 const id = btn.dataset.id;
                 if (!window.unlockedItems.includes(id)) {
                     window.unlockedItems.push(id);
-                    sounds.play('levelUp', 0.5 * (window.gameSettings.volume/100)); // Success Sound!
-                    saveData();
+                    sounds.play('levelUp', 0.5 * (window.gameSettings.volume/100));
                     btn.classList.remove('holding');
                     renderShop();
                     renderLocker();
                 }
-            }, 1000); // 1 second CSS transition fills up
+            }, 1000); 
         };
 
         const cancelHold = () => {
@@ -534,7 +584,7 @@ function bindShopButtons() {
     document.querySelectorAll('.item-icon').forEach(icon => {
         icon.addEventListener('click', (e) => {
             const id = e.currentTarget.dataset.id;
-            if(id) openFullScreenPreview(id);
+            if(id && id !== "null") openFullScreenPreview(id);
         });
     });
 }
@@ -548,7 +598,8 @@ function renderLocker() {
         let equippedId = window.equippedItems[cat];
         let item = equippedId ? ITEMS_DB[equippedId] : null;
         
-        let icon = item ? item.icon : '❌';
+        // FIX: Restored normal grey X
+        let icon = item ? item.icon : '<span style="color:gray; font-family:sans-serif; font-size:3rem; font-weight:bold;">X</span>'; 
         let name = item ? item.name : 'NONE';
         let rColor = item ? getRarityColor(item.rarity) : '#444';
         
@@ -580,16 +631,26 @@ function openLockerCategory(category) {
     grid.innerHTML = '';
     
     const noneEquipped = window.equippedItems[category] === null;
+    
+    // FIX: Restored normal grey X in category select
     grid.innerHTML += `
         <div class="store-item unlocked" style="--rarity-color: #555;">
             <div class="item-name">Unequip</div>
-            <div class="item-icon">❌</div>
+            <div class="item-icon"><span style="color:gray; font-family:sans-serif; font-weight:bold;">X</span></div>
             <button class="btn-equip ${noneEquipped ? 'equipped' : ''}" data-id="null" data-cat="${category}">${noneEquipped ? 'EQUIPPED' : 'EQUIP'}</button>
         </div>
     `;
 
     Object.values(ITEMS_DB).filter(i => i.category === category).forEach(item => {
-        let isUnlocked = window.unlockedItems.includes(item.id) || (item.reqType === 'level' && window.globalAccountLevel >= item.reqVal);
+        let isUnlocked = false;
+        
+        if (item.levelReq !== undefined || item.reqType === 'level') {
+            let reqVal = item.levelReq || item.reqVal || 1;
+            isUnlocked = window.globalAccountLevel >= reqVal || window.unlockedItems.includes(item.id);
+        } else {
+            let reqVal = item.cost || item.reqVal || 1000;
+            isUnlocked = window.gameStats.points >= reqVal || window.unlockedItems.includes(item.id);
+        }
         
         if (isUnlocked) {
             const isEquipped = window.equippedItems[category] === item.id;
@@ -635,7 +696,7 @@ function updateMenuXPBar() {
 }
 
 // ==========================================
-// PREVIEW SYSTEM (MASSIVE DRAWING LOGIC)
+// PREVIEW SYSTEM (ENLARGED & ARROW REMOVED)
 // ==========================================
 let currentPreviewItem = null;
 
@@ -674,7 +735,7 @@ function startPreviewLoop(canvas, specificItem = null) {
         }
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        previewAngle += 0.015;
+        previewAngle += 0.015; 
         
         drawPreview(ctx, canvas.width, canvas.height, previewAngle, specificItem);
         previewAnimationId = requestAnimationFrame(loop);
@@ -688,8 +749,8 @@ function drawPreview(ctx, w, h, angle, specificItem = null) {
     ctx.rotate(angle);
 
     let pClass = selectedClass || 'triangle';
-    let size = 35;
-    if (pClass === 'square') size = 45;
+    let size = 70; // Massive size for locker preview
+    if (pClass === 'square') size = 90;
 
     let baseColor = getEquippedColor();
     let skinType = null;
@@ -758,7 +819,7 @@ function drawPreview(ctx, w, h, angle, specificItem = null) {
         else if (skinType === 'inferno') { ctx.fillStyle='#fbbf24'; ctx.beginPath(); ctx.arc(0,0,size*0.6,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#dc2626'; ctx.shadowColor='#dc2626'; ctx.shadowBlur=25; ctx.beginPath(); ctx.arc(0,0,size*0.4,0,Math.PI*2); ctx.fill(); }
         else if (skinType === 'warlord') { ctx.strokeStyle='#444'; ctx.lineWidth=6; ctx.beginPath(); ctx.moveTo(-size*0.5,-size*0.5); ctx.lineTo(size*0.5,size*0.5); ctx.moveTo(size*0.5,-size*0.5); ctx.lineTo(-size*0.5,size*0.5); ctx.stroke(); }
         else if (skinType === 'spectre') { ctx.fillStyle='rgba(168,85,247,0.8)'; ctx.shadowColor='#a855f7'; ctx.shadowBlur=30; ctx.beginPath(); ctx.arc(0,0,size*0.7,0,Math.PI*2); ctx.fill(); }
-        else if (skinType === 'phantom') { ctx.strokeStyle='rgba(59,130,246,0.8)'; ctx.lineWidth=4; ctx.shadowColor='#3b82f6'; ctx.shadowBlur=15; ctx.beginPath(); ctx.arc(0,0,size*0.8,0,Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(0,0,size*0.4,0,Math.PI*2); ctx.stroke(); }
+        else if (skinType === 'phantom') { ctx.strokeStyle='rgba(59, 130, 246, 0.8)'; ctx.lineWidth=4; ctx.shadowColor='#3b82f6'; ctx.shadowBlur=15; ctx.beginPath(); ctx.arc(0,0,size*0.8,0,Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(0,0,size*0.4,0,Math.PI*2); ctx.stroke(); }
         else if (skinType === 'target') { ctx.save(); ctx.beginPath(); if(pClass==='circle') ctx.arc(0,0,size,0,Math.PI*2); else if(pClass==='square') ctx.rect(-size/2,-size/2,size,size); else { ctx.moveTo(size,0); ctx.lineTo(-size/2,-size*0.866); ctx.lineTo(-size/2,size*0.866); ctx.closePath(); } ctx.clip(); ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=6; ctx.beginPath(); ctx.arc(0,0,size*0.6,0,Math.PI*2); ctx.stroke(); ctx.beginPath(); ctx.arc(0,0,size*0.2,0,Math.PI*2); ctx.stroke(); ctx.restore(); }
         else if (skinType === 'stripes') { ctx.save(); ctx.beginPath(); if(pClass==='circle') ctx.arc(0,0,size,0,Math.PI*2); else if(pClass==='square') ctx.rect(-size/2,-size/2,size,size); else { ctx.moveTo(size,0); ctx.lineTo(-size/2,-size*0.866); ctx.lineTo(-size/2,size*0.866); ctx.closePath(); } ctx.clip(); ctx.fillStyle='rgba(255,255,255,0.3)'; for(let i=-size; i<size; i+=15) { ctx.fillRect(i,-size,8,size*2); } ctx.restore(); }
         else if (skinType === 'checker') { ctx.save(); ctx.beginPath(); if(pClass==='circle') ctx.arc(0,0,size,0,Math.PI*2); else if(pClass==='square') ctx.rect(-size/2,-size/2,size,size); else { ctx.moveTo(size,0); ctx.lineTo(-size/2,-size*0.866); ctx.lineTo(-size/2,size*0.866); ctx.closePath(); } ctx.clip(); ctx.fillStyle='rgba(0,0,0,0.3)'; let sq=size*0.25; for(let x=-size;x<=size;x+=sq){ for(let y=-size;y<=size;y+=sq){ if(Math.abs(Math.round(x/sq)+Math.round(y/sq))%2===0) ctx.fillRect(x,y,sq,sq); } } ctx.restore(); }
@@ -781,16 +842,6 @@ function drawPreview(ctx, w, h, angle, specificItem = null) {
         }
         ctx.restore();
     }
-
-    // Default arrow for preivew
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-    ctx.shadowBlur = 0;
-    ctx.beginPath();
-    let arrowOffset = size + 15;
-    ctx.moveTo(arrowOffset, -8);
-    ctx.lineTo(arrowOffset + 15, 0);
-    ctx.lineTo(arrowOffset, 8);
-    ctx.fill();
 
     ctx.restore();
 
@@ -851,6 +902,21 @@ window.addEventListener('keydown', (e) => {
         document.querySelector(`.keybind-btn[data-action="${listeningForKey}"]`).innerText = key.toUpperCase();
         listeningForKey = null;
         saveData();
+    }
+
+    // FIX: ESC KEY LOGIC RESTORED
+    if (e.key === 'Escape') {
+        const consoleEl = document.getElementById('dev-console');
+        if (!consoleEl.classList.contains('hidden')) {
+            consoleEl.classList.add('hidden');
+            document.getElementById('dev-input').blur();
+            return; 
+        }
+        
+        const gameUi = document.getElementById('game-ui');
+        if (!gameUi.classList.contains('hidden') && !engine.isGameOver && !engine.isDemo && engine.player && !engine.player.isDead) {
+            engine.processDeath(engine.player, null);
+        }
     }
 });
 
