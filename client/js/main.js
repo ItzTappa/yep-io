@@ -174,7 +174,7 @@ function refreshAllUIs() {
     updateMenuXPBar();
 }
 
-document.addEventListener('click', (e) => {
+document.addEventListener('click', async (e) => {
     const target = e.target;
 
     if (target.tagName === 'BUTTON' || target.closest('button')) {
@@ -278,19 +278,21 @@ document.addEventListener('click', (e) => {
         return;
     }
 
-    // Firebase Logout (FIXED: Guarantees modal closes and user logs out)
+    // Firebase Logout (FIXED - using modern async/await to guarantee it fires)
     const logoutBtn = target.closest('#acc-logout-btn');
     if (logoutBtn) {
         logoutBtn.innerText = "LOGGING OUT...";
         
-        setTimeout(async () => {
-            try { await saveUserData(); } catch (e) { console.error("Save error during logout:", e); }
-            try { await signOut(auth); } catch (e) { console.error("SignOut error:", e); }
-            
+        try {
+            await saveUserData(); // push final stats
+            await signOut(auth);  // clear auth state
             document.getElementById('account-modal').classList.add('hidden');
+        } catch (error) {
+            console.error("Logout Error:", error);
+            document.getElementById('account-modal').classList.add('hidden');
+        } finally {
             logoutBtn.innerText = "LOG OUT";
-        }, 10);
-        
+        }
         return;
     }
 
@@ -368,12 +370,13 @@ document.addEventListener('click', (e) => {
         
         window.activePreviewItem = null; 
 
-        const seasonLevelUI = document.querySelector('.player-level-ui');
-        if (seasonLevelUI) {
+        // Hide whole footer while in locker tab
+        const menuFooter = document.querySelector('.menu-footer');
+        if (menuFooter) {
             if (targetTab === 'locker') {
-                seasonLevelUI.classList.add('hidden');
+                menuFooter.classList.add('hidden');
             } else {
-                seasonLevelUI.classList.remove('hidden');
+                menuFooter.classList.remove('hidden');
             }
         }
         
@@ -485,10 +488,13 @@ function renderPreview() {
         previewAngle += 0.015;
         let needsTrail = false;
         
-        if (document.getElementById('locker').classList.contains('active') && currentLockerCategory === 'Trail') {
+        const lockerTab = document.getElementById('locker');
+        if (lockerTab && lockerTab.classList.contains('active') && currentLockerCategory === 'Trail') {
             needsTrail = true;
         }
-        if (!document.getElementById('item-preview-screen').classList.contains('hidden') && window.activePreviewItem && ITEMS_DB[window.activePreviewItem] && ITEMS_DB[window.activePreviewItem].category === 'Trail') {
+        
+        const itemPreviewScreen = document.getElementById('item-preview-screen');
+        if (itemPreviewScreen && !itemPreviewScreen.classList.contains('hidden') && window.activePreviewItem && ITEMS_DB[window.activePreviewItem] && ITEMS_DB[window.activePreviewItem].category === 'Trail') {
             needsTrail = true;
         }
         
@@ -505,7 +511,8 @@ function renderPreview() {
         previewAccumulator -= 16.666;
     }
     
-    if (lockerCtx && document.getElementById('locker').classList.contains('active')) {
+    const lockerTabRender = document.getElementById('locker');
+    if (lockerCtx && lockerTabRender && lockerTabRender.classList.contains('active')) {
         lockerCtx.clearRect(0, 0, 300, 300);
         previewDummy.type = selectedClass || 'triangle';
         previewDummy.equipped = { ...window.equippedItems };
@@ -528,7 +535,8 @@ function renderPreview() {
         window.gameSettings.showNames = tmp;
     }
 
-    if (fsCtx && !document.getElementById('item-preview-screen').classList.contains('hidden')) {
+    const itemPreviewRender = document.getElementById('item-preview-screen');
+    if (fsCtx && itemPreviewRender && !itemPreviewRender.classList.contains('hidden')) {
         fsCtx.clearRect(0, 0, 350, 350);
         previewDummy.type = selectedClass || 'triangle';
         let equipState = { ...window.equippedItems };
@@ -984,7 +992,8 @@ setInterval(() => {
         window.hourlyStats = { kills: 0, time: 0, points: 0, distance: 0 };
         window.currentShopItems = getShop(); 
         
-        if (document.getElementById('store').classList.contains('active')) {
+        const storeTab = document.getElementById('store');
+        if (storeTab && storeTab.classList.contains('active')) {
             renderMainStore();
         }
     }
