@@ -94,7 +94,6 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-
 // Initialize all default device settings (These stay local)
 window.gameSettings = JSON.parse(localStorage.getItem('yepio_settings')) || { 
     highQuality: true, particles: true, showNames: true, showFps: false,
@@ -182,6 +181,20 @@ document.addEventListener('click', (e) => {
         if (sounds && sounds.play) sounds.play('click', 0.4 * (window.gameSettings.volume || 1.0));
     }
 
+    // Toggle Password Visibility
+    const togglePassBtn = target.closest('#toggle-pass-btn');
+    if (togglePassBtn) {
+        const passInput = document.getElementById('acc-pass');
+        if (passInput.type === 'password') {
+            passInput.type = 'text';
+            togglePassBtn.innerText = '🙈';
+        } else {
+            passInput.type = 'password';
+            togglePassBtn.innerText = '👁️';
+        }
+        return;
+    }
+
     // Modals
     if (target.id === 'close-preview-btn' || target.closest('#close-preview-btn')) {
         window.activePreviewItem = null;
@@ -210,7 +223,10 @@ document.addEventListener('click', (e) => {
             loggedOutView.classList.remove('hidden');
             loggedInView.classList.add('hidden');
             document.getElementById('acc-user').value = "";
-            document.getElementById('acc-pass').value = "";
+            const passInput = document.getElementById('acc-pass');
+            passInput.value = "";
+            passInput.type = "password";
+            document.getElementById('toggle-pass-btn').innerText = "👁️";
         }
         accModal.classList.remove('hidden');
         return;
@@ -262,11 +278,19 @@ document.addEventListener('click', (e) => {
         return;
     }
 
-    // Firebase Logout
-    if (target.id === 'acc-logout-btn') {
-        saveUserData().then(() => {
-            signOut(auth);
-            document.getElementById('account-modal').classList.add('hidden');
+    // Firebase Logout (FIXED: Guarantees modal closes and user logs out)
+    const logoutBtn = target.closest('#acc-logout-btn');
+    if (logoutBtn) {
+        logoutBtn.innerText = "LOGGING OUT...";
+        saveUserData().finally(() => {
+            signOut(auth).then(() => {
+                document.getElementById('account-modal').classList.add('hidden');
+                logoutBtn.innerText = "LOG OUT";
+            }).catch(e => {
+                console.error("Logout Error", e);
+                document.getElementById('account-modal').classList.add('hidden');
+                logoutBtn.innerText = "LOG OUT";
+            });
         });
         return;
     }
@@ -665,6 +689,8 @@ document.getElementById('return-lobby-btn').addEventListener('click', () => {
     document.getElementById('main-menu').classList.remove('hidden');
     
     if (window.lastMatchStats) {
+        window.lastMatchStats.timestamp = Date.now(); // ADD TIMESTAMP TO MATCH
+        
         window.hourlyStats.kills += window.lastMatchStats.kills || 0;
         window.hourlyStats.time += window.lastMatchStats.time || 0;
         window.hourlyStats.points += window.lastMatchStats.points || 0;
@@ -751,6 +777,22 @@ function renderLocker() {
 }
 
 function renderStats() {
+    // FIX: 24-Hour Expiration logic for match history!
+    const now = Date.now();
+    const ONE_DAY = 24 * 60 * 60 * 1000;
+    let historyChanged = false;
+
+    window.matchHistory = window.matchHistory.filter(match => {
+        if (!match.timestamp) match.timestamp = now; // Retroactively assign a timestamp to old matches so they don't break
+        const isValid = (now - match.timestamp) < ONE_DAY;
+        if (!isValid) historyChanged = true;
+        return isValid;
+    });
+
+    if (historyChanged) {
+        saveUserData(); // Update the cloud if matches expired while you were away!
+    }
+
     const el1 = document.getElementById('stat-account-level'); if(el1) el1.innerText = window.globalAccountLevel;
     const el2 = document.getElementById('stat-matches'); if(el2) el2.innerText = window.lifetimeStats.matches;
     const el3 = document.getElementById('stat-kills'); if(el3) el3.innerText = window.lifetimeStats.kills;
