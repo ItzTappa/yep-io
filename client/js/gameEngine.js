@@ -210,6 +210,7 @@ export class GameEngine {
                     if (this.leftTouch.active && t.identifier === this.leftTouch.id) {
                         this.leftTouch.active = false;
                         leftBase.classList.remove('active'); 
+                        
                         leftBase.style.top = 'auto';
                         leftBase.style.bottom = '40px';
                         leftBase.style.left = '40px';
@@ -305,14 +306,30 @@ export class GameEngine {
         }
     }
 
-    getSafeSpawnPosition() {
+    getSafeSpawnPosition(minDistFromOthers = 0) {
         let x, y, isSafe = false;
-        while (!isSafe) {
+        let attempts = 0;
+        
+        while (!isSafe && attempts < 100) {
             x = Math.random() * this.worldSize; 
             y = Math.random() * this.worldSize;
-            if (!this.player || distance(x, y, this.player.x, this.player.y) > 1000) {
-                isSafe = true;
+            isSafe = true;
+            
+            // Keep away from player
+            if (this.player && distance(x, y, this.player.x, this.player.y) < 1000) {
+                isSafe = false;
             }
+            
+            // Keep away from other safe zones!
+            if (isSafe && minDistFromOthers > 0) {
+                for (let sz of this.safeZones) {
+                    if (distance(x, y, sz.x, sz.y) < minDistFromOthers) {
+                        isSafe = false;
+                        break;
+                    }
+                }
+            }
+            attempts++;
         }
         return { x, y };
     }
@@ -439,7 +456,7 @@ export class GameEngine {
             this.bots.push(new Bot(Math.random() * this.worldSize, Math.random() * this.worldSize, type, Math.random() * 5000));
         }
         
-        for(let i = 0; i < 500; i++) {
+        for(let i = 0; i < 1000; i++) {
             this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
         }
 
@@ -468,7 +485,7 @@ export class GameEngine {
         const brUi = document.getElementById('br-ui');
         if (brUi) brUi.classList.remove('hidden');
         
-        this.worldSize = 8000; // REDUCED MAP SIZE FOR ACTION!
+        this.worldSize = 8000; // 8k map size
         this.stormActive = false; 
 
         this.isDemo = false; 
@@ -484,9 +501,9 @@ export class GameEngine {
         this.safeZones = [];
         this.safeZoneSpawnTimer = 0;
         
-        // Max 3 safe zones!
+        // Force them to be 4000 units apart
         for(let i = 0; i < 3; i++) {
-            let pos = this.getSafeSpawnPosition();
+            let pos = this.getSafeSpawnPosition(4000);
             this.safeZones.push(new SafeZone(pos.x, pos.y));
         }
         
@@ -555,7 +572,7 @@ export class GameEngine {
         
         let matchSeed = Math.random();
         
-        // Exactly 49 Bots + 1 Player = 50 Total!
+        // 49 Bots
         for(let i = 0; i < 49; i++) {
             const types = ['triangle', 'square', 'circle']; 
             const type = types[Math.floor(Math.random() * 3)]; 
@@ -569,7 +586,7 @@ export class GameEngine {
             this.bots.push(new Bot(spawn.x, spawn.y, type, startingPts));
         }
         
-        // 2,500 Orbs on a 8k map is insane density!
+        // 2,500 Orbs
         for(let i = 0; i < 2500; i++) {
             const x = Math.random() * this.worldSize;
             const y = Math.random() * this.worldSize;
@@ -622,7 +639,7 @@ export class GameEngine {
         this.safeZones = [];
         this.safeZoneSpawnTimer = 0;
         for(let i = 0; i < 3; i++) {
-            let pos = this.getSafeSpawnPosition();
+            let pos = this.getSafeSpawnPosition(4000);
             this.safeZones.push(new SafeZone(pos.x, pos.y));
         }
 
@@ -701,7 +718,7 @@ export class GameEngine {
         }
 
         if (this.isHost) {
-            let botsToSpawn = 50 - players.length; // Max 50 players/bots
+            let botsToSpawn = 50 - players.length;
             
             for(let i = 0; i < botsToSpawn; i++) {
                 const types = ['triangle', 'square', 'circle']; 
@@ -947,7 +964,8 @@ export class GameEngine {
         container.innerHTML = '';
         
         if (this.player && this.player.activeAbility) {
-            let abName = this.player.activeAbility === 'shield' ? 'DOME SHIELD' : 'OVERDRIVE';
+            let abDef = UPGRADE_POOL.find(u => u.id === this.player.activeAbility);
+            let abName = abDef ? abDef.title.toUpperCase() : this.player.activeAbility.toUpperCase();
             let keyText = this.isTouchDevice ? 'TAP ABILITY' : '[E] TO USE';
             container.innerHTML += `
                 <div class="upgrade-badge ability-badge" title="Active Ability">
@@ -958,11 +976,11 @@ export class GameEngine {
         
         if (this.player && this.player.upgrades) {
             for (let upgId in this.player.upgrades) {
-                if (upgId === 'shield' || upgId === 'overdrive') continue;
+                let def = UPGRADE_POOL.find(u => u && u.id === upgId);
+                if (def && def.isActiveAbility) continue;
                 
                 let tier = this.player.upgrades[upgId];
                 if (tier > 0) {
-                    let def = UPGRADE_POOL.find(u => u && u.id === upgId);
                     let title = def ? def.title.toUpperCase() : upgId.toUpperCase();
                     let tierClass = tier === 1 ? 'badge-t1' : tier === 2 ? 'badge-t2' : tier === 3 ? 'badge-t3' : tier === 4 ? 'badge-t4' : 'badge-t5';
                     
@@ -995,10 +1013,9 @@ export class GameEngine {
             if (choice && card) {
                 card.className = 'card';
                 
-                let isAbility = choice.id === 'shield' || choice.id === 'overdrive';
                 const currentTier = this.player.upgrades[choice.id] || 0;
                 
-                if (isAbility) {
+                if (choice.isActiveAbility) {
                     card.classList.add('ability-card');
                     let shortName = choice.title.replace('Active: ', '');
                     document.getElementById(`title-${i+1}`).innerHTML = `⭐ ABILITY:<br/>${shortName.toUpperCase()}`;
@@ -1151,14 +1168,14 @@ export class GameEngine {
             let isSinglePlayer = !this.lobbyCode;
             
             if (!this.isDemo && !this.stormActive && (this.isHost || isSinglePlayer)) { 
+                // NEW RESPAWN AT ZERO POINTS LOGIC!
                 setTimeout(() => {
                     if (this.isGameOver) return;
                     
-                    const safePos = this.getSafeSpawnPosition();
-                    let startPts = this.player ? this.player.points * (0.5 + Math.random() * 0.3) : 0;
+                    const safePos = this.getSafeSpawnPosition(1500); // 1500 away from player
                     const types = ['triangle', 'square', 'circle'];
                     
-                    let newBot = new Bot(safePos.x, safePos.y, types[Math.floor(Math.random() * 3)], startPts);
+                    let newBot = new Bot(safePos.x, safePos.y, types[Math.floor(Math.random() * 3)], 0); // START AT 0!
                     newBot.id = 'b_respawn' + Math.random();
                     this.bots.push(newBot);
                 }, 3000); 
@@ -1248,6 +1265,7 @@ export class GameEngine {
             }
         }
 
+        // CONTINUOUS ORB SPAWNING (MASSIVE DENSITY)
         let desiredOrbs = this.isDemo ? 1000 : 2500;
         if (this.orbs.length < desiredOrbs) {
             let spawnCount = Math.min(25, desiredOrbs - this.orbs.length);
@@ -1271,6 +1289,119 @@ export class GameEngine {
         }
 
         const allPlayers = (this.isDemo || this.isGameOver) ? [...this.bots] : (this.player ? [this.player, ...this.bots] : [...this.bots]);
+
+        // ==========================================
+        // MASSIVE NEW ABILITIES LOGIC (Explosions, Lasers, Etc)
+        // ==========================================
+        allPlayers.forEach(p => {
+            if (p.isDead) return;
+
+            // --- ONE SHOT ABILITY TRIGGERS ---
+            if (p.abilityTriggered) {
+                p.abilityTriggered = false;
+                
+                let vol = (p.isPlayer || distance(this.camera.x, this.camera.y, p.x, p.y) < 1500) ? 0.6 : 0;
+                
+                if (p.activeAbility === 'bullet_nova') {
+                    if (vol) this.playSoundAt('shoot', p.x, p.y, vol);
+                    for(let a=0; a<Math.PI*2; a+=Math.PI/18) {
+                        this.fireProjectile(p, a);
+                    }
+                    this.spawnParticles(p.x, p.y, '#00ffcc', 20);
+                }
+                else if (p.activeAbility === 'blink') {
+                    if (vol) this.playSoundAt('dash', p.x, p.y, vol);
+                    this.spawnParticles(p.x, p.y, '#a855f7', 15);
+                    p.x += Math.cos(p.angle) * 400;
+                    p.y += Math.sin(p.angle) * 400;
+                    p.x = Math.max(0, Math.min(this.worldSize, p.x));
+                    p.y = Math.max(0, Math.min(this.worldSize, p.y));
+                    this.spawnParticles(p.x, p.y, '#a855f7', 15);
+                }
+                else if (p.activeAbility === 'emp') {
+                    if (vol) this.playSoundAt('explosion', p.x, p.y, vol);
+                    this.spawnParticles(p.x, p.y, '#00ffff', 40);
+                    if (p.isPlayer) this.screenShake = Math.max(this.screenShake, 15);
+                    allPlayers.forEach(e => {
+                        if (e !== p && !e.isDead && !e.isTeammate && distance(p.x, p.y, e.x, e.y) < 600) {
+                            e.fireCooldown = 180;
+                            e.dashCooldown = 180;
+                            e.health -= 20;
+                            e.vx *= 0.2; e.vy *= 0.2;
+                            if (e.health <= 0) this.processDeath(e, p);
+                        }
+                    });
+                }
+                else if (p.activeAbility === 'missile_swarm') {
+                    if (vol) this.playSoundAt('shoot', p.x, p.y, vol);
+                    for(let i=-6; i<=6; i++) {
+                        let proj = new Projectile(p.x, p.y, p.angle + (i * 0.15), p, true, false);
+                        this.projectiles.push(proj);
+                    }
+                }
+                else if (p.activeAbility === 'earthshatter') {
+                    if (vol) this.playSoundAt('explosion', p.x, p.y, vol);
+                    this.spawnParticles(p.x, p.y, '#ffaa00', 50);
+                    if (p.isPlayer) this.screenShake = Math.max(this.screenShake, 25);
+                    allPlayers.forEach(e => {
+                        if (e !== p && !e.isDead && !e.isTeammate && distance(p.x, p.y, e.x, e.y) < 600) {
+                            e.health -= 100;
+                            e.vx += (e.x - p.x) * 0.1;
+                            e.vy += (e.y - p.y) * 0.1;
+                            if (e.health <= 0) this.processDeath(e, p);
+                        }
+                    });
+                }
+                else if (p.activeAbility === 'tactical_nuke') {
+                    if (vol) this.playSoundAt('shoot', p.x, p.y, vol);
+                    let nuke = new Projectile(p.x, p.y, p.angle, p, false, true);
+                    this.projectiles.push(nuke);
+                }
+            }
+
+            // --- CONTINUOUS ABILITY EFFECTS ---
+            if (p.abilityTimer > 0) {
+                if (p.activeAbility === 'repulsor') {
+                    allPlayers.forEach(e => {
+                        if (e !== p && !e.isDead && !e.isTeammate && distance(p.x, p.y, e.x, e.y) < 300) {
+                            e.vx += (e.x - p.x) * 0.05;
+                            e.vy += (e.y - p.y) * 0.05;
+                        }
+                    });
+                    if (this.frameCount % 10 === 0) {
+                        this.projectiles.forEach(proj => {
+                            if (proj.owner !== p && distance(p.x, p.y, proj.x, proj.y) < 300) {
+                                proj.angle += Math.PI; 
+                                proj.owner = p; 
+                                proj.color = '#00ffff';
+                            }
+                        });
+                    }
+                }
+                else if (p.activeAbility === 'strafe_run' && this.frameCount % 5 === 0) {
+                    this.fireProjectile(p, p.angle + Math.PI/2);
+                    this.fireProjectile(p, p.angle - Math.PI/2);
+                }
+                else if (p.activeAbility === 'blade_ring' && this.frameCount % 10 === 0) {
+                    allPlayers.forEach(e => {
+                        if (e !== p && !e.isDead && !e.isTeammate && distance(p.x, p.y, e.x, e.y) < 250) {
+                            e.health -= 15;
+                            this.spawnParticles(e.x, e.y, '#ff0000', 3);
+                            if (e.health <= 0) this.processDeath(e, p);
+                        }
+                    });
+                }
+                else if (p.activeAbility === 'sonic_boom' || p.activeAbility === 'phase_strike') {
+                    allPlayers.forEach(e => {
+                        if (e !== p && !e.isDead && !e.isTeammate && distance(p.x, p.y, e.x, e.y) < p.size + e.size + 20) {
+                            e.health -= 5; 
+                            if (e.health <= 0) this.processDeath(e, p);
+                        }
+                    });
+                }
+            }
+        });
+
 
         if (this.stormActive && !this.isCinematicIntro) {
             this.stormRadius = Math.max(0, this.stormRadius - 0.4); 
@@ -1340,7 +1471,7 @@ export class GameEngine {
 
                 if (dx !== 0 || dy !== 0) {
                     const length = Math.hypot(dx, dy);
-                    let currentSpeed = this.player.speed * (this.player.abilityTimer > 0 && this.player.activeAbility === 'overdrive' ? 1.8 : 1.0);
+                    let currentSpeed = this.player.speed * (this.player.abilityTimer > 0 && (this.player.activeAbility === 'overdrive' || this.player.activeAbility === 'sonic_boom') ? 2.5 : 1.0);
                     
                     this.player.vx += (dx / length) * (currentSpeed * 0.2);
                     this.player.vy += (dy / length) * (currentSpeed * 0.2);
@@ -1389,7 +1520,7 @@ export class GameEngine {
                 if (this.safeZoneSpawnTimer > 0) {
                     this.safeZoneSpawnTimer--;
                 } else {
-                    let pos = this.getSafeSpawnPosition();
+                    let pos = this.getSafeSpawnPosition(4000);
                     this.safeZones.push(new SafeZone(pos.x, pos.y));
                     this.safeZoneSpawnTimer = 1800; 
                 }
@@ -1419,7 +1550,7 @@ export class GameEngine {
                         if (p.isTeammate) return;
                         
                         if (distance(this.player.x, this.player.y, p.x, p.y) < 250) { 
-                            if (!(p.abilityTimer > 0 && p.activeAbility === 'shield')) {
+                            if (!(p.abilityTimer > 0 && p.activeAbility === 'shield') && !(p.abilityTimer > 0 && p.activeAbility === 'juggernaut')) {
                                 p.health -= this.player.shockwave * 25; 
                             }
                             p.vx += (p.x - this.player.x) * 0.05; 
@@ -1530,7 +1661,7 @@ export class GameEngine {
                     if (bot.isTeammate && (p.isPlayer || p.isTeammate)) return;
                     
                     if (distance(bot.x, bot.y, p.x, p.y) < 250) {
-                        if (!(p.abilityTimer > 0 && p.activeAbility === 'shield')) {
+                        if (!(p.abilityTimer > 0 && p.activeAbility === 'shield') && !(p.abilityTimer > 0 && p.activeAbility === 'juggernaut')) {
                             p.health -= bot.shockwave * 25; 
                         }
                         p.vx += (p.x - bot.x) * 0.05; 
@@ -1614,7 +1745,7 @@ export class GameEngine {
 
                     if (p1.spikes > 0 && p1.spikeCooldown <= 0) {
                         let dmg = p1.type === 'square' ? p1.spikes * 2.5 : p1.spikes * 5;
-                        if (!(p2.abilityTimer > 0 && p2.activeAbility === 'shield')) {
+                        if (!(p2.abilityTimer > 0 && (p2.activeAbility === 'shield' || p2.activeAbility === 'juggernaut'))) {
                             p2.health -= Math.max(1, dmg - (p2.plating * 2)); 
                             this.spawnParticles(p2.x, p2.y, '#ff4444', 5);
                             if (p2 === this.player) this.screenShake = Math.max(this.screenShake, 8);
@@ -1627,7 +1758,7 @@ export class GameEngine {
                     
                     if (p2.spikes > 0 && p2.spikeCooldown <= 0 && !p1.isDead) {
                         let dmg = p2.type === 'square' ? p2.spikes * 2.5 : p2.spikes * 5;
-                        if (!(p1.abilityTimer > 0 && p1.activeAbility === 'shield')) {
+                        if (!(p1.abilityTimer > 0 && (p1.activeAbility === 'shield' || p1.activeAbility === 'juggernaut'))) {
                             p1.health -= Math.max(1, dmg - (p1.plating * 2)); 
                             this.spawnParticles(p1.x, p1.y, '#ff4444', 5);
                             if (p1 === this.player) this.screenShake = Math.max(this.screenShake, 8);
@@ -1676,7 +1807,10 @@ export class GameEngine {
                     
                     proj.hitTargets.push(target);
                     
-                    if (!(target.abilityTimer > 0 && target.activeAbility === 'shield')) {
+                    // JUGGERNAUT, SHIELD, AND PHASE STRIKE IMMUNITY
+                    let immune = target.abilityTimer > 0 && (target.activeAbility === 'shield' || target.activeAbility === 'juggernaut' || target.activeAbility === 'phase_strike');
+
+                    if (!immune) {
                         let dmg = proj.damage;
                         if (target.health < target.maxHealth * 0.5) dmg *= (1 + proj.owner.executioner);
                         target.health -= Math.max(1, dmg - (target.plating * 2));
