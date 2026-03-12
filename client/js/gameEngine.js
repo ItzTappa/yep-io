@@ -90,6 +90,13 @@ export class GameEngine {
         this.initInput();
     }
 
+    getVol() {
+        if (window.gameSettings && window.gameSettings.volume !== undefined) {
+            return window.gameSettings.volume;
+        }
+        return 1.0;
+    }
+
     initInput() {
         window.addEventListener('resize', () => {
             this.width = window.innerWidth; 
@@ -289,13 +296,13 @@ export class GameEngine {
         }
     }
 
-    playSoundAt(soundName, x, y, baseVolume = 1.0, category = 'combat', varyPitch = false) {
+    playSoundAt(soundName, x, y, baseVolume = 1.0) {
         const dist = distance(this.camera.x, this.camera.y, x, y);
         const maxHearingDistance = 2000; 
         if (dist < maxHearingDistance) {
             const falloff = 1 - (dist / maxHearingDistance);
-            const spatialVolume = baseVolume * (falloff * falloff);
-            sounds.play(soundName, category, spatialVolume, varyPitch);
+            const spatialVolume = baseVolume * (falloff * falloff) * this.getVol();
+            sounds.play(soundName, spatialVolume);
         }
     }
 
@@ -366,7 +373,6 @@ export class GameEngine {
         this.checkAccountLevelUp();
     }
 
-    // --- LEVEL UP NOTIFICATION FIXED ---
     checkAccountLevelUp() {
         let xpRequired = window.globalAccountLevel * 1000;
         let leveledUp = false;
@@ -382,7 +388,7 @@ export class GameEngine {
             if (!window.gameSettings || window.gameSettings.showNotifs !== false) {
                 const notif = document.getElementById('account-level-notif');
                 if (notif) {
-                    sounds.play('level_up', 'alert');
+                    sounds.play('level_up', 0.8 * this.getVol()); 
                     document.getElementById('account-notif-level-num').innerText = window.globalAccountLevel;
                     
                     notif.classList.remove('hidden', 'fade-out', 'show'); 
@@ -593,7 +599,7 @@ export class GameEngine {
             this.orbs.push(new Orb(x, y, 'xp', 1, null, 0));
         }
         
-        for(let i = 0; i < 75; i++) { 
+        for(let i = 0; i < 83; i++) { 
             let pos = this.getSafeOrbPosition(500); 
             this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0)); 
         }
@@ -755,7 +761,7 @@ export class GameEngine {
             this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
         }
         
-        for(let i = 0; i < 75; i++) { 
+        for(let i = 0; i < 83; i++) { 
             let pos = this.getSafeOrbPosition(500); 
             this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0));
         }
@@ -1039,7 +1045,6 @@ export class GameEngine {
         if (this.pendingUpgrades > 0) setTimeout(() => this.showNextUpgrade(), 200); 
     }
 
-    // --- UPGRADE READY NOTIFICATION FIXED ---
     triggerUpgradeReady() {
         if (this.isDemo || this.isGameOver) return;
         
@@ -1052,7 +1057,7 @@ export class GameEngine {
         if (!window.gameSettings || window.gameSettings.showNotifs !== false) {
             const notif = document.getElementById('level-up-notif');
             if (notif) {
-                sounds.play('upgrade_ready', 'alert'); 
+                sounds.play('upgrade_ready', 'alert', 1.0); 
                 
                 notif.classList.remove('hidden', 'fade-out', 'show'); 
                 notif.classList.add('active'); 
@@ -1141,7 +1146,7 @@ export class GameEngine {
             this.orbs.push(new Orb(victim.x, victim.y, 'health'));
         }
         
-        if (Math.random() < 0.10) {
+        if (Math.random() < 0.11) {
             this.orbs.push(new Orb(victim.x, victim.y, 'health'));
         }
         

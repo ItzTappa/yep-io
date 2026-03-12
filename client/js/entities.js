@@ -1883,11 +1883,11 @@ export class Orb {
             if (Math.random() < 0.25) { 
                 this.size = 10; 
                 this.color = '#1F51FF'; 
-                this.healAmount = 45; 
+                this.healAmount = 56; 
             } else { 
                 this.size = 6; 
                 this.color = '#3b82f6'; 
-                this.healAmount = 15; 
+                this.healAmount = 19; 
             } 
         } else { 
             this.size = Math.min(15, 5 + Math.log10(value) * 3); 
