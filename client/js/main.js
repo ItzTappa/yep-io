@@ -594,7 +594,9 @@ document.addEventListener('click', async (e) => {
         broadcastLobbyUpdate();
         renderLocker();
         document.getElementById('mastery-modal').classList.add('hidden');
-        if(sounds) sounds.play('ui_claim', 'ui');
+        
+        // Custom Mastery Unlock sound
+        if(sounds) sounds.play('mastery_unlock', 'ui');
         return;
     }
 
@@ -1158,7 +1160,8 @@ window.addEventListener('triggerSlotMachine', () => {
     void lever.offsetWidth; // Force CSS reflow
     lever.classList.add('pulled');
     
-    if (sounds) sounds.play('ui_click', 'ui'); 
+    // Play actual slot machine spin sound
+    if (sounds) sounds.play('slot_spin', 'ui'); 
 
     // Reset and spin the color reels
     const reels = ['reel-1', 'reel-2', 'reel-3'].map(id => document.getElementById(id));
@@ -1264,7 +1267,8 @@ function applySlotMachineReward() {
     resultEl.style.color = color;
     resultEl.classList.remove('hidden');
     
-    if (sounds) sounds.play('level_up', 'alert');
+    // Play Custom Slot Win Sound
+    if (sounds) sounds.play('slot_win', 'alert');
 
     // Auto-hide the entire UI after 3 seconds
     setTimeout(() => {
