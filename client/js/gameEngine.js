@@ -25,7 +25,7 @@ export class GameEngine {
         this.particles = [];
         this.teammates = []; 
         this.safeZones = [];
-        this.slotMachines = []; // NEW: Lucky Slot Machine Array
+        this.slotMachines = []; 
         this.safeZoneSpawnTimer = 0;
         
         this.lobbyCode = null; 
@@ -359,6 +359,10 @@ export class GameEngine {
             this.particles.push(new Particle(x, y, color));
         }
     }
+    
+    spawnSlotMachine(x, y) {
+        this.slotMachines.push(new LuckySlotMachine(x, y));
+    }
 
     grantAccountXP(baseAmount, enemyPoints = 0) {
         let multiplier = 1;
@@ -518,7 +522,6 @@ export class GameEngine {
             this.safeZones.push(new SafeZone(pos.x, pos.y));
         }
         
-        // NEW: Rare Slot Machine Spawn (Approx 1-2 per match)
         for (let i = 0; i < 5; i++) {
             if (Math.random() < 0.25) {
                 let pos = this.getSafeSpawnPosition(1000);
@@ -662,7 +665,6 @@ export class GameEngine {
             this.safeZones.push(new SafeZone(pos.x, pos.y));
         }
 
-        // NEW: Rare Slot Machine Spawn
         for (let i = 0; i < 5; i++) {
             if (Math.random() < 0.25) {
                 let pos = this.getSafeSpawnPosition(1000);
@@ -1228,11 +1230,36 @@ export class GameEngine {
         const totalPlayers = allPlayers.length;
 
         // ==========================================
-        // NEW: END OF MATCH AWARDS LOGIC
+        // END OF MATCH STATS (RESTORED MAIN GRID)
         // ==========================================
         const statsGrid = document.querySelector('.stats-grid');
-        if (statsGrid) statsGrid.classList.add('hidden'); 
+        if (statsGrid) statsGrid.classList.remove('hidden'); 
 
+        const rankEl = document.getElementById('go-placement');
+        if (rankEl) {
+            let suffix = "th";
+            if (rank % 10 === 1 && rank % 100 !== 11) suffix = "st";
+            else if (rank % 10 === 2 && rank % 100 !== 12) suffix = "nd";
+            else if (rank % 10 === 3 && rank % 100 !== 13) suffix = "rd";
+            rankEl.innerText = `${rank}${suffix}`;
+        }
+        
+        const ptsEl = document.getElementById('go-points');
+        if (ptsEl) ptsEl.innerText = Math.floor(this.player.points || 0);
+        
+        const killsEl = document.getElementById('go-kills');
+        if (killsEl) killsEl.innerText = this.player.kills || 0;
+        
+        const timeEl = document.getElementById('go-time');
+        if (timeEl) {
+            const m = Math.floor(timeAlive / 60);
+            const s = timeAlive % 60;
+            timeEl.innerText = m > 0 ? `${m}m ${s}s` : `${s}s`;
+        }
+
+        // ==========================================
+        // DYNAMIC AWARDS (SMALL RIBBONS BELOW STATS)
+        // ==========================================
         let titles = [];
         let maxKills = Math.max(...allPlayers.map(p => p.kills || 0));
         let maxPoints = Math.max(...allPlayers.map(p => p.points || 0));
@@ -1276,7 +1303,6 @@ export class GameEngine {
             awardsContainer.style.display = 'flex';
         }
 
-        // Keep raw stats data tracking active for firebase / lobby UI
         window.lastMatchStats = {
             kills: this.player.kills || 0,
             time: timeAlive || 0,
@@ -1345,7 +1371,7 @@ export class GameEngine {
             }
         }
 
-        // NEW: Lucky Slot Machine Update & Collision
+        // Slot Machine Update & Collision
         this.slotMachines.forEach(sm => sm.update());
         
         if (!this.isDemo && !this.isGameOver && this.player && !this.player.isDead) {
@@ -1707,6 +1733,14 @@ export class GameEngine {
             if (bot.isRemotePlayer) continue; 
 
             bot.updateBot(allPlayers, this.isCinematicIntro);
+            
+            // NEW: NPC Wall Avoidance (Soft Repulsion)
+            let margin = 300;
+            let avoidForce = 0.05;
+            if (bot.x < margin) bot.vx += (margin - bot.x) * 0.002;
+            if (bot.y < margin) bot.vy += (margin - bot.y) * 0.002;
+            if (bot.x > this.worldSize - margin) bot.vx -= (bot.x - (this.worldSize - margin)) * 0.002;
+            if (bot.y > this.worldSize - margin) bot.vy -= (bot.y - (this.worldSize - margin)) * 0.002;
             
             if (this.stormActive && !this.isCinematicIntro) {
                 const distToCenter = distance(bot.x, bot.y, this.stormCenter.x, this.stormCenter.y);
@@ -2167,7 +2201,7 @@ export class GameEngine {
         this.ctx.stroke();
 
         this.safeZones.forEach(sz => sz.draw(this.ctx));
-        this.slotMachines.forEach(sm => sm.draw(this.ctx)); // NEW: Draw Slot Machines
+        this.slotMachines.forEach(sm => sm.draw(this.ctx));
 
         this.orbs.forEach(orb => orb.draw(this.ctx));
         this.particles.forEach(p => p.draw(this.ctx));

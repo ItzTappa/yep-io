@@ -2225,6 +2225,14 @@ if (devInput) {
                     logDev(`[SUCCESS] Storm triggered.`); 
                 }
             }
+            else if (cmd === '/slot') {
+                if (window.game && !window.game.isDemo && player) {
+                    window.game.spawnSlotMachine(player.x + 100, player.y);
+                    logDev('[SUCCESS] Spawned a Lucky Slot Machine nearby.');
+                } else {
+                    logDev('[ERROR] Must be in an active match.');
+                }
+            }
             else if (cmd === '/ability') {
                 if(player) { 
                     player.activeAbility = parts[1]; 
@@ -2319,7 +2327,7 @@ if (devInput) {
                 devInput.blur();
             }
             else if (cmd === '/help') {
-                logDev('Commands: /level, /kills, /dist, /time, /statpoints, /claimall, /reroll, /close, /god, /score, /speed, /damage, /firerate, /multishot, /spikes, /orbiters, /missiles, /size, /heal, /nuke, /shake, /storm, /ability [shield/overdrive], /cooldown, /maxupgrades, /suicide, /tiny, /giant, /freeze, /unfreeze');
+                logDev('Commands: /level, /kills, /dist, /time, /statpoints, /claimall, /reroll, /close, /god, /score, /speed, /damage, /firerate, /multishot, /spikes, /orbiters, /missiles, /size, /heal, /nuke, /shake, /storm, /slot, /ability [shield/overdrive], /cooldown, /maxupgrades, /suicide, /tiny, /giant, /freeze, /unfreeze');
             }
             else {
                 logDev('<span style="color: red;">[ERROR] Unknown command. Type /help</span>');
