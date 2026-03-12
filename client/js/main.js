@@ -1,9 +1,16 @@
 import { GameEngine } from './gameEngine.js';
-import { Player } from './entities.js';
+import { Player, getWeightedUpgrades } from './entities.js';
 import { ITEMS_DB, RARITY_COLORS } from './items.js';
 import { UPGRADE_POOL } from './upgrades.js'; 
 import { sounds } from './soundManager.js';
 import { lobbyUI } from './networkLobby.js';
+
+// Inject Mastery Skins into ITEMS_DB dynamically so they work with existing locker/render logic
+if (ITEMS_DB) {
+    ITEMS_DB['skin_mastery_triangle'] = { id: 'skin_mastery_triangle', category: 'Skin', value: 'golden', name: 'Golden Jet', rarity: 5, hideFromStore: true };
+    ITEMS_DB['skin_mastery_square'] = { id: 'skin_mastery_square', category: 'Skin', value: 'golden', name: 'Golden Tank', rarity: 5, hideFromStore: true };
+    ITEMS_DB['skin_mastery_circle'] = { id: 'skin_mastery_circle', category: 'Skin', value: 'golden', name: 'Golden Soldier', rarity: 5, hideFromStore: true };
+}
 
 // ==========================================
 // 1. FIREBASE GLOBAL ACCOUNT SYSTEM
@@ -75,6 +82,7 @@ function resetLocalStats() {
     window.claimedItems = {};
     window.matchHistory = [];
     window.lifetimeStats = { matches: 0, kills: 0, time: 0, points: 0, distance: 0 };
+    window.classStats = { triangle: { kills: 0, matches: 0 }, square: { kills: 0, matches: 0 }, circle: { kills: 0, matches: 0 } };
     window.myFriends = [];
     window.myRequests = [];
     window.myInvites = [];
@@ -110,6 +118,7 @@ async function listenToUserData(uid) {
             window.claimedItems = data.unlocked || {};
             window.matchHistory = data.history || [];
             window.lifetimeStats = data.stats || { matches: 0, kills: 0, time: 0, points: 0, distance: 0 };
+            window.classStats = data.classStats || { triangle: { kills: 0, matches: 0 }, square: { kills: 0, matches: 0 }, circle: { kills: 0, matches: 0 } };
             
             window.myFriends = data.friends || [];
             window.myRequests = data.requestsIn || [];
@@ -149,6 +158,7 @@ async function saveUserData() {
                 unlocked: window.claimedItems,
                 history: window.matchHistory,
                 stats: window.lifetimeStats,
+                classStats: window.classStats,
                 lastActive: Date.now()
             }, { merge: true });
         } catch(e) { 
@@ -193,7 +203,7 @@ if (sounds && sounds.setVolume) {
 window.hourlyStats = { kills: 0, time: 0, points: 0, distance: 0 };
 
 function generateShop() {
-    const rotatingItems = Object.values(ITEMS_DB).filter(item => item.isRotating);
+    const rotatingItems = Object.values(ITEMS_DB).filter(item => item.isRotating && !item.hideFromStore);
     const shuffled = rotatingItems.sort(() => 0.5 - Math.random());
     const selected = shuffled.slice(0, 4);
     
@@ -453,6 +463,47 @@ async function joinLobbyByCode(code, sourceBtn) {
 }
 
 // ==========================================
+// CLASS MASTERY GUI LOGIC
+// ==========================================
+function openMasteryModal(classType) {
+    const modal = document.getElementById('mastery-modal');
+    const title = document.getElementById('mastery-class-title');
+    const killsEl = document.getElementById('mastery-kills');
+    const matchesEl = document.getElementById('mastery-matches');
+    const pb = document.getElementById('mastery-progress-bar');
+    const equipBtn = document.getElementById('mastery-equip-btn');
+    const reqText = document.getElementById('mastery-req-text');
+
+    if (!window.classStats) window.classStats = {};
+    if (!window.classStats[classType]) window.classStats[classType] = { kills: 0, matches: 0 };
+    
+    const stats = window.classStats[classType];
+    
+    title.innerText = `${classType.toUpperCase()} MASTERY`;
+    killsEl.innerText = stats.kills;
+    matchesEl.innerText = stats.matches;
+    
+    let progress = Math.min(100, (stats.kills / 100) * 100);
+    pb.style.width = `${progress}%`;
+    
+    if (stats.kills >= 100) {
+        reqText.innerText = "MASTERY UNLOCKED!";
+        reqText.style.color = "#00ffcc";
+        equipBtn.disabled = false;
+        equipBtn.innerText = "EQUIP GOLDEN SKIN";
+        equipBtn.dataset.equipClass = classType;
+    } else {
+        reqText.innerText = `Requires 100 Kills (${stats.kills}/100)`;
+        reqText.style.color = "#aaa";
+        equipBtn.disabled = true;
+        equipBtn.innerText = "LOCKED";
+    }
+    
+    modal.classList.remove('hidden');
+}
+
+
+// ==========================================
 // GLOBAL UI HANDLER
 // ==========================================
 let currentLockerCategory = null;
@@ -523,6 +574,49 @@ document.addEventListener('click', async (e) => {
     if (target.id === 'back-to-friends-btn') {
         document.getElementById('friend-profile-view').classList.add('hidden');
         document.getElementById('account-logged-in').classList.remove('hidden');
+        return;
+    }
+    
+    // Mastery Modal
+    if (target.id === 'close-mastery-btn') {
+        document.getElementById('mastery-modal').classList.add('hidden');
+        return;
+    }
+    
+    if (target.id === 'mastery-equip-btn') {
+        const cType = target.dataset.equipClass;
+        const skinId = `skin_mastery_${cType}`;
+        if (!window.claimedItems) window.claimedItems = {};
+        window.claimedItems[skinId] = true;
+        if (!window.equippedItems) window.equippedItems = {};
+        window.equippedItems.Skin = skinId;
+        saveUserData();
+        broadcastLobbyUpdate();
+        renderLocker();
+        document.getElementById('mastery-modal').classList.add('hidden');
+        if(sounds) sounds.play('ui_claim', 'ui');
+        return;
+    }
+
+    // Slot Machine Buttons
+    if (target.id === 'slot-spin-btn') {
+        target.classList.add('hidden');
+        if(sounds) sounds.play('ui_click', 'ui');
+        
+        const reels = ['reel-1', 'reel-2', 'reel-3'].map(id => document.getElementById(id));
+        reels.forEach(r => r.classList.add('spinning'));
+        document.getElementById('slot-status-text').innerText = "SPINNING...";
+        
+        setTimeout(() => {
+            reels.forEach(r => r.classList.remove('spinning'));
+            document.getElementById('slot-status-text').innerText = "RESULT:";
+            applySlotMachineReward();
+        }, 2000);
+        return;
+    }
+    
+    if (target.id === 'slot-close-btn') {
+        document.getElementById('slot-machine-ui').classList.add('hidden');
         return;
     }
 
@@ -891,10 +985,24 @@ document.addEventListener('click', async (e) => {
 
     // Class Selection
     if (target.classList.contains('class-btn')) {
+        if (target.classList.contains('active')) {
+            openMasteryModal(target.dataset.class);
+            return;
+        }
+
         document.querySelectorAll('.class-btn').forEach(b => b.classList.remove('active'));
         target.classList.add('active');
         selectedClass = target.dataset.class;
         
+        // Enforce Class-Locked Mastery Skins
+        if (window.equippedItems && window.equippedItems.Skin && window.equippedItems.Skin.startsWith('skin_mastery_')) {
+            if (window.equippedItems.Skin !== `skin_mastery_${selectedClass}`) {
+                window.equippedItems.Skin = null; // Unequip invalid mastery skin
+                saveUserData();
+                renderLocker();
+            }
+        }
+
         broadcastLobbyUpdate(); 
         
         const info = document.getElementById('class-info');
@@ -1052,6 +1160,88 @@ document.addEventListener('click', async (e) => {
     }
 });
 
+
+// ==========================================
+// SLOT MACHINE REWARD LOGIC
+// ==========================================
+window.addEventListener('triggerSlotMachine', () => {
+    const ui = document.getElementById('slot-machine-ui');
+    if (ui) {
+        ui.classList.remove('hidden');
+        document.getElementById('slot-result').classList.add('hidden');
+        document.getElementById('slot-spin-btn').classList.remove('hidden');
+        document.getElementById('slot-close-btn').classList.add('hidden');
+        document.getElementById('slot-status-text').innerText = "Pull the lever for a chance at legendary upgrades!";
+        ['reel-1', 'reel-2', 'reel-3'].forEach(id => {
+            const r = document.getElementById(id);
+            r.innerText = "?";
+            r.classList.remove('spinning');
+        });
+    }
+});
+
+function applySlotMachineReward() {
+    const p = window.game.player;
+    if (!p) return;
+    
+    const resultEl = document.getElementById('slot-result');
+    const reels = ['reel-1', 'reel-2', 'reel-3'].map(id => document.getElementById(id));
+    
+    let roll = Math.random();
+    let text = "";
+    let color = "white";
+    let symbol = "🍒";
+    
+    // Rare Legendary Active Ability
+    if (roll < 0.10 && !p.activeAbility) {
+        let abilities = UPGRADE_POOL.filter(u => u.isActiveAbility && (!u.classes || u.classes.includes(p.type)));
+        if (abilities.length > 0) {
+            let ab = abilities[Math.floor(Math.random() * abilities.length)];
+            p.applyUpgrade(ab.id);
+            text = `JACKPOT! UNLOCKED: ${ab.title}`;
+            color = "#ff00ff";
+            symbol = "⭐";
+        } else {
+            roll = 0.5; // fallback
+        }
+    }
+    
+    // Max Stat to T5
+    if (roll >= 0.10 && roll < 0.30) {
+        let stats = UPGRADE_POOL.filter(u => !u.isActiveAbility);
+        let stat = stats[Math.floor(Math.random() * stats.length)];
+        p.upgrades[stat.id] = 5;
+        if(stat.apply) { for(let i=0; i<5; i++) stat.apply(p); }
+        text = `MEGA WIN! MAXED: ${stat.title}`;
+        color = "#00ffcc";
+        symbol = "7";
+    }
+    
+    // Random Upgrade
+    if (roll >= 0.30) {
+        let choices = getWeightedUpgrades(p, 1);
+        if (choices.length > 0) {
+            p.applyUpgrade(choices[0].id);
+            text = `WIN! UPGRADED: ${choices[0].title}`;
+            color = "#ffd700";
+            symbol = "🍒";
+        } else {
+            text = "NO UPGRADES LEFT!";
+            color = "#aaa";
+            symbol = "✖";
+        }
+    }
+    
+    reels.forEach(r => r.innerText = symbol);
+    window.game.updateUpgradeBadges();
+    
+    resultEl.innerText = text;
+    resultEl.style.color = color;
+    resultEl.classList.remove('hidden');
+    document.getElementById('slot-close-btn').classList.remove('hidden');
+    
+    if (sounds) sounds.play('level_up', 'alert');
+}
 
 // ==========================================
 // RENDERERS
@@ -1287,7 +1477,7 @@ function renderMainStore() {
 
     shopItems.forEach(shopItem => {
         const item = ITEMS_DB ? ITEMS_DB[shopItem.id] : null;
-        if (!item) return;
+        if (!item || item.hideFromStore) return;
         
         const currentValue = window.hourlyStats ? (window.hourlyStats[shopItem.type] || 0) : 0;
         const isUnlocked = currentValue >= shopItem.req;
@@ -1844,6 +2034,13 @@ document.getElementById('return-lobby-btn').addEventListener('click', () => {
     if (window.lastMatchStats) {
         window.lastMatchStats.timestamp = Date.now();
         
+        let pClass = window.lastMatchStats.playerClass || 'triangle';
+        if (!window.classStats) window.classStats = {};
+        if (!window.classStats[pClass]) window.classStats[pClass] = { kills: 0, matches: 0 };
+        
+        window.classStats[pClass].matches += 1;
+        window.classStats[pClass].kills += window.lastMatchStats.kills || 0;
+        
         window.hourlyStats.kills += window.lastMatchStats.kills || 0;
         window.hourlyStats.time += window.lastMatchStats.time || 0;
         window.hourlyStats.points += window.lastMatchStats.points || 0;
@@ -2139,5 +2336,3 @@ try {
 } catch(e) {
     console.error("Initial render error:", e);
 }
-
-// Stable Version - Important Backup

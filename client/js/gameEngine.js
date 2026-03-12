@@ -1,4 +1,4 @@
-import { Player, Bot, Orb, Projectile, Particle, SafeZone, getWeightedUpgrades } from './entities.js';
+import { Player, Bot, Orb, Projectile, Particle, SafeZone, LuckySlotMachine, getWeightedUpgrades } from './entities.js';
 import { distance } from './utils.js';
 import { sounds } from './soundManager.js';
 import { UPGRADE_POOL } from './upgrades.js'; 
@@ -25,6 +25,7 @@ export class GameEngine {
         this.particles = [];
         this.teammates = []; 
         this.safeZones = [];
+        this.slotMachines = []; // NEW: Lucky Slot Machine Array
         this.safeZoneSpawnTimer = 0;
         
         this.lobbyCode = null; 
@@ -454,6 +455,7 @@ export class GameEngine {
         this.particles = [];
         this.teammates = []; 
         this.safeZones = []; 
+        this.slotMachines = [];
         this.isCinematicIntro = false;
         
         this.player = new Player(-10000, -10000, 'circle', ""); 
@@ -505,6 +507,7 @@ export class GameEngine {
         this.projectiles = []; 
         this.particles = [];
         this.teammates = [];
+        this.slotMachines = [];
         this.screenShake = 0;
         
         this.safeZones = [];
@@ -513,6 +516,14 @@ export class GameEngine {
         for(let i = 0; i < 3; i++) {
             let pos = this.getSafeSpawnPosition(4000);
             this.safeZones.push(new SafeZone(pos.x, pos.y));
+        }
+        
+        // NEW: Rare Slot Machine Spawn (Approx 1-2 per match)
+        for (let i = 0; i < 5; i++) {
+            if (Math.random() < 0.25) {
+                let pos = this.getSafeSpawnPosition(1000);
+                this.slotMachines.push(new LuckySlotMachine(pos.x, pos.y));
+            }
         }
         
         this.player = new Player(this.worldSize / 2, this.worldSize / 2, playerClass, "");
@@ -599,7 +610,8 @@ export class GameEngine {
             this.orbs.push(new Orb(x, y, 'xp', 1, null, 0));
         }
         
-        for(let i = 0; i < 83; i++) { 
+        // BUFF: 10% Increase to Health Orb Spawn (83 -> 91)
+        for(let i = 0; i < 91; i++) { 
             let pos = this.getSafeOrbPosition(500); 
             this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0)); 
         }
@@ -640,6 +652,7 @@ export class GameEngine {
         this.projectiles = []; 
         this.particles = [];
         this.teammates = [];
+        this.slotMachines = [];
         this.screenShake = 0;
         
         this.safeZones = [];
@@ -647,6 +660,14 @@ export class GameEngine {
         for(let i = 0; i < 3; i++) {
             let pos = this.getSafeSpawnPosition(4000);
             this.safeZones.push(new SafeZone(pos.x, pos.y));
+        }
+
+        // NEW: Rare Slot Machine Spawn
+        for (let i = 0; i < 5; i++) {
+            if (Math.random() < 0.25) {
+                let pos = this.getSafeSpawnPosition(1000);
+                this.slotMachines.push(new LuckySlotMachine(pos.x, pos.y));
+            }
         }
 
         const gameUi = document.getElementById('game-ui');
@@ -761,7 +782,8 @@ export class GameEngine {
             this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
         }
         
-        for(let i = 0; i < 83; i++) { 
+        // BUFF: 10% Increase to Health Orb Spawn (83 -> 91)
+        for(let i = 0; i < 91; i++) { 
             let pos = this.getSafeOrbPosition(500); 
             this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0));
         }
@@ -1146,7 +1168,8 @@ export class GameEngine {
             this.orbs.push(new Orb(victim.x, victim.y, 'health'));
         }
         
-        if (Math.random() < 0.11) {
+        // BUFF: Base Enemy Drop Rate Increased by 10% (0.11 -> 0.21)
+        if (Math.random() < 0.21) {
             this.orbs.push(new Orb(victim.x, victim.y, 'health'));
         }
         
@@ -1204,17 +1227,56 @@ export class GameEngine {
         const rank = allPlayers.indexOf(this.player) + 1;
         const totalPlayers = allPlayers.length;
 
-        let suffix = "th";
-        if (rank % 10 === 1 && rank % 100 !== 11) suffix = "st";
-        else if (rank % 10 === 2 && rank % 100 !== 12) suffix = "nd";
-        else if (rank % 10 === 3 && rank % 100 !== 13) suffix = "rd";
+        // ==========================================
+        // NEW: END OF MATCH AWARDS LOGIC
+        // ==========================================
+        const statsGrid = document.querySelector('.stats-grid');
+        if (statsGrid) statsGrid.classList.add('hidden'); 
 
-        const placementEl = document.getElementById('go-placement');
-        if (placementEl) placementEl.innerText = `${rank}${suffix}`;
-        
-        const xpEl = document.getElementById('go-xp');
-        if (xpEl) xpEl.innerText = `+${this.matchXPEarned}`;
+        let titles = [];
+        let maxKills = Math.max(...allPlayers.map(p => p.kills || 0));
+        let maxPoints = Math.max(...allPlayers.map(p => p.points || 0));
 
+        if (this.player.points >= maxPoints && this.player.points > 0) {
+            titles.push({ icon: '👑', name: 'Most Points', desc: 'Highest overall score', color: 'award-gold' });
+        }
+        if (this.player.kills >= maxKills && this.player.kills > 0) {
+            titles.push({ icon: '⚔️', name: 'Most Eliminations', desc: 'Lethal force', color: 'award-silver' });
+        }
+        if (this.player.kills === 0 && timeAlive > 120) {
+            titles.push({ icon: '🕊️', name: 'Pacifist', desc: 'Survived long with 0 kills', color: 'award-bronze' });
+        }
+        if (this.distanceTraveled > 15000) {
+            titles.push({ icon: '🏃', name: 'Marathoner', desc: 'Most distance traveled', color: 'award-special' });
+        }
+        if (rank === 1 && this.player.kills > 0) {
+            titles.push({ icon: '🏆', name: 'Champion', desc: 'Match Winner', color: 'award-gold' });
+        }
+        if (this.player.kills > 0 && this.player.health < this.player.maxHealth * 0.2) {
+            titles.push({ icon: '🔥', name: 'Comeback Player', desc: 'Clutched on low health', color: 'award-special' });
+        }
+        if (titles.length === 0) {
+            titles.push({ icon: '👍', name: 'Participant', desc: 'Fought bravely', color: 'award-bronze' });
+        }
+
+        let awardsHtml = '';
+        titles.forEach(t => {
+            awardsHtml += `
+            <div class="award-badge ${t.color}">
+                <div class="award-icon">${t.icon}</div>
+                <div class="award-title">${t.name}</div>
+                <div class="award-desc">${t.desc}</div>
+            </div>`;
+        });
+
+        const awardsContainer = document.getElementById('go-awards-container');
+        if (awardsContainer) {
+            awardsContainer.innerHTML = awardsHtml;
+            awardsContainer.classList.remove('hidden');
+            awardsContainer.style.display = 'flex';
+        }
+
+        // Keep raw stats data tracking active for firebase / lobby UI
         window.lastMatchStats = {
             kills: this.player.kills || 0,
             time: timeAlive || 0,
@@ -1229,14 +1291,8 @@ export class GameEngine {
         const goKillerName = document.getElementById('go-killer-name');
         if (goKillerName) goKillerName.innerText = killer ? killer.name : "UNKNOWN";
         
-        const goPoints = document.getElementById('go-points');
-        if (goPoints) goPoints.innerText = Math.floor(this.player.points);
-        
-        const goKills = document.getElementById('go-kills');
-        if (goKills) goKills.innerText = this.player.kills;
-        
-        const goTime = document.getElementById('go-time');
-        if (goTime) goTime.innerText = `${timeAlive}s`;
+        const xpEl = document.getElementById('go-xp');
+        if (xpEl) xpEl.innerText = `+${this.matchXPEarned}`;
         
         const gameOverScreen = document.getElementById('game-over-screen');
         if (gameOverScreen) gameOverScreen.classList.remove('hidden');
@@ -1285,6 +1341,20 @@ export class GameEngine {
                     if (nameEl) nameEl.innerText = this.spectateTarget.name;
                 } else {
                     this.spectateTarget = null;
+                }
+            }
+        }
+
+        // NEW: Lucky Slot Machine Update & Collision
+        this.slotMachines.forEach(sm => sm.update());
+        
+        if (!this.isDemo && !this.isGameOver && this.player && !this.player.isDead) {
+            for (let i = this.slotMachines.length - 1; i >= 0; i--) {
+                let sm = this.slotMachines[i];
+                if (distance(this.player.x, this.player.y, sm.x, sm.y) < this.player.size + sm.size) {
+                    this.slotMachines.splice(i, 1);
+                    window.dispatchEvent(new CustomEvent('triggerSlotMachine'));
+                    break; 
                 }
             }
         }
@@ -2097,6 +2167,7 @@ export class GameEngine {
         this.ctx.stroke();
 
         this.safeZones.forEach(sz => sz.draw(this.ctx));
+        this.slotMachines.forEach(sm => sm.draw(this.ctx)); // NEW: Draw Slot Machines
 
         this.orbs.forEach(orb => orb.draw(this.ctx));
         this.particles.forEach(p => p.draw(this.ctx));
@@ -2293,5 +2364,3 @@ export class GameEngine {
         }
     }
 }
-
-// Stable Version - Important Backup

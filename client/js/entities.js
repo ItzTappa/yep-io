@@ -1199,6 +1199,35 @@ export class Entity {
                 ctx.fill(); 
                 ctx.restore(); 
             }
+            else if (skinType === 'golden') { 
+                ctx.save(); 
+                ctx.beginPath(); 
+                if (this.type === 'circle') {
+                    ctx.arc(0, 0, this.size, 0, Math.PI * 2); 
+                } else if (this.type === 'square') {
+                    ctx.rect(-this.size / 2, -this.size / 2, this.size, this.size); 
+                } else { 
+                    ctx.moveTo(this.size, 0); 
+                    ctx.lineTo(-this.size / 2, -this.size * 0.866); 
+                    ctx.lineTo(-this.size / 2, this.size * 0.866); 
+                    ctx.closePath(); 
+                } 
+                ctx.clip(); 
+                
+                let grad = ctx.createLinearGradient(-this.size, -this.size, this.size, this.size);
+                grad.addColorStop(0, '#ffdf00');
+                grad.addColorStop(0.5, '#d4af37');
+                grad.addColorStop(1, '#996515');
+                ctx.fillStyle = grad;
+                ctx.fillRect(-this.size, -this.size, this.size * 2, this.size * 2);
+                
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.shadowColor = '#ffe600';
+                ctx.shadowBlur = 20;
+                ctx.stroke();
+                ctx.restore(); 
+            }
             else {
                 ctx.beginPath(); 
                 const innerSize = this.size * 0.5;
@@ -1883,11 +1912,11 @@ export class Orb {
             if (Math.random() < 0.25) { 
                 this.size = 10; 
                 this.color = '#1F51FF'; 
-                this.healAmount = 56; 
+                this.healAmount = 70; // 25% Increase (Was 56)
             } else { 
                 this.size = 6; 
                 this.color = '#3b82f6'; 
-                this.healAmount = 19; 
+                this.healAmount = 24; // 25% Increase (Was 19)
             } 
         } else { 
             this.size = Math.min(15, 5 + Math.log10(value) * 3); 
@@ -1955,4 +1984,66 @@ export class Particle {
     }
 }
 
-// Stable Version - Important Backup
+export class LuckySlotMachine {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.size = 30; // Collision size
+        this.time = Math.random() * 100;
+    }
+    
+    update() {
+        this.time += 0.1;
+    }
+    
+    draw(ctx) {
+        ctx.save();
+        
+        // Periodic bounce calculation
+        let bounce = Math.abs(Math.sin(this.time)) * 15;
+        ctx.translate(this.x, this.y - bounce);
+        
+        if (window.gameSettings && window.gameSettings.highQuality) {
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#ffe600';
+        }
+        
+        // Main Slot Machine Body
+        ctx.fillStyle = '#111';
+        ctx.fillRect(-15, -20, 30, 40);
+        
+        ctx.strokeStyle = '#ffe600';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-15, -20, 30, 40);
+        
+        // Inner Screen
+        ctx.fillStyle = '#222';
+        ctx.fillRect(-10, -10, 20, 15);
+        
+        // Reels
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(-8, -8, 4, 11);
+        ctx.fillRect(-2, -8, 4, 11);
+        ctx.fillRect(4, -8, 4, 11);
+        
+        // Side Lever
+        ctx.fillStyle = '#555';
+        ctx.fillRect(15, -5, 6, 3);
+        ctx.fillStyle = '#ff0044';
+        ctx.beginPath();
+        ctx.arc(22, -4, 4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Top Light (Blinking effect)
+        if (Math.floor(this.time * 2) % 2 === 0) {
+            ctx.fillStyle = '#ff0044';
+        } else {
+            ctx.fillStyle = '#00ffcc';
+        }
+        ctx.beginPath();
+        ctx.arc(0, -20, 6, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+}
