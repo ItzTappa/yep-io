@@ -483,17 +483,17 @@ function openMasteryModal(classType) {
     killsEl.innerText = stats.kills;
     matchesEl.innerText = stats.matches;
     
-    let progress = Math.min(100, (stats.kills / 100) * 100);
+    let progress = Math.min(100, (stats.kills / 1000) * 100);
     pb.style.width = `${progress}%`;
     
-    if (stats.kills >= 100) {
+    if (stats.kills >= 1000) {
         reqText.innerText = "MASTERY UNLOCKED!";
         reqText.style.color = "#00ffcc";
         equipBtn.disabled = false;
         equipBtn.innerText = "EQUIP GOLDEN SKIN";
         equipBtn.dataset.equipClass = classType;
     } else {
-        reqText.innerText = `Requires 100 Kills (${stats.kills}/100)`;
+        reqText.innerText = `Requires 1000 Kills (${stats.kills}/1000)`;
         reqText.style.color = "#aaa";
         equipBtn.disabled = true;
         equipBtn.innerText = "LOCKED";
@@ -598,28 +598,6 @@ document.addEventListener('click', async (e) => {
         return;
     }
 
-    // Slot Machine Buttons
-    if (target.id === 'slot-spin-btn') {
-        target.classList.add('hidden');
-        if(sounds) sounds.play('ui_click', 'ui');
-        
-        const reels = ['reel-1', 'reel-2', 'reel-3'].map(id => document.getElementById(id));
-        reels.forEach(r => r.classList.add('spinning'));
-        document.getElementById('slot-status-text').innerText = "SPINNING...";
-        
-        setTimeout(() => {
-            reels.forEach(r => r.classList.remove('spinning'));
-            document.getElementById('slot-status-text').innerText = "RESULT:";
-            applySlotMachineReward();
-        }, 2000);
-        return;
-    }
-    
-    if (target.id === 'slot-close-btn') {
-        document.getElementById('slot-machine-ui').classList.add('hidden');
-        return;
-    }
-
     // Gamemode Selector (Host Only)
     if (target.classList.contains('mode-select-btn')) {
         if (!window.lobbyPlayers || window.lobbyPlayers.length === 0 || window.lobbyPlayers[0].uid !== getMyUid()) {
@@ -677,7 +655,7 @@ document.addEventListener('click', async (e) => {
             } else {
                 // Toggle ready status
                 const isReady = !me.ready;
-                if (isReady && sounds) sounds.play('ui_ready', 'ui'); // Play satisfying ready sound!
+                if (isReady && sounds) sounds.play('ui_ready', 'ui'); 
                 
                 const newPlayers = window.lobbyPlayers.map(p => p.uid === myUid ? { ...p, ready: isReady } : p);
                 updateDoc(doc(db, "lobbies", window.currentLobbyCode), { players: newPlayers });
@@ -1162,22 +1140,40 @@ document.addEventListener('click', async (e) => {
 
 
 // ==========================================
-// SLOT MACHINE REWARD LOGIC
+// NEW: AUTO-SPINNING SLOT MACHINE LOGIC
 // ==========================================
 window.addEventListener('triggerSlotMachine', () => {
     const ui = document.getElementById('slot-machine-ui');
-    if (ui) {
-        ui.classList.remove('hidden');
-        document.getElementById('slot-result').classList.add('hidden');
-        document.getElementById('slot-spin-btn').classList.remove('hidden');
-        document.getElementById('slot-close-btn').classList.add('hidden');
-        document.getElementById('slot-status-text').innerText = "Pull the lever for a chance at legendary upgrades!";
-        ['reel-1', 'reel-2', 'reel-3'].forEach(id => {
-            const r = document.getElementById(id);
-            r.innerText = "?";
-            r.classList.remove('spinning');
-        });
-    }
+    if (!ui) return;
+    
+    ui.classList.remove('hidden');
+    ui.style.opacity = '1';
+    
+    const resultEl = document.getElementById('slot-result');
+    resultEl.classList.add('hidden');
+    
+    // Trigger physical lever animation
+    const lever = document.getElementById('slot-lever');
+    lever.classList.remove('pulled');
+    void lever.offsetWidth; // Force CSS reflow
+    lever.classList.add('pulled');
+    
+    if (sounds) sounds.play('ui_click', 'ui'); 
+
+    // Reset and spin the color reels
+    const reels = ['reel-1', 'reel-2', 'reel-3'].map(id => document.getElementById(id));
+    reels.forEach(r => {
+        r.classList.add('spinning');
+        r.innerText = "";
+        r.style.background = "";
+        r.style.boxShadow = "";
+    });
+    
+    // Auto resolve after 2 seconds
+    setTimeout(() => {
+        reels.forEach(r => r.classList.remove('spinning'));
+        applySlotMachineReward();
+    }, 2000);
 });
 
 function applySlotMachineReward() {
@@ -1190,57 +1186,94 @@ function applySlotMachineReward() {
     let roll = Math.random();
     let text = "";
     let color = "white";
-    let symbol = "🍒";
-    
-    // Rare Legendary Active Ability
+    let targetTier = 1;
+    let chosenUpgrade = null;
+    let isLegendary = false;
+
+    // 10% Chance for Legendary Active Ability
     if (roll < 0.10 && !p.activeAbility) {
         let abilities = UPGRADE_POOL.filter(u => u.isActiveAbility && (!u.classes || u.classes.includes(p.type)));
         if (abilities.length > 0) {
-            let ab = abilities[Math.floor(Math.random() * abilities.length)];
-            p.applyUpgrade(ab.id);
-            text = `JACKPOT! UNLOCKED: ${ab.title}`;
-            color = "#ff00ff";
-            symbol = "⭐";
+            chosenUpgrade = abilities[Math.floor(Math.random() * abilities.length)];
+            targetTier = 5;
+            isLegendary = true;
         } else {
-            roll = 0.5; // fallback
+            roll = 0.5; // fallback to stat roll if they already have an ability
         }
     }
-    
-    // Max Stat to T5
-    if (roll >= 0.10 && roll < 0.30) {
-        let stats = UPGRADE_POOL.filter(u => !u.isActiveAbility);
-        let stat = stats[Math.floor(Math.random() * stats.length)];
-        p.upgrades[stat.id] = 5;
-        if(stat.apply) { for(let i=0; i<5; i++) stat.apply(p); }
-        text = `MEGA WIN! MAXED: ${stat.title}`;
-        color = "#00ffcc";
-        symbol = "7";
+
+    // Roll for a random tier and upgrade
+    if (!chosenUpgrade) {
+        let stats = UPGRADE_POOL.filter(u => !u.isActiveAbility && (!u.classes || u.classes.includes(p.type)));
+        chosenUpgrade = stats[Math.floor(Math.random() * stats.length)];
+        
+        if (roll < 0.15) targetTier = 5;       // 15% Max T5
+        else if (roll < 0.35) targetTier = 4;  // 20% T4
+        else if (roll < 0.60) targetTier = 3;  // 25% T3
+        else if (roll < 0.85) targetTier = 2;  // 25% T2
+        else targetTier = 1;                   // 15% T1
     }
-    
-    // Random Upgrade
-    if (roll >= 0.30) {
-        let choices = getWeightedUpgrades(p, 1);
-        if (choices.length > 0) {
-            p.applyUpgrade(choices[0].id);
-            text = `WIN! UPGRADED: ${choices[0].title}`;
-            color = "#ffd700";
-            symbol = "🍒";
-        } else {
-            text = "NO UPGRADES LEFT!";
-            color = "#aaa";
-            symbol = "✖";
+
+    if (isLegendary) {
+        p.applyUpgrade(chosenUpgrade.id);
+        text = `LEGENDARY!\n${chosenUpgrade.title.replace('Active: ', '')}`;
+        color = "#ff00ff";
+    } else {
+        let maxAllowed = chosenUpgrade.maxTier !== undefined ? chosenUpgrade.maxTier : p.maxUpgradeTier;
+        let currentTier = p.upgrades[chosenUpgrade.id] || 0;
+        
+        targetTier = Math.min(targetTier, maxAllowed);
+        
+        // If they already have this tier or higher, just give them +1 to next available
+        if (currentTier >= targetTier) {
+            if (currentTier < maxAllowed) {
+                targetTier = currentTier + 1;
+            } else {
+                let stats = UPGRADE_POOL.filter(u => !u.isActiveAbility && (!u.classes || u.classes.includes(p.type)));
+                let unmaxed = stats.filter(u => (p.upgrades[u.id]||0) < (u.maxTier !== undefined ? u.maxTier : p.maxUpgradeTier));
+                if (unmaxed.length > 0) {
+                    chosenUpgrade = unmaxed[Math.floor(Math.random() * unmaxed.length)];
+                    currentTier = p.upgrades[chosenUpgrade.id] || 0;
+                    targetTier = currentTier + 1;
+                } else {
+                    targetTier = currentTier; // Fully maxed out
+                }
+            }
         }
+
+        // Apply the difference so they jump straight to the rolled tier
+        let diff = targetTier - currentTier;
+        for (let i = 0; i < diff; i++) {
+            p.applyUpgrade(chosenUpgrade.id);
+        }
+        
+        let tierColors = {1: '#cd7f32', 2: '#c0c0c0', 3: '#ffd700', 4: '#00ffcc', 5: '#ff00ff'};
+        color = tierColors[targetTier] || '#fff';
+        text = `UPGRADED!\n${chosenUpgrade.title} T${targetTier}`;
     }
     
-    reels.forEach(r => r.innerText = symbol);
+    // Lock reels to the target color
+    reels.forEach(r => {
+        r.style.background = color;
+        r.style.boxShadow = `inset 0 0 10px rgba(0,0,0,0.8), 0 0 15px ${color}`;
+    });
+    
     window.game.updateUpgradeBadges();
     
     resultEl.innerText = text;
     resultEl.style.color = color;
     resultEl.classList.remove('hidden');
-    document.getElementById('slot-close-btn').classList.remove('hidden');
     
     if (sounds) sounds.play('level_up', 'alert');
+
+    // Auto-hide the entire UI after 3 seconds
+    setTimeout(() => {
+        const ui = document.getElementById('slot-machine-ui');
+        if (ui) {
+            ui.style.opacity = '0';
+            setTimeout(() => ui.classList.add('hidden'), 300);
+        }
+    }, 3000);
 }
 
 // ==========================================
