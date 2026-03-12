@@ -90,13 +90,6 @@ export class GameEngine {
         this.initInput();
     }
 
-    getVol() {
-        if (window.gameSettings && window.gameSettings.volume !== undefined) {
-            return window.gameSettings.volume;
-        }
-        return 1.0;
-    }
-
     initInput() {
         window.addEventListener('resize', () => {
             this.width = window.innerWidth; 
@@ -296,13 +289,13 @@ export class GameEngine {
         }
     }
 
-    playSoundAt(soundName, x, y, baseVolume = 1.0) {
+    playSoundAt(soundName, x, y, baseVolume = 1.0, category = 'combat', varyPitch = false) {
         const dist = distance(this.camera.x, this.camera.y, x, y);
         const maxHearingDistance = 2000; 
         if (dist < maxHearingDistance) {
             const falloff = 1 - (dist / maxHearingDistance);
-            const spatialVolume = baseVolume * (falloff * falloff) * this.getVol();
-            sounds.play(soundName, spatialVolume);
+            const spatialVolume = baseVolume * (falloff * falloff);
+            sounds.play(soundName, category, spatialVolume, varyPitch);
         }
     }
 
@@ -315,12 +308,10 @@ export class GameEngine {
             y = Math.random() * this.worldSize;
             isSafe = true;
             
-            // Keep away from player
             if (this.player && distance(x, y, this.player.x, this.player.y) < 1000) {
                 isSafe = false;
             }
             
-            // Keep away from other safe zones
             if (isSafe && minDistFromOthers > 0) {
                 for (let sz of this.safeZones) {
                     if (distance(x, y, sz.x, sz.y) < minDistFromOthers) {
@@ -375,7 +366,7 @@ export class GameEngine {
         this.checkAccountLevelUp();
     }
 
-    // RESTORED OLD CLASS TOGGLING
+    // --- LEVEL UP NOTIFICATION FIXED ---
     checkAccountLevelUp() {
         let xpRequired = window.globalAccountLevel * 1000;
         let leveledUp = false;
@@ -394,7 +385,6 @@ export class GameEngine {
                     sounds.play('level_up', 'alert');
                     document.getElementById('account-notif-level-num').innerText = window.globalAccountLevel;
                     
-                    // Fixed CSS Animation Logic
                     notif.classList.remove('hidden', 'fade-out', 'show'); 
                     notif.classList.add('active'); 
                     
@@ -584,7 +574,6 @@ export class GameEngine {
         
         let matchSeed = Math.random();
         
-        // 49 Bots
         for(let i = 0; i < 49; i++) {
             const types = ['triangle', 'square', 'circle']; 
             const type = types[Math.floor(Math.random() * 3)]; 
@@ -598,7 +587,6 @@ export class GameEngine {
             this.bots.push(new Bot(spawn.x, spawn.y, type, startingPts));
         }
         
-        // REBALANCED ORB COUNT: 3,000 total (allows for better spacing)
         for(let i = 0; i < 3000; i++) {
             const x = Math.random() * this.worldSize;
             const y = Math.random() * this.worldSize;
@@ -763,7 +751,6 @@ export class GameEngine {
             this.bots = [...this.teammates]; 
         }
 
-        // REBALANCED ORBS
         for(let i = 0; i < 3000; i++) {
             this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
         }
@@ -793,14 +780,10 @@ export class GameEngine {
                     if (b.c) bot.color = b.c;
                     
                     if (b.u && typeof bot.applyUpgrade === 'function') {
-                        if (!bot.upgrades) {
-                            bot.upgrades = {};
-                        }
+                        if (!bot.upgrades) bot.upgrades = {};
                         for (let key in b.u) {
                             let hostTier = b.u[key];
-                            for(let i = 0; i < hostTier; i++) {
-                                bot.applyUpgrade(key);
-                            }
+                            for(let i = 0; i < hostTier; i++) bot.applyUpgrade(key);
                         }
                     }
                     bot.upgradeProgress = -999999; 
@@ -834,9 +817,8 @@ export class GameEngine {
                         }
                         
                         bot.upgradeProgress = -999999; 
-                        if (bd.d && !bot.isDead) {
-                            this.processDeath(bot, null); 
-                        }
+                        if (bd.d && !bot.isDead) this.processDeath(bot, null); 
+                        
                     } else if (!bd.d) {
                         let newBot = new Bot(bd.x, bd.y, bd.type, 0);
                         newBot.id = bd.id;
@@ -848,9 +830,7 @@ export class GameEngine {
                         if (bd.u && typeof newBot.applyUpgrade === 'function') {
                             for (let key in bd.u) {
                                 let hostTier = bd.u[key];
-                                for(let i = 0; i < hostTier; i++) {
-                                    newBot.applyUpgrade(key);
-                                }
+                                for(let i = 0; i < hostTier; i++) newBot.applyUpgrade(key);
                             }
                         }
                         newBot.upgradeProgress = -999999; 
@@ -880,9 +860,7 @@ export class GameEngine {
                     
                     for (let s = 0; s < totalShots; s++) {
                         let finalAngle = startAngle + (s * spreadAngle);
-                        if (data.type === 'triangle') {
-                            finalAngle += (Math.random() - 0.5) * 0.15;
-                        }
+                        if (data.type === 'triangle') finalAngle += (Math.random() - 0.5) * 0.15;
                         this.fireProjectile(tm, finalAngle);
                     }
                 }
@@ -890,9 +868,7 @@ export class GameEngine {
 
             window.gameSocket.on('teammateDied', (data) => {
                 let tm = this.teammates.find(t => t.remoteId === data.id);
-                if (tm && !tm.isDead) {
-                    this.processDeath(tm, null); 
-                }
+                if (tm && !tm.isDead) this.processDeath(tm, null); 
             });
         }
 
@@ -901,13 +877,9 @@ export class GameEngine {
         this.camera.x = spawnX;
         this.camera.y = spawnY;
         
-        if (players.length <= 2) {
-            this.introStartZoom = 0.8;
-        } else if (players.length === 3) {
-            this.introStartZoom = 0.65;
-        } else {
-            this.introStartZoom = 0.5;
-        }
+        if (players.length <= 2) this.introStartZoom = 0.8;
+        else if (players.length === 3) this.introStartZoom = 0.65;
+        else this.introStartZoom = 0.5;
         
         this.cameraZoom = this.introStartZoom;
 
@@ -957,9 +929,7 @@ export class GameEngine {
             const li = document.createElement('li'); 
             let displayPts = p.points >= 1000 ? (p.points / 1000).toFixed(1) + 'k' : Math.floor(p.points);
             li.innerText = `#${index + 1} ${p.isPlayer ? "YOU" : p.name} - ${displayPts} Pts`;
-            if (p === this.player) {
-                li.style.color = '#00ffcc';
-            }
+            if (p === this.player) li.style.color = '#00ffcc';
             list.appendChild(li);
         });
     }
@@ -1049,9 +1019,7 @@ export class GameEngine {
         }
         
         const ui = document.getElementById('upgrade-ui');
-        if (ui) {
-            ui.classList.remove('hidden');
-        }
+        if (ui) ui.classList.remove('hidden');
     }
 
     selectUpgrade(index) {
@@ -1063,58 +1031,55 @@ export class GameEngine {
         this.updateUpgradeBadges(); 
         
         const ui = document.getElementById('upgrade-ui');
-        if (ui) {
-            ui.classList.add('hidden');
-        }
+        if (ui) ui.classList.add('hidden');
         
         this.isChoosingUpgrade = false; 
         this.pendingUpgrades--;
         
-        if (this.pendingUpgrades > 0) {
-            setTimeout(() => this.showNextUpgrade(), 200); 
-        }
+        if (this.pendingUpgrades > 0) setTimeout(() => this.showNextUpgrade(), 200); 
     }
 
-    // RESTORED OLD CLASS TOGGLING
-    checkAccountLevelUp() {
-        let xpRequired = window.globalAccountLevel * 1000;
-        let leveledUp = false;
+    // --- UPGRADE READY NOTIFICATION FIXED ---
+    triggerUpgradeReady() {
+        if (this.isDemo || this.isGameOver) return;
         
-        while (window.globalAccountXP >= xpRequired) {
-            window.globalAccountLevel++; 
-            window.globalAccountXP -= xpRequired;
-            xpRequired = window.globalAccountLevel * 1000; 
-            leveledUp = true;
+        const xpBarContainer = document.querySelector('.xp-bar-container');
+        if (xpBarContainer) {
+            xpBarContainer.classList.add('level-up-flash');
+            setTimeout(() => xpBarContainer.classList.remove('level-up-flash'), 500);
+        }
+
+        if (!window.gameSettings || window.gameSettings.showNotifs !== false) {
+            const notif = document.getElementById('level-up-notif');
+            if (notif) {
+                sounds.play('upgrade_ready', 'alert'); 
+                
+                notif.classList.remove('hidden', 'fade-out', 'show'); 
+                notif.classList.add('active'); 
+                
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        notif.classList.add('show');
+                    });
+                });
+                
+                if (this.levelUpTimeout) {
+                    clearTimeout(this.levelUpTimeout);
+                }
+                
+                this.levelUpTimeout = setTimeout(() => {
+                    if(notif) {
+                        notif.classList.remove('show');
+                        setTimeout(() => notif.classList.remove('active'), 400); 
+                    }
+                }, 3000);
+            }
         }
         
-        if (leveledUp && !this.isDemo) {
-            if (!window.gameSettings || window.gameSettings.showNotifs !== false) {
-                const notif = document.getElementById('account-level-notif');
-                if (notif) {
-                    sounds.play('level_up', 'alert');
-                    document.getElementById('account-notif-level-num').innerText = window.globalAccountLevel;
-                    
-                    // Fixed CSS Animation Logic
-                    notif.classList.remove('hidden', 'fade-out', 'show'); 
-                    notif.classList.add('active'); 
-                    
-                    requestAnimationFrame(() => {
-                        requestAnimationFrame(() => {
-                            notif.classList.add('show');
-                        });
-                    });
-                    
-                    if (this.accountLevelUpTimeout) {
-                        clearTimeout(this.accountLevelUpTimeout);
-                    }
-                    this.accountLevelUpTimeout = setTimeout(() => {
-                        if(notif) {
-                            notif.classList.remove('show');
-                            setTimeout(() => notif.classList.remove('active'), 400);
-                        }
-                    }, 4000);
-                }
-            }
+        this.pendingUpgrades++; 
+        
+        if (!this.isChoosingUpgrade) {
+            this.showNextUpgrade();
         }
     }
 
@@ -1132,7 +1097,12 @@ export class GameEngine {
         if (victim.isDead) return;
         victim.isDead = true;
 
-        this.playSoundAt('enemy_death', victim.x, victim.y, 0.7); // Fixed sound name
+        if (victim === this.player) {
+            this.playSoundAt('player_death', victim.x, victim.y, 1.0, 'heavy');
+        } else {
+            this.playSoundAt('enemy_death', victim.x, victim.y, 0.7, 'heavy');
+        }
+        
         this.spawnParticles(victim.x, victim.y, victim.color, 30); 
         
         if (!this.isDemo && this.player && distance(this.player.x, this.player.y, victim.x, victim.y) < 500) {
@@ -1216,14 +1186,10 @@ export class GameEngine {
         this.spectateTarget = killer;
         
         const ui = document.getElementById('upgrade-ui');
-        if (ui) {
-            ui.classList.add('hidden'); 
-        }
+        if (ui) ui.classList.add('hidden'); 
 
         const mobileControls = document.getElementById('mobile-controls');
-        if (mobileControls) {
-            mobileControls.classList.add('hidden');
-        }
+        if (mobileControls) mobileControls.classList.add('hidden');
 
         const timeAlive = Math.floor((Date.now() - this.matchStartTime) / 1000);
         this.grantAccountXP(timeAlive * 2);
@@ -1239,14 +1205,10 @@ export class GameEngine {
         else if (rank % 10 === 3 && rank % 100 !== 13) suffix = "rd";
 
         const placementEl = document.getElementById('go-placement');
-        if (placementEl) {
-            placementEl.innerText = `${rank}${suffix}`;
-        }
+        if (placementEl) placementEl.innerText = `${rank}${suffix}`;
         
         const xpEl = document.getElementById('go-xp');
-        if (xpEl) {
-            xpEl.innerText = `+${this.matchXPEarned}`;
-        }
+        if (xpEl) xpEl.innerText = `+${this.matchXPEarned}`;
 
         window.lastMatchStats = {
             kills: this.player.kills || 0,
@@ -1278,25 +1240,17 @@ export class GameEngine {
     update() {
         this.frameCount++;
         
-        if (this.frameCount % 30 === 0) {
-            this.updateLeaderboard(); 
-        }
+        if (this.frameCount % 30 === 0) this.updateLeaderboard(); 
 
         let pointsGainedThisFrame = 0;
 
         if (this.screenShake > 0) {
             this.screenShake *= 0.9;
-            if (this.screenShake < 0.5) {
-                this.screenShake = 0;
-            }
+            if (this.screenShake < 0.5) this.screenShake = 0;
         }
 
         const allPlayers = (this.isDemo || this.isGameOver) ? [...this.bots] : [this.player, ...this.bots];
 
-        // ==========================================
-        // CONTINUOUS ORB SPAWNING (TARGETED TO KEEP ACTION HIGH!)
-        // 3000 Max Orbs. 60% chance to spawn near an existing player!
-        // ==========================================
         let desiredOrbs = this.isDemo ? 1000 : 3000;
         if (this.orbs.length < desiredOrbs) {
             let spawnCount = Math.min(100, desiredOrbs - this.orbs.length);
@@ -1305,7 +1259,7 @@ export class GameEngine {
                 if (Math.random() < 0.60 && allPlayers.length > 0) {
                     let refPlayer = allPlayers[Math.floor(Math.random() * allPlayers.length)];
                     let ang = Math.random() * Math.PI * 2;
-                    let dist = 300 + (Math.random() * 1700); // 300 to 2000 units away
+                    let dist = 300 + (Math.random() * 1700); 
                     ox = refPlayer.x + Math.cos(ang) * dist;
                     oy = refPlayer.y + Math.sin(ang) * dist;
                     ox = Math.max(0, Math.min(this.worldSize, ox));
@@ -1323,35 +1277,27 @@ export class GameEngine {
                 if (this.bots.length > 0) {
                     this.spectateTarget = this.bots.reduce((a, b) => a.points > b.points ? a : b);
                     const nameEl = document.getElementById('go-killer-name');
-                    if (nameEl) {
-                        nameEl.innerText = this.spectateTarget.name;
-                    }
+                    if (nameEl) nameEl.innerText = this.spectateTarget.name;
                 } else {
                     this.spectateTarget = null;
                 }
             }
         }
 
-        // ==========================================
-        // MASSIVE NEW ABILITIES LOGIC (Explosions, Lasers, Etc)
-        // ==========================================
         allPlayers.forEach(p => {
             if (p.isDead) return;
 
-            // --- ONE SHOT ABILITY TRIGGERS ---
             if (p.abilityTriggered) {
                 p.abilityTriggered = false;
                 
-                let vol = (p.isPlayer || distance(this.camera.x, this.camera.y, p.x, p.y) < 1500) ? 0.6 : 0;
+                let vol = (p.isPlayer || distance(this.camera.x, this.camera.y, p.x, p.y) < 1500) ? 1.0 : 0;
                 
                 if (p.activeAbility === 'bullet_nova') {
-                    for(let a=0; a<Math.PI*2; a+=Math.PI/18) {
-                        this.fireProjectile(p, a);
-                    }
+                    for(let a=0; a<Math.PI*2; a+=Math.PI/18) this.fireProjectile(p, a);
                     this.spawnParticles(p.x, p.y, '#00ffcc', 20);
                 }
                 else if (p.activeAbility === 'blink') {
-                    if (vol) this.playSoundAt('dash', p.x, p.y, vol);
+                    if (vol) this.playSoundAt('ability_blink', p.x, p.y, vol, 'ability');
                     this.spawnParticles(p.x, p.y, '#a855f7', 15);
                     p.x += Math.cos(p.angle) * 400;
                     p.y += Math.sin(p.angle) * 400;
@@ -1360,7 +1306,7 @@ export class GameEngine {
                     this.spawnParticles(p.x, p.y, '#a855f7', 15);
                 }
                 else if (p.activeAbility === 'emp') {
-                    if (vol) this.playSoundAt('ability_emp', p.x, p.y, vol); // Fixed sound name
+                    if (vol) this.playSoundAt('ability_emp', p.x, p.y, vol, 'ability');
                     this.spawnParticles(p.x, p.y, '#00ffff', 40);
                     if (p.isPlayer) this.screenShake = Math.max(this.screenShake, 15);
                     allPlayers.forEach(e => {
@@ -1374,14 +1320,13 @@ export class GameEngine {
                     });
                 }
                 else if (p.activeAbility === 'missile_swarm') {
-                    if (vol) this.playSoundAt('ability_missile', p.x, p.y, vol); // Fixed sound name
+                    if (vol) this.playSoundAt('ability_missile', p.x, p.y, vol, 'ability');
                     for(let i=-6; i<=6; i++) {
                         let proj = new Projectile(p.x, p.y, p.angle + (i * 0.15), p, true, false);
                         this.projectiles.push(proj);
                     }
                 }
                 else if (p.activeAbility === 'earthshatter') {
-                    if (vol) this.playSoundAt('ability_nuke', p.x, p.y, vol); // Fixed sound name
                     this.spawnParticles(p.x, p.y, '#ffaa00', 50);
                     if (p.isPlayer) this.screenShake = Math.max(this.screenShake, 25);
                     allPlayers.forEach(e => {
@@ -1394,13 +1339,27 @@ export class GameEngine {
                     });
                 }
                 else if (p.activeAbility === 'tactical_nuke') {
-                    if (vol) this.playSoundAt('ability_nuke', p.x, p.y, vol); // Fixed sound name
+                    if (vol) this.playSoundAt('ability_nuke', p.x, p.y, vol, 'ability');
                     let nuke = new Projectile(p.x, p.y, p.angle, p, false, true);
                     this.projectiles.push(nuke);
                 }
+                else if (p.activeAbility === 'railgun') {
+                    if (vol) this.playSoundAt('plasma_gun', p.x, p.y, vol, 'ability');
+                    if (p.isPlayer) this.screenShake = Math.max(this.screenShake, 20);
+                    
+                    let railProj = new Projectile(p.x, p.y, p.angle, p, false, false);
+                    railProj.isRailgun = true; 
+                    railProj.speed = 40;       
+                    railProj.pierce = 999;     
+                    railProj.damage = (p.baseDamage || 10) * 10; 
+                    railProj.color = '#ff00ff';
+                    railProj.sizeScale = 3.0;  
+                    railProj.life = 100;       
+                    
+                    this.projectiles.push(railProj);
+                }
             }
 
-            // --- CONTINUOUS ABILITY EFFECTS ---
             if (p.abilityTimer > 0) {
                 if (p.activeAbility === 'repulsor') {
                     allPlayers.forEach(e => {
@@ -1442,7 +1401,6 @@ export class GameEngine {
                 }
             }
         });
-
 
         if (this.stormActive && !this.isCinematicIntro) {
             this.stormRadius = Math.max(0, this.stormRadius - 0.4); 
@@ -1495,7 +1453,7 @@ export class GameEngine {
                     this.player.dash(dx, dy);
                     
                     if (preDashPts > this.player.points) { 
-                        sounds.play('dash', 0.4 * this.getVol());
+                        sounds.play('dash', 'combat', 0.4);
                         this.spawnParticles(this.player.x, this.player.y, '#ffffff', 8);
                         this.screenShake = Math.max(this.screenShake, 5); 
                     }
@@ -1539,9 +1497,6 @@ export class GameEngine {
 
             this.player.update();
 
-            // ==========================================
-            // NEW SAFE ZONE LOGIC WITH SOUND TRIGGERS
-            // ==========================================
             this.player.inSafeZone = false;
             for (let i = this.safeZones.length - 1; i >= 0; i--) {
                 let sz = this.safeZones[i];
@@ -1550,18 +1505,15 @@ export class GameEngine {
                 
                 let isInside = sz.update(this.player);
                 
-                // Play ticking sound EXACTLY when the countdown starts
                 if (prevState === 'idle' && sz.state === 'triggering') {
-                    this.playSoundAt('sz_tick', sz.x, sz.y, 0.6);
+                    this.playSoundAt('sz_tick', sz.x, sz.y, 0.6, 'alert');
                 } 
-                // Play a ticking sound precisely every second (60 frames)
                 else if (sz.state === 'triggering' && sz.triggerTimer % 60 === 0 && sz.triggerTimer !== prevTimer) {
-                    this.playSoundAt('sz_tick', sz.x, sz.y, 0.6);
+                    this.playSoundAt('sz_tick', sz.x, sz.y, 0.6, 'alert');
                 }
 
-                // Play the activation sound the exact moment it powers on
                 if (prevState !== 'active' && sz.state === 'active') {
-                    this.playSoundAt('sz_on', sz.x, sz.y, 1.0);
+                    this.playSoundAt('sz_on', sz.x, sz.y, 1.0, 'alert');
                 }
 
                 if (isInside) {
@@ -1573,7 +1525,7 @@ export class GameEngine {
                 
                 if (sz.state === 'active' && sz.lifeTimer <= 0) {
                     this.safeZones.splice(i, 1);
-                    this.safeZoneSpawnTimer = 1800; // 30 seconds wait!
+                    this.safeZoneSpawnTimer = 1800; 
                 }
             }
 
@@ -1602,7 +1554,7 @@ export class GameEngine {
             if (!this.isCinematicIntro) {
                 if (this.player.wantsShockwave) {
                     this.player.wantsShockwave = false;
-                    this.playSoundAt('enemy_death', this.player.x, this.player.y, 0.4); // Fixed sound name
+                    this.playSoundAt('take_damage', this.player.x, this.player.y, 0.4, 'heavy'); 
                     this.spawnParticles(this.player.x, this.player.y, '#ffcc00', 20); 
                     this.screenShake = Math.max(this.screenShake, 10);
                     
@@ -1710,7 +1662,7 @@ export class GameEngine {
 
             if (bot.wantsShockwave) {
                 bot.wantsShockwave = false;
-                this.playSoundAt('enemy_death', bot.x, bot.y, 0.4); // Fixed sound name
+                this.playSoundAt('take_damage', bot.x, bot.y, 0.4, 'heavy'); 
                 this.spawnParticles(bot.x, bot.y, '#ffcc00', 20); 
                 
                 if (!this.isDemo && this.player && distance(this.player.x, this.player.y, bot.x, bot.y) < 500) {
@@ -1809,6 +1761,7 @@ export class GameEngine {
                         if (!(p2.abilityTimer > 0 && (p2.activeAbility === 'shield' || p2.activeAbility === 'juggernaut'))) {
                             p2.health -= Math.max(1, dmg - (p2.plating * 2)); 
                             this.spawnParticles(p2.x, p2.y, '#ff4444', 5);
+                            this.playSoundAt('take_damage', p2.x, p2.y, 0.4, 'heavy');
                             if (p2 === this.player) this.screenShake = Math.max(this.screenShake, 8);
                         }
                         p1.spikeCooldown = 30; 
@@ -1822,6 +1775,7 @@ export class GameEngine {
                         if (!(p1.abilityTimer > 0 && (p1.activeAbility === 'shield' || p1.activeAbility === 'juggernaut'))) {
                             p1.health -= Math.max(1, dmg - (p1.plating * 2)); 
                             this.spawnParticles(p1.x, p1.y, '#ff4444', 5);
+                            this.playSoundAt('take_damage', p1.x, p1.y, 0.4, 'heavy');
                             if (p1 === this.player) this.screenShake = Math.max(this.screenShake, 8);
                         }
                         p2.spikeCooldown = 30;
@@ -1876,9 +1830,9 @@ export class GameEngine {
                         if (target.health < target.maxHealth * 0.5) dmg *= (1 + proj.owner.executioner);
                         target.health -= Math.max(1, dmg - (target.plating * 2));
                         
-                        this.playSoundAt('take_damage', target.x, target.y, 0.4); // Fixed sound name
+                        this.playSoundAt('take_damage', target.x, target.y, 0.3, 'heavy');
                         if (proj.owner === this.player) {
-                            sounds.play('hit_marker', 1.0 * this.getVol()); // Added satisfying hit tick
+                            sounds.play('hit_marker', 'combat', 1.0);
                         }
 
                         this.spawnParticles(proj.x, proj.y, proj.color, 4);
@@ -1889,7 +1843,7 @@ export class GameEngine {
                         }
                     } else {
                         this.spawnParticles(proj.x, proj.y, '#0096ff', 3);
-                        this.playSoundAt('take_damage', target.x, target.y, 0.1); // Fixed sound name
+                        this.playSoundAt('take_damage', target.x, target.y, 0.1, 'combat');
                     }
                     
                     if (proj.pierce > 0) { 
@@ -1950,7 +1904,7 @@ export class GameEngine {
             }
 
             if (collectedBy) {
-                if (collectedBy === this.player) sounds.play('xp_pickup', 0.4 * this.getVol()); // Fixed sound name
+                if (collectedBy === this.player) sounds.play('xp_pickup', 'pickup', 1.0, true); 
                 
                 if (orb.type === 'health') {
                     if (collectedBy.health < collectedBy.maxHealth) {
