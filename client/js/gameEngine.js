@@ -391,17 +391,26 @@ export class GameEngine {
             if (!window.gameSettings || window.gameSettings.showNotifs !== false) {
                 const notif = document.getElementById('account-level-notif');
                 if (notif) {
-                    sounds.play('level_up', 0.8 * this.getVol()); // Fixed sound name
+                    sounds.play('level_up', 'alert');
                     document.getElementById('account-notif-level-num').innerText = window.globalAccountLevel;
                     
-                    notif.classList.remove('hidden', 'fade-out'); 
+                    // Fixed CSS Animation Logic
+                    notif.classList.remove('hidden', 'fade-out', 'show'); 
+                    notif.classList.add('active'); 
+                    
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            notif.classList.add('show');
+                        });
+                    });
                     
                     if (this.accountLevelUpTimeout) {
                         clearTimeout(this.accountLevelUpTimeout);
                     }
                     this.accountLevelUpTimeout = setTimeout(() => {
                         if(notif) {
-                            notif.classList.add('fade-out');
+                            notif.classList.remove('show');
+                            setTimeout(() => notif.classList.remove('active'), 400);
                         }
                     }, 4000);
                 }
@@ -1067,38 +1076,45 @@ export class GameEngine {
     }
 
     // RESTORED OLD CLASS TOGGLING
-    triggerUpgradeReady() {
-        if (this.isDemo || this.isGameOver) return;
+    checkAccountLevelUp() {
+        let xpRequired = window.globalAccountLevel * 1000;
+        let leveledUp = false;
         
-        const xpBarContainer = document.querySelector('.xp-bar-container');
-        if (xpBarContainer) {
-            xpBarContainer.classList.add('level-up-flash');
-            setTimeout(() => xpBarContainer.classList.remove('level-up-flash'), 500);
+        while (window.globalAccountXP >= xpRequired) {
+            window.globalAccountLevel++; 
+            window.globalAccountXP -= xpRequired;
+            xpRequired = window.globalAccountLevel * 1000; 
+            leveledUp = true;
         }
-
-        if (!window.gameSettings || window.gameSettings.showNotifs !== false) {
-            const notif = document.getElementById('level-up-notif');
-            if (notif) {
-                sounds.play('upgrade_ready', 0.6 * this.getVol()); // Fixed sound name
-                
-                notif.classList.remove('hidden', 'fade-out'); 
-                
-                if (this.levelUpTimeout) {
-                    clearTimeout(this.levelUpTimeout);
-                }
-                
-                this.levelUpTimeout = setTimeout(() => {
-                    if(notif) {
-                        notif.classList.add('fade-out'); 
+        
+        if (leveledUp && !this.isDemo) {
+            if (!window.gameSettings || window.gameSettings.showNotifs !== false) {
+                const notif = document.getElementById('account-level-notif');
+                if (notif) {
+                    sounds.play('level_up', 'alert');
+                    document.getElementById('account-notif-level-num').innerText = window.globalAccountLevel;
+                    
+                    // Fixed CSS Animation Logic
+                    notif.classList.remove('hidden', 'fade-out', 'show'); 
+                    notif.classList.add('active'); 
+                    
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            notif.classList.add('show');
+                        });
+                    });
+                    
+                    if (this.accountLevelUpTimeout) {
+                        clearTimeout(this.accountLevelUpTimeout);
                     }
-                }, 3000);
+                    this.accountLevelUpTimeout = setTimeout(() => {
+                        if(notif) {
+                            notif.classList.remove('show');
+                            setTimeout(() => notif.classList.remove('active'), 400);
+                        }
+                    }, 4000);
+                }
             }
-        }
-        
-        this.pendingUpgrades++; 
-        
-        if (!this.isChoosingUpgrade) {
-            this.showNextUpgrade();
         }
     }
 
