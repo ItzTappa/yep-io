@@ -1734,7 +1734,7 @@ export class GameEngine {
 
             bot.updateBot(allPlayers, this.isCinematicIntro);
             
-            // NEW: NPC Wall Avoidance (Soft Repulsion)
+            // NPC Wall Avoidance (Soft Repulsion)
             let margin = 300;
             let avoidForce = 0.05;
             if (bot.x < margin) bot.vx += (margin - bot.x) * 0.002;
@@ -2289,6 +2289,19 @@ export class GameEngine {
                 if (b.isTeammate) drawDot(b.x, b.y, '#00ffcc', 3);
                 else drawDot(b.x, b.y, '#ff4444', 2);
             }
+        });
+
+        // NEW: DRAW SLOT MACHINES ON MINIMAP
+        this.slotMachines.forEach(sm => {
+            let flashColor = Math.floor(Date.now() / 250) % 2 === 0 ? '#ffe600' : '#ff00ff';
+            ctx.fillStyle = flashColor;
+            ctx.beginPath();
+            ctx.arc(sm.x * scale, sm.y * scale, 5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1;
+            ctx.stroke();
         });
 
         if (this.player && !this.player.isDead) {
