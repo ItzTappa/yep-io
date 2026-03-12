@@ -5,6 +5,11 @@ import { UPGRADE_POOL } from './upgrades.js';
 import { sounds } from './soundManager.js';
 import { lobbyUI } from './networkLobby.js';
 
+// INJECT MASTERY SKINS DYNAMICALLY SO THEY CAN BE EQUIPPED
+ITEMS_DB['mastery_triangle'] = { id: 'mastery_triangle', name: 'Jet Master', category: 'Skin', rarity: 5, value: 'mastery_gold', icon: '🌟' };
+ITEMS_DB['mastery_square'] = { id: 'mastery_square', name: 'Tank Master', category: 'Skin', rarity: 5, value: 'mastery_gold', icon: '🌟' };
+ITEMS_DB['mastery_circle'] = { id: 'mastery_circle', name: 'Soldier Master', category: 'Skin', rarity: 5, value: 'mastery_gold', icon: '🌟' };
+
 // ==========================================
 // 1. FIREBASE GLOBAL ACCOUNT SYSTEM
 // ==========================================
@@ -74,7 +79,7 @@ function resetLocalStats() {
     window.equippedItems = { Skin: null, Trail: null, Banner: null, Color: null };
     window.claimedItems = {};
     window.matchHistory = [];
-    window.lifetimeStats = { matches: 0, kills: 0, time: 0, points: 0, distance: 0 };
+    window.lifetimeStats = { matches: 0, kills: 0, time: 0, points: 0, distance: 0, classKills: { triangle: 0, square: 0, circle: 0 } };
     window.myFriends = [];
     window.myRequests = [];
     window.myInvites = [];
@@ -100,7 +105,7 @@ async function listenToUserData(uid) {
             window.globalAccountXP = data.xp || 0;
             window.globalAccountLevel = data.level || 1;
             
-            // 🚨 SAFEGUARD: Ensure equippedItems is always a valid object
+            // 🚨 SAFEGUARD: Ensure equippedItems is always a valid object, even if database is corrupted
             if (data.equipped && typeof data.equipped === 'object') {
                 window.equippedItems = data.equipped;
             } else {
@@ -109,7 +114,7 @@ async function listenToUserData(uid) {
             
             window.claimedItems = data.unlocked || {};
             window.matchHistory = data.history || [];
-            window.lifetimeStats = data.stats || { matches: 0, kills: 0, time: 0, points: 0, distance: 0 };
+            window.lifetimeStats = data.stats || { matches: 0, kills: 0, time: 0, points: 0, distance: 0, classKills: { triangle: 0, square: 0, circle: 0 } };
             
             window.myFriends = data.friends || [];
             window.myRequests = data.requestsIn || [];
@@ -184,11 +189,6 @@ window.gameSettings = JSON.parse(localStorage.getItem('yepio_settings')) || {
     volume: 1.0, showLeaderboard: true, showBadges: true, showNotifs: true, showMinimap: true,
     keybinds: { up: 'w', down: 's', left: 'a', right: 'd', dash: ' ', ability: 'e' }
 };
-
-// Sync audio manager volume on boot
-if (sounds && sounds.setVolume) {
-    sounds.setVolume(window.gameSettings.volume);
-}
 
 window.hourlyStats = { kills: 0, time: 0, points: 0, distance: 0 };
 
@@ -400,9 +400,11 @@ async function joinLobbyByCode(code, sourceBtn) {
         const snap = await getDoc(doc(db, "lobbies", code));
         
         if (!snap.exists()) {
-            if (sounds) sounds.play('ui_error', 'ui');
+            if (sounds && sounds.play) sounds.play('ui_error', 'ui');
             sourceBtn.innerText = "NOT FOUND!";
-            setTimeout(() => { sourceBtn.innerText = originalText; }, 2000);
+            setTimeout(() => {
+                sourceBtn.innerText = originalText;
+            }, 2000);
             return false;
         }
         
@@ -410,16 +412,20 @@ async function joinLobbyByCode(code, sourceBtn) {
         const max = data.mode === 'duos' ? 2 : data.mode === 'trios' ? 3 : 4;
         
         if (data.players.length >= max) {
-            if (sounds) sounds.play('ui_error', 'ui');
+            if (sounds && sounds.play) sounds.play('ui_error', 'ui');
             sourceBtn.innerText = "LOBBY FULL!";
-            setTimeout(() => { sourceBtn.innerText = originalText; }, 2000);
+            setTimeout(() => {
+                sourceBtn.innerText = originalText;
+            }, 2000);
             return false;
         }
         
         if (data.inGame) {
-            if (sounds) sounds.play('ui_error', 'ui');
+            if (sounds && sounds.play) sounds.play('ui_error', 'ui');
             sourceBtn.innerText = "IN MATCH!";
-            setTimeout(() => { sourceBtn.innerText = originalText; }, 2000);
+            setTimeout(() => {
+                sourceBtn.innerText = originalText;
+            }, 2000);
             return false;
         }
 
@@ -445,9 +451,11 @@ async function joinLobbyByCode(code, sourceBtn) {
         
     } catch(e) {
         console.error(e);
-        if (sounds) sounds.play('ui_error', 'ui');
+        if (sounds && sounds.play) sounds.play('ui_error', 'ui');
         sourceBtn.innerText = "ERROR!";
-        setTimeout(() => { sourceBtn.innerText = originalText; }, 2000);
+        setTimeout(() => {
+            sourceBtn.innerText = originalText;
+        }, 2000);
         return false;
     }
 }
@@ -482,6 +490,61 @@ document.addEventListener('mouseover', (e) => {
         }
     }
 });
+
+// Class Mastery Modal Logic
+function openMasteryModal(cls) {
+    if (sounds && sounds.play) sounds.play('ui_click', 'ui');
+    let kills = (window.lifetimeStats && window.lifetimeStats.classKills && window.lifetimeStats.classKills[cls]) || 0;
+    
+    let className = cls === 'triangle' ? 'JET' : cls === 'square' ? 'TANK' : 'SOLDIER';
+    document.getElementById('mastery-title').innerText = `${className} MASTERY`;
+    document.getElementById('mastery-progress-text').innerText = `${kills} / 1000 Kills`;
+    document.getElementById('mastery-bar').style.width = `${Math.min(100, (kills/1000)*100)}%`;
+
+    let claimBtn = document.getElementById('claim-mastery-btn');
+    let equipBtn = document.getElementById('equip-mastery-btn');
+    let skinId = `mastery_${cls}`;
+
+    claimBtn.classList.add('hidden');
+    equipBtn.classList.add('hidden');
+
+    if (window.claimedItems && window.claimedItems[skinId]) {
+        equipBtn.classList.remove('hidden');
+        if (window.equippedItems && window.equippedItems.Skin === skinId) {
+            equipBtn.innerText = "✓ EQUIPPED";
+        } else {
+            equipBtn.innerText = "EQUIP SKIN";
+            equipBtn.onclick = () => {
+                window.equippedItems.Skin = skinId;
+                saveUserData();
+                refreshAllUIs();
+                equipBtn.innerText = "✓ EQUIPPED";
+                if (sounds && sounds.play) sounds.play('ui_ready', 'ui');
+            };
+        }
+    } else if (kills >= 1000) {
+        claimBtn.classList.remove('hidden');
+        claimBtn.innerText = "CLAIM MASTERY SKIN";
+        claimBtn.onclick = () => {
+            window.claimedItems[skinId] = true;
+            saveUserData();
+            refreshAllUIs();
+            claimBtn.classList.add('hidden');
+            equipBtn.classList.remove('hidden');
+            equipBtn.innerText = "EQUIP SKIN";
+            if (sounds && sounds.play) sounds.play('ui_claim', 'ui');
+            equipBtn.onclick = () => {
+                window.equippedItems.Skin = skinId;
+                saveUserData();
+                refreshAllUIs();
+                equipBtn.innerText = "✓ EQUIPPED";
+            };
+        };
+    }
+    
+    document.getElementById('mastery-modal').classList.remove('hidden');
+}
+
 
 document.addEventListener('click', async (e) => {
     const target = e.target;
@@ -518,6 +581,10 @@ document.addEventListener('click', async (e) => {
         document.getElementById('friend-profile-view').classList.add('hidden');
         return;
     }
+    if (target.id === 'close-mastery-btn') {
+        document.getElementById('mastery-modal').classList.add('hidden');
+        return;
+    }
 
     // Back to Friends list from Friend Profile
     if (target.id === 'back-to-friends-btn') {
@@ -545,7 +612,7 @@ document.addEventListener('click', async (e) => {
     // Manual Join by Code
     if (target.id === 'join-lobby-btn') {
         if (!selectedClass) {
-            if (sounds) sounds.play('ui_error', 'ui');
+            if (sounds && sounds.play) sounds.play('ui_error', 'ui');
             document.querySelector('.tab-btn[data-target="lobby"]').click();
             const info = document.getElementById('class-info');
             info.innerText = "PLEASE SELECT A CLASS FIRST!";
@@ -561,7 +628,7 @@ document.addEventListener('click', async (e) => {
         if (codeInput.length === 5) {
             joinLobbyByCode(codeInput.toUpperCase(), target);
         } else {
-            if (sounds) sounds.play('ui_error', 'ui');
+            if (sounds && sounds.play) sounds.play('ui_error', 'ui');
         }
         return;
     }
@@ -635,12 +702,12 @@ document.addEventListener('click', async (e) => {
         const errorText = document.getElementById('acc-error');
         
         if (user.length < 3) { 
-            if (sounds) sounds.play('ui_error', 'ui');
+            if (sounds && sounds.play) sounds.play('ui_error', 'ui');
             errorText.innerText = "Username must be at least 3 chars!"; 
             return; 
         }
         if (pass.length < 6) { 
-            if (sounds) sounds.play('ui_error', 'ui');
+            if (sounds && sounds.play) sounds.play('ui_error', 'ui');
             errorText.innerText = "Password must be at least 6 chars!"; 
             return; 
         }
@@ -653,7 +720,7 @@ document.addEventListener('click', async (e) => {
                 document.getElementById('account-modal').classList.add('hidden');
             })
             .catch((error) => {
-                if (sounds) sounds.play('ui_error', 'ui');
+                if (sounds && sounds.play) sounds.play('ui_error', 'ui');
                 errorText.style.color = "#ff4444";
                 if(error.code === 'auth/email-already-in-use') {
                     errorText.innerText = "Username already taken!";
@@ -671,7 +738,7 @@ document.addEventListener('click', async (e) => {
         const errorText = document.getElementById('acc-error');
         
         if (!user || !pass) { 
-            if (sounds) sounds.play('ui_error', 'ui');
+            if (sounds && sounds.play) sounds.play('ui_error', 'ui');
             errorText.innerText = "Please enter username and password!"; 
             return; 
         }
@@ -684,7 +751,7 @@ document.addEventListener('click', async (e) => {
                 document.getElementById('account-modal').classList.add('hidden');
             })
             .catch((error) => {
-                if (sounds) sounds.play('ui_error', 'ui');
+                if (sounds && sounds.play) sounds.play('ui_error', 'ui');
                 errorText.style.color = "#ff4444";
                 errorText.innerText = "Incorrect username or password!";
             });
@@ -719,7 +786,7 @@ document.addEventListener('click', async (e) => {
         
         if (!targetName) return;
         if (targetName === currentUser) { 
-            if (sounds) sounds.play('ui_error', 'ui');
+            if (sounds && sounds.play) sounds.play('ui_error', 'ui');
             msg.innerText = "You can't add yourself!"; 
             msg.style.color = "#ff4444"; 
             return; 
@@ -732,7 +799,7 @@ document.addEventListener('click', async (e) => {
         const snap = await getDocs(q);
         
         if (snap.empty) {
-            if (sounds) sounds.play('ui_error', 'ui');
+            if (sounds && sounds.play) sounds.play('ui_error', 'ui');
             msg.innerText = "Player not found!";
             msg.style.color = "#ff4444";
         } else {
@@ -740,7 +807,7 @@ document.addEventListener('click', async (e) => {
             const targetUid = targetDoc.id;
             
             if (window.myFriends.includes(targetUid)) {
-                if (sounds) sounds.play('ui_error', 'ui');
+                if (sounds && sounds.play) sounds.play('ui_error', 'ui');
                 msg.innerText = "Already friends!";
                 msg.style.color = "#ff4444";
                 return;
@@ -754,7 +821,7 @@ document.addEventListener('click', async (e) => {
                 msg.style.color = "#00ffcc";
                 searchInput.value = "";
             } catch(e) {
-                if (sounds) sounds.play('ui_error', 'ui');
+                if (sounds && sounds.play) sounds.play('ui_error', 'ui');
                 msg.innerText = "Error sending request.";
                 msg.style.color = "#ff4444";
             }
@@ -798,7 +865,7 @@ document.addEventListener('click', async (e) => {
         
         // Protect from joining without a class
         if (!selectedClass) {
-            if (sounds) sounds.play('ui_error', 'ui');
+            if (sounds && sounds.play) sounds.play('ui_error', 'ui');
             document.querySelector('.tab-btn[data-target="lobby"]').click();
             document.getElementById('account-modal').classList.add('hidden');
             const info = document.getElementById('class-info');
@@ -821,11 +888,10 @@ document.addEventListener('click', async (e) => {
         if (joined) {
             const notifBox = target.closest('.notif-box');
             if (notifBox) {
-                notifBox.classList.remove('show');
+                notifBox.classList.add('fade-out');
                 setTimeout(() => {
-                    notifBox.classList.remove('active');
                     notifBox.remove();
-                }, 400);
+                }, 500);
             }
             if (auth.currentUser) {
                 await updateDoc(doc(db, "users", auth.currentUser.uid), {
@@ -879,7 +945,7 @@ document.addEventListener('click', async (e) => {
                 }, 1000);
 
             } catch(e) {
-                if (sounds) sounds.play('ui_error', 'ui');
+                if (sounds && sounds.play) sounds.play('ui_error', 'ui');
                 inviteBtn.innerText = "ERROR!";
                 setTimeout(() => { 
                     inviteBtn.innerText = "INVITE TO MULTIPLAYER"; 
@@ -891,27 +957,34 @@ document.addEventListener('click', async (e) => {
 
     // Class Selection
     if (target.classList.contains('class-btn')) {
-        document.querySelectorAll('.class-btn').forEach(b => b.classList.remove('active'));
-        target.classList.add('active');
-        selectedClass = target.dataset.class;
+        let clickedClass = target.dataset.class;
         
-        broadcastLobbyUpdate(); 
-        
-        const info = document.getElementById('class-info');
-        if (info) {
-            if (selectedClass === 'triangle') info.innerText = "JET: Fast & agile. Lower health. Good for hit-and-run.";
-            if (selectedClass === 'square') info.innerText = "TANK: High health, slow speed. Excels in close-quarters brawls.";
-            if (selectedClass === 'circle') info.innerText = "SOLDIER: Balanced speed and health. The perfect all-rounder.";
+        if (selectedClass === clickedClass) {
+            // If they double click their active class, open mastery!
+            openMasteryModal(clickedClass);
+        } else {
+            document.querySelectorAll('.class-btn').forEach(b => b.classList.remove('active'));
+            target.classList.add('active');
+            selectedClass = clickedClass;
             
-            info.style.color = "var(--accent)";
-            info.classList.remove('hidden', 'fade-out');
+            broadcastLobbyUpdate(); 
             
-            if (window.classInfoTimeout) {
-                clearTimeout(window.classInfoTimeout);
+            const info = document.getElementById('class-info');
+            if (info) {
+                if (selectedClass === 'triangle') info.innerText = "JET: Fast & agile. Lower health. Good for hit-and-run.";
+                if (selectedClass === 'square') info.innerText = "TANK: High health, slow speed. Excels in close-quarters brawls.";
+                if (selectedClass === 'circle') info.innerText = "SOLDIER: Balanced speed and health. The perfect all-rounder.";
+                
+                info.style.color = "var(--accent)";
+                info.classList.remove('hidden', 'fade-out');
+                
+                if (window.classInfoTimeout) {
+                    clearTimeout(window.classInfoTimeout);
+                }
+                window.classInfoTimeout = setTimeout(() => { 
+                    info.classList.add('fade-out'); 
+                }, 4000);
             }
-            window.classInfoTimeout = setTimeout(() => { 
-                info.classList.add('fade-out'); 
-            }, 4000);
         }
     }
 
@@ -931,6 +1004,16 @@ document.addEventListener('click', async (e) => {
         } else {
             const item = ITEMS_DB[itemId];
             if (item) {
+                // Lock Mastery Skins to their class
+                if (item.id.startsWith('mastery_')) {
+                    if (selectedClass && item.id !== `mastery_${selectedClass}`) {
+                        if (sounds && sounds.play) sounds.play('ui_error', 'ui');
+                        equipBtn.innerText = "WRONG CLASS!";
+                        setTimeout(() => equipBtn.innerText = "EQUIP", 2000);
+                        return;
+                    }
+                }
+
                 if (window.equippedItems[item.category] === itemId) {
                     window.equippedItems[item.category] = null; 
                 } else {
@@ -979,7 +1062,7 @@ document.addEventListener('click', async (e) => {
         const targetTab = target.dataset.target;
         
         if (targetTab === 'multiplayer' && !selectedClass) {
-            if (sounds) sounds.play('ui_error', 'ui');
+            if (sounds && sounds.play) sounds.play('ui_error', 'ui');
             const info = document.getElementById('class-info');
             if (info) {
                 info.innerText = "PLEASE SELECT A CLASS FIRST!";
@@ -1438,7 +1521,7 @@ async function renderFriendsUI() {
     }
 }
 
-// EXACT RESTORE OF THE OLD SLIDE-IN NOTIFICATION LOGIC
+// RESTORED OLD FADE-OUT NOTIFICATION
 function showInviteNotification(senderName, code, hostUid) {
     const queue = document.getElementById('notif-queue');
     const template = document.getElementById('invite-template');
@@ -1447,11 +1530,7 @@ function showInviteNotification(senderName, code, hostUid) {
 
     const clone = template.cloneNode(true);
     clone.id = "";
-    
-    // Fix: Remove standard hidden classes and add 'active' so display:flex kicks in
-    clone.classList.remove('hidden', 'fade-out', 'show');
-    clone.classList.add('active'); 
-    
+    clone.classList.remove('hidden', 'fade-out');
     clone.querySelector('.invite-sender-name').innerText = `From: ${senderName}`;
     
     const btn = clone.querySelector('.accept-invite-btn');
@@ -1461,24 +1540,16 @@ function showInviteNotification(senderName, code, hostUid) {
     
     queue.appendChild(clone);
     
-    // Double requestAnimationFrame ensures browser paints the flexbox before adding transform
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            clone.classList.add('show');
-        });
-    });
-    
     if(sounds && sounds.play) {
         sounds.play('notification', 'alert');
     }
 
     setTimeout(() => {
         if(clone.parentNode) {
-            clone.classList.remove('show');
+            clone.classList.add('fade-out');
             setTimeout(() => {
-                clone.classList.remove('active');
                 clone.remove();
-            }, 400);
+            }, 500);
         }
     }, 15000);
 }
@@ -1737,6 +1808,10 @@ document.getElementById('close-settings-btn').addEventListener('click', () => {
 
     localStorage.setItem('yepio_settings', JSON.stringify(window.gameSettings));
 
+    if (sounds && sounds.setVolume) {
+        sounds.setVolume(window.gameSettings.volume);
+    }
+
     const fpsDisplay = document.getElementById('fps-display');
     if (fpsDisplay) {
         if (window.gameSettings.showFps) {
@@ -1854,6 +1929,17 @@ document.getElementById('return-lobby-btn').addEventListener('click', () => {
         window.lifetimeStats.time += window.lastMatchStats.time || 0;
         window.lifetimeStats.points += window.lastMatchStats.points || 0;
         window.lifetimeStats.distance += window.lastMatchStats.distance || 0;
+
+        // CLASS KILLS TRACKING FOR MASTERY
+        if (!window.lifetimeStats.classKills) {
+            window.lifetimeStats.classKills = { triangle: 0, square: 0, circle: 0 };
+        }
+        if (window.lastMatchStats.playerClass) {
+            let cls = window.lastMatchStats.playerClass.toLowerCase();
+            if (window.lifetimeStats.classKills[cls] !== undefined) {
+                window.lifetimeStats.classKills[cls] += (window.lastMatchStats.kills || 0);
+            }
+        }
         
         window.matchHistory.unshift(window.lastMatchStats);
         if (window.matchHistory.length > 20) {
@@ -2139,5 +2225,3 @@ try {
 } catch(e) {
     console.error("Initial render error:", e);
 }
-
-// Hello
