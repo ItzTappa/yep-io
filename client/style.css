@@ -333,7 +333,9 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 /* ==========================================
    RESTORED NOTIFICATION QUEUE STYLING
 ========================================== */
-#notif-queue { position: absolute; bottom: 90px; left: 20px; display: flex; flex-direction: column-reverse; gap: 15px; align-items: flex-start; z-index: 150; pointer-events: none; }
+
+/* DROPPED THE BOTTOM VALUE DOWN TO EXACTLY MATCH THE MIDDLE OF THE CARDS */
+#notif-queue { position: absolute; bottom: 60px; left: 20px; display: flex; flex-direction: column-reverse; gap: 15px; align-items: flex-start; z-index: 150; pointer-events: none; }
 
 .notif-box { 
     display: none; 
@@ -433,7 +435,8 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
     #minimap-canvas { width: 100px; height: 100px; }
     #player-count-display { font-size: 0.9rem; padding: 4px; }
     
-    #notif-queue { bottom: 65px; left: 10px; transform: scale(0.8); transform-origin: bottom left; }
+    /* DROPPED NOTIFICATIONS DOWN FOR MOBILE TOO */
+    #notif-queue { bottom: 40px; left: 10px; transform: scale(0.8); transform-origin: bottom left; }
     .notif-box { padding: 10px 20px; }
     .notif-text { font-size: 0.85rem; }
     .notif-level { font-size: 1rem; }
