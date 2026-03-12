@@ -330,10 +330,40 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 #minimap-canvas { width: 100%; height: 220px; display: block; }
 #player-count-display { text-align: center; padding: 8px; font-weight: bold; color: var(--accent); background: rgba(0,0,0,0.8); border-top: 2px solid #444; font-size: 1.2rem; letter-spacing: 2px; }
 
+
 /* ==========================================
-   COMPACT SLOT MACHINE HUD UI
+   ALIGNMENT: NOTIFS (LEFT), UPGRADES (CENTER), SLOT (RIGHT)
 ========================================== */
+
+#notif-queue { 
+    position: absolute; 
+    bottom: 40px; /* ALIGNED WITH UPGRADES & SLOT MACHINE */
+    left: 20px; 
+    display: flex; 
+    flex-direction: column-reverse; 
+    gap: 15px; 
+    align-items: flex-start; 
+    z-index: 150; 
+    pointer-events: none; 
+}
+
+#upgrade-ui { 
+    position: absolute; 
+    bottom: 40px; /* ALIGNED HORIZONTALLY */
+    left: 50%; 
+    transform: translateX(-50%); 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    gap: 15px; 
+    z-index: 100; 
+    pointer-events: none; 
+}
+
 #slot-machine-ui {
+    position: absolute; 
+    bottom: 40px; /* ALIGNED HORIZONTALLY */
+    right: 20px;
     width: 220px;
     background: linear-gradient(135deg, #222, #111);
     border: 2px solid var(--accent);
@@ -342,11 +372,18 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
     text-align: center;
     box-shadow: 0 0 15px rgba(255, 230, 0, 0.3);
     pointer-events: auto;
-    position: relative;
-    margin-top: 5px;
     transition: opacity 0.3s ease-out;
+    z-index: 100;
+    
+    /* This ensures that when the result text is injected, it expands UPWARDS */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
 }
 
+/* ==========================================
+   COMPACT SLOT MACHINE HUD UI COMPONENTS
+========================================== */
 .hud-slot-title {
     font-size: 1.2rem;
     color: var(--accent);
@@ -381,10 +418,7 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
     transition: background 0.2s, box-shadow 0.2s;
 }
 
-/* The color spin animation */
-.reel.spinning {
-    animation: slotColorSpin 0.15s linear infinite;
-}
+.reel.spinning { animation: slotColorSpin 0.15s linear infinite; }
 
 @keyframes slotColorSpin {
     0%   { background: #cd7f32; box-shadow: inset 0 20px 5px -10px rgba(255,255,255,0.4); }
@@ -395,7 +429,6 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
     100% { background: #cd7f32; }
 }
 
-/* The Physical Lever */
 .hud-slot-lever {
     position: absolute;
     right: -15px;
@@ -438,9 +471,6 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
     line-height: 1.2;
 }
 
-/* NOTIFICATION QUEUE STYLING */
-#notif-queue { position: absolute; bottom: 60px; left: 20px; display: flex; flex-direction: column-reverse; gap: 15px; align-items: flex-start; z-index: 150; pointer-events: none; }
-
 .notif-box { 
     display: none; 
     padding: 12px 25px; 
@@ -464,8 +494,6 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 .notif-level { font-size: 1.2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); }
 .notif-season .notif-level { color: #000; text-shadow: none; }
 
-/* UPGRADES */
-#upgrade-ui { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 100; pointer-events: none; }
 .upgrade-header { background: rgba(0, 0, 0, 0.7); padding: 5px 20px; border-radius: 20px; color: var(--accent); font-weight: bold; letter-spacing: 2px; font-size: 0.9rem; border: 1px solid var(--accent); }
 .upgrade-cards { display: flex; gap: 20px; }
 .card { background: rgba(20, 20, 25, 0.9); border: 2px solid #444; border-radius: 10px; width: 200px; padding: 15px; text-align: center; position: relative; box-shadow: 0 10px 20px rgba(0,0,0,0.5); transition: border-color 0.2s, box-shadow 0.2s; cursor: pointer; pointer-events: auto; }
@@ -580,8 +608,8 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
     .xp-bar-container { top: max(10px, env(safe-area-inset-top)); width: 50%; height: 16px; }
     #level-display { font-size: 0.7rem; }
     #fps-display { bottom: auto; top: max(10px, env(safe-area-inset-bottom)); left: 10px; font-size: 0.7rem; padding: 4px 8px; }
-    .upgrade-badges-container { top: calc(max(10px, env(safe-area-inset-top)) + 45px); left: 10px; transform: scale(0.8); transform-origin: top left; }
     
+    .upgrade-badges-container { top: calc(max(10px, env(safe-area-inset-top)) + 45px); left: 10px; transform: scale(0.8); transform-origin: top left; }
     .right-hud-column { top: calc(max(10px, env(safe-area-inset-top)) + 45px); right: 10px; gap: 10px; }
     .leaderboard { width: 110px; padding: 8px; background: rgba(0,0,0,0.7); }
     .leaderboard h3 { font-size: 0.7rem; margin-bottom: 5px; }
@@ -591,17 +619,18 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
     #minimap-canvas { width: 100px; height: 100px; }
     #player-count-display { font-size: 0.9rem; padding: 4px; }
     
-    #notif-queue { bottom: 40px; left: 10px; transform: scale(0.8); transform-origin: bottom left; }
+    #notif-queue { bottom: 20px; left: 10px; transform: scale(0.8); transform-origin: bottom left; }
     .notif-box { padding: 10px 20px; }
     .notif-text { font-size: 0.85rem; }
     .notif-level { font-size: 1rem; }
     
-    #upgrade-ui { top: auto; bottom: 20px; transform: translateX(-50%); width: 95%; max-width: 500px; z-index: 2000; }
+    #upgrade-ui { bottom: 20px; transform: translateX(-50%); width: 95%; max-width: 500px; z-index: 2000; }
     .upgrade-cards { flex-direction: row; gap: 8px; justify-content: center; width: 100%; }
     .card { flex: 1; padding: 12px 5px; margin: 0; min-height: 90px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; }
     .card-title { font-size: 0.85rem; margin-top: 0; margin-bottom: 2px; text-shadow: 1px 1px 2px black;}
     .card-desc { font-size: 0.65rem; line-height: 1.2; padding: 0 5px; }
     .card-key { display: none; }
+    
     #game-over-screen h2 { font-size: 2.2rem; margin-bottom: 5px; }
     .killed-by { font-size: 0.9rem; margin-bottom: 15px; padding: 8px 15px; }
     .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 1rem; padding: 15px 20px; margin-bottom: 15px; }
@@ -655,7 +684,7 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
     .fullscreen-preview-box canvas { width: 250px; height: 250px; }
 
     /* HUD Slot Machine Mobile */
-    #slot-machine-ui { width: 110px; padding: 5px; }
+    #slot-machine-ui { bottom: 20px; right: 10px; width: 110px; padding: 5px; }
     .hud-slot-title { font-size: 0.8rem; margin-bottom: 5px; }
     .slot-reels { gap: 5px; padding: 5px; margin-bottom: 2px; }
     .reel { width: 20px; height: 25px; }
