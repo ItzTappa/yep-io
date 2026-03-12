@@ -28,12 +28,10 @@ export class GameEngine {
         this.safeZones = [];
         this.safeZoneSpawnTimer = 0;
 
-        // --- NEW MAP INTERACTABLES ---
         this.pads = [];
         this.asteroids = [];
         this.slotMachineEntity = null;
         
-        // --- SLOT MACHINE UI STATE ---
         this.slotMachineActive = false;
         this.slotMachineTick = 0;
         
@@ -441,7 +439,6 @@ export class GameEngine {
         }
     }
 
-    // --- NEW: KILL FEED DISPATCHER ---
     addKillFeed(killer, victim) {
         if (window.gameSettings && window.gameSettings.showNotifs === false) return;
         
@@ -457,7 +454,6 @@ export class GameEngine {
         el.innerHTML = `<span style="color:${killer.color}">${killerName}</span> ⚔️ <span style="color:${victim.color}">${victimName}</span>`;
         feed.appendChild(el);
 
-        // Keep it clean (max 5 items)
         while(feed.children.length > 5) {
             feed.removeChild(feed.firstChild);
         }
@@ -569,7 +565,6 @@ export class GameEngine {
         this.slotMachineActive = false;
         this.slotMachineTick = 0;
 
-        // Map Interactables Generation
         for(let i = 0; i < 3; i++) {
             let pos = this.getSafeSpawnPosition(4000);
             this.safeZones.push(new SafeZone(pos.x, pos.y));
@@ -716,7 +711,6 @@ export class GameEngine {
             this.safeZones.push(new SafeZone(pos.x, pos.y));
         }
         
-        // Host controls map interactable spawns to keep it synced
         if (this.isHost) {
             for(let i = 0; i < 15; i++) {
                 let pos = this.getSafeSpawnPosition(500);
@@ -1167,7 +1161,6 @@ export class GameEngine {
         }
     }
 
-    // --- NEW: SLOT MACHINE UI TRIGGER ---
     activateSlotMachine() {
         if (this.isDemo || this.isGameOver || !this.player) return;
         
@@ -1229,7 +1222,7 @@ export class GameEngine {
 
             document.getElementById('slot-result').innerText = `WON: ${choice.title.toUpperCase()} (T${tier})`;
             document.getElementById('slot-result').style.color = color;
-            sounds.play('ui_claim', 'alert');
+            sounds.play('slot_win', 'alert'); // NEW SLOT WIN SOUND
             this.updateUpgradeBadges();
             
         } else {
@@ -1392,7 +1385,6 @@ export class GameEngine {
         const goTime = document.getElementById('go-time');
         if (goTime) goTime.innerText = `${timeAlive}s`;
         
-        // --- NEW: END OF MATCH AWARDS LOGIC ---
         const goAwards = document.getElementById('go-awards');
         if (goAwards) {
             goAwards.innerHTML = '';
@@ -1471,7 +1463,6 @@ export class GameEngine {
             }
         }
 
-        // --- NEW: SLOT MACHINE MAP LOGIC ---
         if (this.slotMachineEntity && !this.slotMachineEntity.isDead) {
             this.slotMachineEntity.update();
             
@@ -1484,7 +1475,6 @@ export class GameEngine {
             }
         }
         
-        // Randomly spawn a new slot machine if missing
         if (!this.slotMachineEntity || this.slotMachineEntity.isDead) {
             if (!this.slotMachineActive && Math.random() < 0.0005) {
                 let slotPos = this.getSafeSpawnPosition(1000);
@@ -1492,7 +1482,6 @@ export class GameEngine {
             }
         }
 
-        // --- NEW: SLOT MACHINE UI ANIMATION ---
         if (this.slotMachineActive) {
             this.slotMachineTick++;
             
@@ -1502,7 +1491,7 @@ export class GameEngine {
                 if (document.getElementById('reel-2')) document.getElementById('reel-2').style.background = colors[Math.floor(Math.random() * colors.length)];
                 if (document.getElementById('reel-3')) document.getElementById('reel-3').style.background = colors[Math.floor(Math.random() * colors.length)];
                 
-                sounds.play('ui_hover', 'ui');
+                sounds.play('slot_spin', 'ui'); // NEW SLOT SPIN SOUND
             }
             
             if (this.slotMachineTick === 120) {
@@ -1516,24 +1505,27 @@ export class GameEngine {
             }
         }
 
-        // --- NEW: ACCELERATOR PADS ---
         this.pads.forEach(pad => {
             pad.update();
             allPlayers.forEach(p => {
                 if (!p.isDead && !p.isCloaked && distance(p.x, p.y, pad.x, pad.y) < pad.size + p.size) {
-                    pad.trigger(p);
-                    if (p === this.player) this.screenShake = Math.max(this.screenShake, 5);
+                    if (!pad.cooldowns.has(p)) {
+                        pad.trigger(p);
+                        // NEW PAD SOUND!
+                        this.playSoundAt('boost_pad', pad.x, pad.y, 0.7, 'pickup');
+                        if (p === this.player) this.screenShake = Math.max(this.screenShake, 5);
+                    }
                 }
             });
         });
 
-        // --- NEW: EXPLOSIVE ASTEROIDS ---
         for (let i = this.asteroids.length - 1; i >= 0; i--) {
             let ast = this.asteroids[i];
             ast.update();
             
             if (ast.isDead) {
-                this.playSoundAt('take_damage', ast.x, ast.y, 1.0, 'heavy');
+                // NEW ASTEROID BOOM SOUND!
+                this.playSoundAt('asteroid_boom', ast.x, ast.y, 1.0, 'heavy');
                 this.spawnParticles(ast.x, ast.y, '#ff4400', 40);
                 
                 if (!this.isDemo && this.player && distance(this.player.x, this.player.y, ast.x, ast.y) < 800) {
@@ -1551,7 +1543,6 @@ export class GameEngine {
             }
         }
         
-        // Respawn Asteroids
         if (this.asteroids.length < 15 && Math.random() < 0.01) {
             let pos = this.getSafeSpawnPosition(500);
             this.asteroids.push(new Asteroid(pos.x, pos.y));
@@ -2069,7 +2060,6 @@ export class GameEngine {
             }
         }
 
-        // --- NEW: ASTEROIDS PROJECTILE COLLISION ---
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             const proj = this.projectiles[i];
             let hitObj = false;
@@ -2330,9 +2320,6 @@ export class GameEngine {
         this.ctx.translate(camX, camY);
         this.ctx.scale(this.cameraZoom, this.cameraZoom);
         
-        // ==========================================
-        // MAP BORDER FORCEFIELD
-        // ==========================================
         this.ctx.save();
         this.ctx.strokeStyle = '#00ffff'; 
         this.ctx.lineWidth = 8;
