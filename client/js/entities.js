@@ -1248,11 +1248,15 @@ export class Entity {
             }
             let t = (Date.now() / 500) * this.overclock; 
             let selfSpin = (Date.now() / 80) * this.overclock; 
+
+            // GLIDING EFFECT (SAME AS FACING ARROW)
+            let swayX = Math.max(-3, Math.min(3, -this.vx * 0.3));
+            let swayY = Math.max(-3, Math.min(3, -this.vy * 0.3));
             
             for (let i = 0; i < this.orbiters; i++) {
                 let angle = t + (i / this.orbiters) * Math.PI * 2; 
-                let ox = this.x + Math.cos(angle) * (this.size + 25); 
-                let oy = this.y + Math.sin(angle) * (this.size + 25);
+                let ox = this.x + swayX + Math.cos(angle) * (this.size + 25); 
+                let oy = this.y + swayY + Math.sin(angle) * (this.size + 25);
                 
                 ctx.save(); 
                 ctx.translate(ox, oy); 
@@ -1286,8 +1290,13 @@ export class Entity {
             ctx.shadowBlur = 0; 
         }
 
+        // =====================================
+        // NEW: FLOATING FACING ARROW
+        // =====================================
         if (this.isPlayer && this.frontVisual !== 'gun' && this.frontVisual !== 'spikes' && !this.isCloaked && !isPreviewCanvas) {
+            
             let timeBob = Math.sin(Date.now() / 300) * 1.5; 
+            
             let localVx = this.vx * Math.cos(-this.angle) - this.vy * Math.sin(-this.angle);
             let localVy = this.vx * Math.sin(-this.angle) + this.vy * Math.cos(-this.angle);
             let swayX = Math.max(-3, Math.min(3, -localVx * 0.3));
@@ -1743,7 +1752,7 @@ export class Projectile {
         this.owner = owner; 
         this.isMissile = isMissile; 
         this.isNuke = isNuke; 
-        this.isRailgun = false; // Initialized to false, engine overrides it when spawning
+        this.isRailgun = false; 
         this.pierce = owner.pierceAmmo || 0; 
         this.hitTargets = []; 
         this.sizeScale = 1 + (owner.heavyArt * 0.5);
@@ -1795,7 +1804,6 @@ export class Projectile {
                 }
             }
         } 
-        // Railguns do NOT auto-aim, they require pure skill since they are so devastating
         else if (!this.isMissile && !this.isNuke && !this.isRailgun && this.owner.isPlayer && targets) {
             let nearest = null; 
             let minDist = 350; 
@@ -1832,7 +1840,6 @@ export class Projectile {
         ctx.scale(this.sizeScale, this.sizeScale);
         
         if (window.gameSettings && window.gameSettings.highQuality) { 
-            // Give the railgun a much larger glowing aura
             ctx.shadowBlur = this.isRailgun ? 20 : 10; 
             ctx.shadowColor = this.color; 
         } else { 
@@ -1847,11 +1854,9 @@ export class Projectile {
             ctx.lineTo(-8, -6); 
             ctx.fill(); 
         } else if (this.isRailgun) {
-            // The massive glowing plasma laser
             ctx.fillStyle = this.color; 
             ctx.fillRect(-15, -4, 50, 8); 
             
-            // The blinding hot inner core (white, no shadow so it looks intensely hot)
             ctx.fillStyle = '#ffffff'; 
             ctx.shadowBlur = 0; 
             ctx.fillRect(-10, -1.5, 40, 3);
