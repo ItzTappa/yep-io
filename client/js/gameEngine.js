@@ -607,7 +607,6 @@ export class GameEngine {
             this.orbs.push(new Orb(x, y, 'xp', 1, null, 0));
         }
         
-        // BUFF: 10% Increase to Health Orb Spawn (83 -> 91)
         for(let i = 0; i < 91; i++) { 
             let pos = this.getSafeOrbPosition(500); 
             this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0)); 
@@ -636,10 +635,14 @@ export class GameEngine {
         this.lobbyCode = lobbyCode; 
         this.isHost = isHost || false;
         
-        this.worldSize = 8000; 
+        // ==========================================
+        // NEW: 1v1 MATCH CONFIGURATION
+        // ==========================================
+        let is1v1 = window.currentLobbyMode === '1v1';
+        this.worldSize = is1v1 ? 3000 : 8000; 
         this.stormActive = true; 
         this.stormCenter = { x: this.worldSize / 2, y: this.worldSize / 2 };
-        this.stormRadius = 6000; 
+        this.stormRadius = is1v1 ? 2500 : 6000; 
 
         this.isDemo = false; 
         this.isGameOver = false; 
@@ -655,7 +658,7 @@ export class GameEngine {
         this.safeZones = [];
         this.safeZoneSpawnTimer = 0;
         for(let i = 0; i < 3; i++) {
-            let pos = this.getSafeSpawnPosition(4000);
+            let pos = this.getSafeSpawnPosition(this.worldSize / 2);
             this.safeZones.push(new SafeZone(pos.x, pos.y));
         }
 
@@ -701,9 +704,10 @@ export class GameEngine {
         const brUi = document.getElementById('br-ui');
         if (brUi) brUi.classList.remove('hidden'); 
 
+        // SPACING FOR MULTIPLAYER SPAWNS
         let spawnX = this.worldSize / 2;
         let spawnY = this.worldSize / 2;
-        let spacing = 150;
+        let spacing = is1v1 ? 1000 : 150; 
         let totalWidth = (players.length - 1) * spacing;
         let startX = spawnX - totalWidth / 2;
 
@@ -724,17 +728,22 @@ export class GameEngine {
                 let bot = new Bot(px, py, pData.classType || 'square', 0);
                 bot.name = pData.name;
                 bot.color = pData.color;
-                bot.isTeammate = true; 
+                
+                // NEW: In 1v1 mode, remote players are enemies, not teammates.
+                let isFriendly = !is1v1;
+                bot.isTeammate = isFriendly; 
                 bot.isRemotePlayer = true; 
                 bot.remoteId = pData.id; 
                 
                 this.bots.push(bot);
-                this.teammates.push(bot);
+                if (isFriendly) {
+                    this.teammates.push(bot);
+                }
             }
         }
 
         if (this.isHost) {
-            let botsToSpawn = 50 - players.length;
+            let botsToSpawn = is1v1 ? 0 : 50 - players.length;
             
             for(let i = 0; i < botsToSpawn; i++) {
                 const types = ['triangle', 'square', 'circle']; 
@@ -763,18 +772,17 @@ export class GameEngine {
                     });
                 }
             }, 2500);
-        } else {
-            this.bots = [...this.teammates]; 
         }
 
-        for(let i = 0; i < 3000; i++) {
-            this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
-        }
-        
-        // BUFF: 10% Increase to Health Orb Spawn (83 -> 91)
-        for(let i = 0; i < 91; i++) { 
-            let pos = this.getSafeOrbPosition(500); 
-            this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0));
+        // ONLY SPAWN ORBS IF NOT 1V1
+        if (!is1v1) {
+            for(let i = 0; i < 3000; i++) {
+                this.orbs.push(new Orb(Math.random() * this.worldSize, Math.random() * this.worldSize, 'xp', 1, null, 0));
+            }
+            for(let i = 0; i < 91; i++) { 
+                let pos = this.getSafeOrbPosition(500); 
+                this.orbs.push(new Orb(pos.x, pos.y, 'health', 1, null, 0));
+            }
         }
 
         if (window.gameSocket) {
@@ -787,7 +795,8 @@ export class GameEngine {
             window.gameSocket.on('hostInit', (data) => {
                 if (this.isHost) return;
                 
-                this.bots = [...this.teammates]; 
+                // Retain all remote players (whether friendly or enemy)
+                this.bots = this.bots.filter(b => b.isRemotePlayer); 
                 
                 data.bots.forEach(b => {
                     let bot = new Bot(b.x, b.y, b.type, 0);
@@ -856,8 +865,9 @@ export class GameEngine {
                 });
             });
 
+            // Update: We search `this.bots` instead of `this.teammates` so 1v1 enemies update
             window.gameSocket.on('teammateMoved', (data) => {
-                let tm = this.teammates.find(t => t.remoteId === data.id);
+                let tm = this.bots.find(t => t.remoteId === data.id);
                 if (tm) {
                     tm.x = data.x; 
                     tm.y = data.y; 
@@ -869,7 +879,7 @@ export class GameEngine {
             });
 
             window.gameSocket.on('teammateShoot', (data) => {
-                let tm = this.teammates.find(t => t.remoteId === data.id);
+                let tm = this.bots.find(t => t.remoteId === data.id);
                 if (tm) {
                     const totalShots = (data.multiShot || 0) + 1;
                     const spreadAngle = 0.2; 
@@ -884,7 +894,7 @@ export class GameEngine {
             });
 
             window.gameSocket.on('teammateDied', (data) => {
-                let tm = this.teammates.find(t => t.remoteId === data.id);
+                let tm = this.bots.find(t => t.remoteId === data.id);
                 if (tm && !tm.isDead) this.processDeath(tm, null); 
             });
         }
@@ -912,7 +922,7 @@ export class GameEngine {
         document.getElementById('xp-bar').style.width = '0%';
         document.getElementById('level-display').innerText = '0 PTS';
 
-        this.totalMatchPlayers = 50; 
+        this.totalMatchPlayers = is1v1 ? 2 : 50; 
         
         this.isRunning = true;
         this.accumulator = 0;
@@ -1157,7 +1167,6 @@ export class GameEngine {
             this.orbs.push(new Orb(victim.x, victim.y, 'health'));
         }
         
-        // BUFF: Base Enemy Drop Rate Increased by 10% (0.11 -> 0.21)
         if (Math.random() < 0.21) {
             this.orbs.push(new Orb(victim.x, victim.y, 'health'));
         }
@@ -1181,6 +1190,7 @@ export class GameEngine {
 
             let isSinglePlayer = !this.lobbyCode;
             
+            // Only respawn bots if not in a storm-active mode
             if (!this.isDemo && !this.stormActive && (this.isHost || isSinglePlayer)) { 
                 setTimeout(() => {
                     if (this.isGameOver) return;
@@ -1216,7 +1226,6 @@ export class GameEngine {
         const rank = allPlayers.indexOf(this.player) + 1;
         const totalPlayers = allPlayers.length;
 
-        // END OF MATCH STATS
         const statsGrid = document.querySelector('.stats-grid');
         if (statsGrid) statsGrid.classList.remove('hidden'); 
 
@@ -1277,7 +1286,19 @@ export class GameEngine {
 
         const allPlayers = (this.isDemo || this.isGameOver) ? [...this.bots] : [this.player, ...this.bots];
 
-        let desiredOrbs = this.isDemo ? 1000 : 3000;
+        // ==========================================
+        // NEW: 1v1 PASSIVE UPGRADE TRICKLE
+        // ==========================================
+        if (window.currentLobbyMode === '1v1' && !this.isDemo && !this.isGameOver && this.player && !this.player.isDead) {
+            // Grants roughly ~9 points per second, creating a steady upgrade curve without farming
+            let passiveXP = 0.15; 
+            this.player.points += passiveXP;
+            this.player.upgradeProgress += passiveXP;
+            pointsGainedThisFrame += passiveXP;
+        }
+
+        // ORB SPAWNING (Bypassed in 1v1 mode)
+        let desiredOrbs = this.isDemo ? 1000 : (window.currentLobbyMode === '1v1' ? 0 : 3000);
         if (this.orbs.length < desiredOrbs) {
             let spawnCount = Math.min(100, desiredOrbs - this.orbs.length);
             for(let i = 0; i < spawnCount; i++) {
@@ -1310,20 +1331,15 @@ export class GameEngine {
             }
         }
 
-        // ==========================================
-        // NEW: SLOT MACHINE LIFESPAN & LIMIT LOGIC
-        // ==========================================
         for (let i = this.slotMachines.length - 1; i >= 0; i--) {
             let sm = this.slotMachines[i];
             sm.update();
             
-            // Handle Despawn
             if (sm.lifeTimer <= 0) {
                 this.slotMachines.splice(i, 1);
                 continue;
             }
             
-            // Handle Player Collision (Activation)
             if (!this.isDemo && !this.isGameOver && this.player && !this.player.isDead) {
                 if (distance(this.player.x, this.player.y, sm.x, sm.y) < this.player.size + sm.size) {
                     this.slotMachines.splice(i, 1);
@@ -1333,9 +1349,7 @@ export class GameEngine {
             }
         }
         
-        // Natural Random Spawning (Limits map to exactly 1 slot machine at a time)
         if (!this.isDemo && !this.isGameOver && this.slotMachines.length === 0) {
-            // Approx. ~0.02% chance per frame to spawn one (Roughly every 1-2 minutes)
             if (Math.random() < 0.0002) {
                 let pos = this.getSafeSpawnPosition(1000);
                 this.slotMachines.push(new LuckySlotMachine(pos.x, pos.y));
@@ -1591,7 +1605,7 @@ export class GameEngine {
                 if (this.safeZoneSpawnTimer > 0) {
                     this.safeZoneSpawnTimer--;
                 } else {
-                    let pos = this.getSafeSpawnPosition(4000);
+                    let pos = this.getSafeSpawnPosition(this.worldSize / 2);
                     this.safeZones.push(new SafeZone(pos.x, pos.y));
                     this.safeZoneSpawnTimer = 1800; 
                 }
@@ -2200,7 +2214,6 @@ export class GameEngine {
         ctx.clearRect(0, 0, 220, 220);
         const scale = 220 / this.worldSize;
 
-        // TRUE SIZE MINIMAP SAFE ZONES!
         this.safeZones.forEach(sz => {
             ctx.fillStyle = sz.state === 'active' ? 'rgba(0, 255, 204, 0.4)' : 'rgba(0, 255, 204, 0.15)';
             ctx.beginPath();
@@ -2247,7 +2260,6 @@ export class GameEngine {
             }
         });
 
-        // NEW: DRAW SLOT MACHINES ON MINIMAP
         this.slotMachines.forEach(sm => {
             let flashColor = Math.floor(Date.now() / 250) % 2 === 0 ? '#ffe600' : '#ff00ff';
             ctx.fillStyle = flashColor;

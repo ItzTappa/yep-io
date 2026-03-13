@@ -38,6 +38,7 @@ let currentUser = null;
 let currentLobbyMode = 'duos'; 
 window.currentLobbyCode = null; // Globally available code
 window.lobbyPlayers = [];
+window.currentLobbyMode = 'duos'; // Expose mode globally for gameEngine
 
 // Persistent Guest ID for those without an account
 if (!window.mySessionId) {
@@ -277,7 +278,8 @@ function renderLobbySlots(hostName = null) {
     const container = document.getElementById('player-slots-container');
     if (!container) return;
     
-    let count = currentLobbyMode === 'duos' ? 2 : currentLobbyMode === 'trios' ? 3 : 4;
+    // NEW: Respect 1v1 mode limit
+    let count = currentLobbyMode === '1v1' ? 2 : currentLobbyMode === 'duos' ? 2 : currentLobbyMode === 'trios' ? 3 : 4;
     container.innerHTML = '';
     
     const players = window.lobbyPlayers || [];
@@ -329,6 +331,7 @@ function listenToLobby(code) {
             const data = snap.data();
             window.lobbyPlayers = data.players || [];
             currentLobbyMode = data.mode || 'duos';
+            window.currentLobbyMode = currentLobbyMode; // Expose globally for GameEngine
             document.getElementById('lobby-code-display').innerText = code;
             
             // Sync mode UI
@@ -352,7 +355,10 @@ function listenToLobby(code) {
                 }
                 
                 setInGameStatus(true);
-                game.start(selectedClass);
+                
+                // Proper multiplayer initialization
+                const isHost = (window.lobbyPlayers.length > 0 && window.lobbyPlayers[0].uid === getMyUid());
+                game.startMultiplayer(window.lobbyPlayers, code, isHost);
             }
         } else {
             // Lobby deleted/expired
@@ -417,7 +423,8 @@ async function joinLobbyByCode(code, sourceBtn) {
         }
         
         const data = snap.data();
-        const max = data.mode === 'duos' ? 2 : data.mode === 'trios' ? 3 : 4;
+        // NEW: Respect 1v1 limit in matchmaking
+        const max = data.mode === '1v1' ? 2 : data.mode === 'duos' ? 2 : data.mode === 'trios' ? 3 : 4;
         
         if (data.players.length >= max) {
             if (sounds) sounds.play('ui_error', 'ui');
@@ -609,6 +616,7 @@ document.addEventListener('click', async (e) => {
         document.querySelectorAll('.mode-select-btn').forEach(b => b.classList.remove('active'));
         target.classList.add('active');
         currentLobbyMode = target.dataset.mode;
+        window.currentLobbyMode = currentLobbyMode; // Expose globally
         
         if (window.currentLobbyCode) {
             updateDoc(doc(db, "lobbies", window.currentLobbyCode), { mode: currentLobbyMode });
@@ -1115,6 +1123,8 @@ document.addEventListener('click', async (e) => {
                     class: selectedClass || 'triangle',
                     equipped: window.equippedItems || {}
                 };
+                
+                window.currentLobbyMode = currentLobbyMode;
                 
                 setDoc(doc(db, "lobbies", window.currentLobbyCode), {
                     mode: currentLobbyMode,
