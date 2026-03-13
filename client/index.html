@@ -114,12 +114,19 @@
         </div>
 
         <div class="menu-footer">
-            <div class="footer-left-container">
-                <div id="gamemode-selector" class="gamemode-selector hidden">
-                    <button class="mode-select-btn" data-mode="1v1">1v1</button>
-                    <button class="mode-select-btn active" data-mode="duos">DUOS</button>
-                    <button class="mode-select-btn" data-mode="trios">TRIOS</button>
-                    <button class="mode-select-btn" data-mode="squads">SQUADS</button>
+            <div class="footer-left-container" style="position: relative;">
+                
+                <div id="br-team-selector" class="gamemode-selector hidden" style="margin-bottom: 10px;">
+                    <button class="mode-select-btn active" data-teamsize="duos">DUOS</button>
+                    <button class="mode-select-btn" data-teamsize="trios">TRIOS</button>
+                    <button class="mode-select-btn" data-teamsize="squads">SQUADS</button>
+                </div>
+
+                <button id="gamemodes-main-btn" class="footer-btn dark-btn-outline hidden" style="margin-bottom: 10px; width: auto; padding: 0 20px; height: 50px; font-size: 1.1rem;">GAMEMODE: BATTLE ROYALE</button>
+
+                <div id="gamemodes-menu" class="hidden" style="position: absolute; bottom: 100%; left: 0; background: rgba(0,0,0,0.9); border: 2px solid #555; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 5px; z-index: 200; margin-bottom: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
+                    <button class="menu-mode-btn active" data-mainmode="br" style="padding: 10px 20px; font-weight: bold; background: transparent; color: white; border: none; text-align: left; cursor: pointer;">BATTLE ROYALE</button>
+                    <button class="menu-mode-btn" data-mainmode="1v1" style="padding: 10px 20px; font-weight: bold; background: transparent; color: gray; border: none; text-align: left; cursor: pointer;">1v1 DUEL</button>
                 </div>
                 
                 <div class="player-level-ui">
@@ -265,8 +272,18 @@
         </div>
     </div>
 
+    <div id="match-countdown-overlay" class="hidden" style="position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0,0,0,0.8); z-index: 9998; display: flex; flex-direction: column; justify-content: center; align-items: center; pointer-events: none;">
+        <div style="font-size: 2rem; color: white; letter-spacing: 5px; text-transform: uppercase; margin-bottom: 20px;">MATCH STARTING IN</div>
+        <div id="countdown-text" style="font-size: 8rem; font-weight: bold; color: var(--accent); text-shadow: 0 0 30px var(--accent);">3</div>
+    </div>
+
     <div id="game-ui" class="hidden">
         <div class="hud">
+            
+            <div id="spectator-hud" class="hidden" style="position: absolute; top: 80px; left: 50%; transform: translateX(-50%); font-size: 1.5rem; font-weight: bold; color: white; text-shadow: 1px 1px 3px black; background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 8px; border: 2px solid #555; pointer-events: none;">
+                SPECTATING: <span id="spectating-name" class="cyan-text">TEAMMATE</span>
+            </div>
+
             <div id="fps-display" class="hidden">60 FPS</div>
             <div id="upgrade-badges" class="upgrade-badges-container"></div>
             
@@ -328,8 +345,7 @@
         </div>
 
         <div id="game-over-screen" class="hidden">
-            <h2>MATCH OVER</h2>
-            <div class="killed-by">SPECTATING: <span id="go-killer-name" class="accent-text">UNKNOWN</span></div>
+            <h2 id="go-title-text">MATCH OVER</h2>
             <div class="stats-grid">
                 <div id="go-placement-container">Placed <span id="go-placement" class="cyan-text">1st</span></div>
                 <div>Points: <span id="go-points">0</span></div>

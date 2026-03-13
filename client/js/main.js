@@ -35,10 +35,12 @@ const db = getFirestore(app);
 
 let selectedClass = null; 
 let currentUser = null;
-let currentLobbyMode = 'duos'; 
-window.currentLobbyCode = null; // Globally available code
+
+// NEW: Persistent Matchmaking Structure
+window.currentLobbyCode = null; 
 window.lobbyPlayers = [];
-window.currentLobbyMode = 'duos'; // Expose mode globally for gameEngine
+window.currentMainMode = 'br'; 
+window.currentTeamSize = 'duos'; 
 
 // Persistent Guest ID for those without an account
 if (!window.mySessionId) {
@@ -109,7 +111,6 @@ async function listenToUserData(uid) {
             window.globalAccountXP = data.xp || 0;
             window.globalAccountLevel = data.level || 1;
             
-            // 🚨 SAFEGUARD: Ensure equippedItems is always a valid object
             if (data.equipped && typeof data.equipped === 'object') {
                 window.equippedItems = data.equipped;
             } else {
@@ -147,7 +148,6 @@ async function listenToUserData(uid) {
     });
 }
 
-// Save stats securely to the Cloud
 async function saveUserData() {
     if (auth.currentUser) {
         try {
@@ -178,7 +178,7 @@ setInterval(() => {
 onAuthStateChanged(auth, (user) => {
     if (user) {
         currentUser = user.email.split('@')[0];
-        setInGameStatus(false); // Reset inGame flag on fresh load
+        setInGameStatus(false); 
         listenToUserData(user.uid);
     } else {
         currentUser = null;
@@ -196,7 +196,6 @@ window.gameSettings = JSON.parse(localStorage.getItem('yepio_settings')) || {
     keybinds: { up: 'w', down: 's', left: 'a', right: 'd', dash: ' ', ability: 'e' }
 };
 
-// Sync audio manager volume on boot
 if (sounds && sounds.setVolume) {
     sounds.setVolume(window.gameSettings.volume);
 }
@@ -270,16 +269,16 @@ try {
 }
 
 // ==========================================
-// REAL-TIME LOBBY SYSTEM
+// REAL-TIME LOBBY SYSTEM & MATCH COUNTDOWN
 // ==========================================
 let lobbyUnsub = null;
+let isCountingDown = false;
 
-function renderLobbySlots(hostName = null) {
+function renderLobbySlots() {
     const container = document.getElementById('player-slots-container');
     if (!container) return;
     
-    // NEW: Respect 1v1 mode limit
-    let count = currentLobbyMode === '1v1' ? 2 : currentLobbyMode === 'duos' ? 2 : currentLobbyMode === 'trios' ? 3 : 4;
+    let count = window.currentMainMode === '1v1' ? 2 : window.currentTeamSize === 'squads' ? 4 : window.currentTeamSize === 'trios' ? 3 : 2;
     container.innerHTML = '';
     
     const players = window.lobbyPlayers || [];
@@ -308,7 +307,6 @@ function renderLobbySlots(hostName = null) {
         }
     }
 
-    // Toggle LEAVE button visibility
     const myUid = getMyUid();
     const me = (window.lobbyPlayers || []).find(pl => pl.uid === myUid);
     const leaveBtn = document.getElementById('leave-lobby-btn');
@@ -321,6 +319,58 @@ function renderLobbySlots(hostName = null) {
     }
 }
 
+function startMatchCountdown(data, code, isHost) {
+    if (isCountingDown) return;
+    isCountingDown = true;
+    
+    const overlay = document.getElementById('match-countdown-overlay');
+    const text = document.getElementById('countdown-text');
+    overlay.classList.remove('hidden');
+    
+    let count = 3;
+    text.innerText = count;
+    if(sounds) sounds.play('ui_click', 'ui'); 
+    
+    let intv = setInterval(() => {
+        count--;
+        if (count > 0) {
+            text.innerText = count;
+            if(sounds) sounds.play('ui_click', 'ui');
+        } else {
+            clearInterval(intv);
+            text.innerText = "FIGHT!";
+            
+            const fade = document.getElementById('black-fade-overlay');
+            fade.style.transition = 'opacity 0.5s ease-in-out';
+            fade.style.opacity = '1';
+            fade.style.pointerEvents = 'all';
+            
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                isCountingDown = false;
+                window.isInMatch = true;
+                
+                document.getElementById('main-menu').classList.add('hidden');
+                document.getElementById('game-ui').classList.remove('hidden');
+                
+                const hud = document.querySelector('.hud');
+                if(hud) hud.classList.remove('hidden');
+                
+                setInGameStatus(true);
+                
+                window.currentLobbyMode = data.mainMode === '1v1' ? '1v1' : 'br';
+                window.game.startMultiplayer(window.lobbyPlayers, code, isHost);
+                
+                setTimeout(() => {
+                    fade.style.opacity = '0';
+                    setTimeout(() => { fade.style.pointerEvents = 'none'; }, 500);
+                }, 500);
+                
+            }, 500);
+        }
+    }, 1000);
+}
+
 function listenToLobby(code) {
     if (lobbyUnsub) {
         lobbyUnsub();
@@ -330,38 +380,40 @@ function listenToLobby(code) {
         if (snap.exists()) {
             const data = snap.data();
             window.lobbyPlayers = data.players || [];
-            currentLobbyMode = data.mode || 'duos';
-            window.currentLobbyMode = currentLobbyMode; // Expose globally for GameEngine
+            
+            window.currentMainMode = data.mainMode || 'br';
+            window.currentTeamSize = data.teamSize || 'duos';
             document.getElementById('lobby-code-display').innerText = code;
             
-            // Sync mode UI
-            document.querySelectorAll('.mode-select-btn').forEach(b => b.classList.remove('active'));
-            const mBtn = document.querySelector(`.mode-select-btn[data-mode="${currentLobbyMode}"]`);
-            if (mBtn) {
-                mBtn.classList.add('active');
+            // Sync UI Buttons dynamically
+            const mainBtn = document.getElementById('gamemodes-main-btn');
+            const tsSelector = document.getElementById('br-team-selector');
+            
+            document.querySelectorAll('.menu-mode-btn').forEach(b => b.classList.remove('active'));
+            let activeModeBtn = document.querySelector(`.menu-mode-btn[data-mainmode="${window.currentMainMode}"]`);
+            if(activeModeBtn) activeModeBtn.classList.add('active');
+            
+            if (window.currentMainMode === '1v1') {
+                mainBtn.innerText = "GAMEMODE: 1v1 DUEL";
+                tsSelector.classList.add('hidden');
+            } else {
+                mainBtn.innerText = "GAMEMODE: BATTLE ROYALE";
+                tsSelector.classList.remove('hidden');
             }
+            
+            document.querySelectorAll('.mode-select-btn').forEach(b => b.classList.remove('active'));
+            let activeTsBtn = document.querySelector(`.mode-select-btn[data-teamsize="${window.currentTeamSize}"]`);
+            if (activeTsBtn) activeTsBtn.classList.add('active');
             
             renderLobbySlots();
 
-            // Auto-start game if host triggered it
-            if (data.inGame && !window.isInMatch) {
-                window.isInMatch = true;
-                document.getElementById('main-menu').classList.add('hidden');
-                document.getElementById('game-ui').classList.remove('hidden');
-                
-                const hud = document.querySelector('.hud');
-                if(hud) {
-                    hud.classList.remove('hidden');
-                }
-                
-                setInGameStatus(true);
-                
-                // Proper multiplayer initialization
-                const isHost = (window.lobbyPlayers.length > 0 && window.lobbyPlayers[0].uid === getMyUid());
-                game.startMultiplayer(window.lobbyPlayers, code, isHost);
+            const isHost = (window.lobbyPlayers.length > 0 && window.lobbyPlayers[0].uid === getMyUid());
+
+            if (data.matchState === 'countdown' && !window.isInMatch && !isCountingDown) {
+                startMatchCountdown(data, code, isHost);
             }
+            
         } else {
-            // Lobby deleted/expired
             window.currentLobbyCode = null;
             window.lobbyPlayers = [];
             renderLobbySlots();
@@ -423,8 +475,7 @@ async function joinLobbyByCode(code, sourceBtn) {
         }
         
         const data = snap.data();
-        // NEW: Respect 1v1 limit in matchmaking
-        const max = data.mode === '1v1' ? 2 : data.mode === 'duos' ? 2 : data.mode === 'trios' ? 3 : 4;
+        const max = data.mainMode === '1v1' ? 2 : (data.teamSize === 'squads' ? 4 : (data.teamSize === 'trios' ? 3 : 2));
         
         if (data.players.length >= max) {
             if (sounds) sounds.play('ui_error', 'ui');
@@ -433,7 +484,7 @@ async function joinLobbyByCode(code, sourceBtn) {
             return false;
         }
         
-        if (data.inGame) {
+        if (data.matchState === 'countdown' || data.matchState === 'playing') {
             if (sounds) sounds.play('ui_error', 'ui');
             sourceBtn.innerText = "IN MATCH!";
             setTimeout(() => { sourceBtn.innerText = originalText; }, 2000);
@@ -531,7 +582,6 @@ function refreshAllUIs() {
     updateMenuXPBar();
 }
 
-// UI Hover Sounds Add-on
 document.addEventListener('mouseover', (e) => {
     const target = e.target;
     if (target.tagName === 'BUTTON' || target.closest('button') || target.classList.contains('tab-btn') || target.classList.contains('item-icon') || target.classList.contains('locker-slot') || target.closest('.locker-slot')) {
@@ -544,14 +594,12 @@ document.addEventListener('mouseover', (e) => {
 document.addEventListener('click', async (e) => {
     const target = e.target;
 
-    // UI Click Sound
     if (target.tagName === 'BUTTON' || target.closest('button') || target.classList.contains('tab-btn') || target.classList.contains('item-icon') || target.classList.contains('locker-slot') || target.closest('.locker-slot')) {
         if (sounds && sounds.play) {
             sounds.play('ui_click', 'ui');
         }
     }
 
-    // Toggle Password Visibility
     const togglePassBtn = target.closest('#toggle-pass-btn');
     if (togglePassBtn) {
         const passInput = document.getElementById('acc-pass');
@@ -565,7 +613,6 @@ document.addEventListener('click', async (e) => {
         return;
     }
 
-    // Modals
     if (target.id === 'close-preview-btn' || target.closest('#close-preview-btn')) {
         window.activePreviewItem = null;
         document.getElementById('item-preview-screen').classList.add('hidden');
@@ -577,14 +624,12 @@ document.addEventListener('click', async (e) => {
         return;
     }
 
-    // Back to Friends list from Friend Profile
     if (target.id === 'back-to-friends-btn') {
         document.getElementById('friend-profile-view').classList.add('hidden');
         document.getElementById('account-logged-in').classList.remove('hidden');
         return;
     }
     
-    // Mastery Modal
     if (target.id === 'close-mastery-btn') {
         document.getElementById('mastery-modal').classList.add('hidden');
         return;
@@ -602,29 +647,52 @@ document.addEventListener('click', async (e) => {
         renderLocker();
         document.getElementById('mastery-modal').classList.add('hidden');
         
-        // Custom Mastery Unlock sound
         if(sounds) sounds.play('mastery_unlock', 'ui');
         return;
     }
 
-    // Gamemode Selector (Host Only)
-    if (target.classList.contains('mode-select-btn')) {
-        if (!window.lobbyPlayers || window.lobbyPlayers.length === 0 || window.lobbyPlayers[0].uid !== getMyUid()) {
-            return; // Must be host
+    // NEW GAMEMODE UI SELECTORS
+    if (target.id === 'gamemodes-main-btn') {
+        document.getElementById('gamemodes-menu').classList.toggle('hidden');
+        return;
+    }
+
+    if (target.classList.contains('menu-mode-btn')) {
+        if (!window.lobbyPlayers || window.lobbyPlayers.length === 0 || window.lobbyPlayers[0].uid !== getMyUid()) return; // Must be host
+        
+        document.querySelectorAll('.menu-mode-btn').forEach(b => b.classList.remove('active'));
+        target.classList.add('active');
+        
+        let newMode = target.dataset.mainmode;
+        
+        if (newMode === '1v1') {
+            document.getElementById('gamemodes-main-btn').innerText = "GAMEMODE: 1v1 DUEL";
+            document.getElementById('br-team-selector').classList.add('hidden');
+        } else {
+            document.getElementById('gamemodes-main-btn').innerText = "GAMEMODE: BATTLE ROYALE";
+            document.getElementById('br-team-selector').classList.remove('hidden');
         }
         
-        document.querySelectorAll('.mode-select-btn').forEach(b => b.classList.remove('active'));
-        target.classList.add('active');
-        currentLobbyMode = target.dataset.mode;
-        window.currentLobbyMode = currentLobbyMode; // Expose globally
+        document.getElementById('gamemodes-menu').classList.add('hidden');
         
         if (window.currentLobbyCode) {
-            updateDoc(doc(db, "lobbies", window.currentLobbyCode), { mode: currentLobbyMode });
+            updateDoc(doc(db, "lobbies", window.currentLobbyCode), { mainMode: newMode });
         }
         return;
     }
     
-    // Manual Join by Code
+    if (target.classList.contains('mode-select-btn') && target.hasAttribute('data-teamsize')) {
+        if (!window.lobbyPlayers || window.lobbyPlayers.length === 0 || window.lobbyPlayers[0].uid !== getMyUid()) return; // Must be host
+        
+        document.querySelectorAll('.mode-select-btn').forEach(b => b.classList.remove('active'));
+        target.classList.add('active');
+        
+        if (window.currentLobbyCode) {
+            updateDoc(doc(db, "lobbies", window.currentLobbyCode), { teamSize: target.dataset.teamsize });
+        }
+        return;
+    }
+    
     if (target.id === 'join-lobby-btn') {
         if (!selectedClass) {
             if (sounds) sounds.play('ui_error', 'ui');
@@ -648,7 +716,6 @@ document.addEventListener('click', async (e) => {
         return;
     }
 
-    // Ready Up / Start Match
     if (target.id === 'ready-btn') {
         if (!window.currentLobbyCode) return;
         
@@ -659,11 +726,10 @@ document.addEventListener('click', async (e) => {
             const isHost = window.lobbyPlayers[0].uid === myUid;
             const everyoneElseReady = window.lobbyPlayers.every(p => p.uid === myUid || p.ready);
             
+            // IF HOST AND ALL READY = TRIGGER COUNTDOWN
             if (isHost && everyoneElseReady && window.lobbyPlayers.length > 1) {
-                // START THE GAME!
-                updateDoc(doc(db, "lobbies", window.currentLobbyCode), { inGame: true });
+                updateDoc(doc(db, "lobbies", window.currentLobbyCode), { matchState: 'countdown' });
             } else {
-                // Toggle ready status
                 const isReady = !me.ready;
                 if (isReady && sounds) sounds.play('ui_ready', 'ui'); 
                 
@@ -674,14 +740,12 @@ document.addEventListener('click', async (e) => {
         return;
     }
     
-    // Leave Lobby
     if (target.id === 'leave-lobby-btn') {
         leaveCurrentLobby();
         document.querySelector('.tab-btn[data-target="lobby"]').click();
         return;
     }
 
-    // Account Modal Toggle
     if (target.id === 'account-btn') {
         const accModal = document.getElementById('account-modal');
         const loggedOutView = document.getElementById('account-logged-out');
@@ -710,7 +774,6 @@ document.addEventListener('click', async (e) => {
         return;
     }
 
-    // Firebase Registration
     if (target.id === 'acc-register-btn') {
         const user = document.getElementById('acc-user').value.trim();
         const pass = document.getElementById('acc-pass').value;
@@ -746,7 +809,6 @@ document.addEventListener('click', async (e) => {
         return;
     }
 
-    // Firebase Login
     if (target.id === 'acc-login-btn') {
         const user = document.getElementById('acc-user').value.trim();
         const pass = document.getElementById('acc-pass').value;
@@ -773,7 +835,6 @@ document.addEventListener('click', async (e) => {
         return;
     }
 
-    // Firebase Logout
     const logoutBtn = target.closest('#acc-logout-btn');
     if (logoutBtn) {
         logoutBtn.innerText = "LOGGING OUT...";
@@ -791,9 +852,6 @@ document.addEventListener('click', async (e) => {
         return;
     }
 
-    // --- FRIENDS SYSTEM ACTIONS ---
-    
-    // Add Friend
     if (target.id === 'add-friend-btn') {
         const searchInput = document.getElementById('friend-search-input');
         const msg = document.getElementById('friend-search-msg');
@@ -844,7 +902,6 @@ document.addEventListener('click', async (e) => {
         return;
     }
 
-    // Accept Request
     if (target.classList.contains('accept-req-btn')) {
         const friendUid = target.dataset.uid;
         target.innerText = "...";
@@ -862,7 +919,6 @@ document.addEventListener('click', async (e) => {
         return;
     }
 
-    // Deny Request
     if (target.classList.contains('deny-req-btn')) {
         const friendUid = target.dataset.uid;
         try {
@@ -875,10 +931,8 @@ document.addEventListener('click', async (e) => {
         return;
     }
 
-    // Accept Live Invite
     if (target.classList.contains('accept-invite-btn') || target.classList.contains('join-invite-btn')) {
         
-        // Protect from joining without a class
         if (!selectedClass) {
             if (sounds) sounds.play('ui_error', 'ui');
             document.querySelector('.tab-btn[data-target="lobby"]').click();
@@ -899,7 +953,6 @@ document.addEventListener('click', async (e) => {
         
         const joined = await joinLobbyByCode(code, target);
         
-        // If successfully joined, clear the invite
         if (joined) {
             const notifBox = target.closest('.notif-box');
             if (notifBox) {
@@ -918,7 +971,6 @@ document.addEventListener('click', async (e) => {
         return;
     }
 
-    // Click Friend -> View Profile
     const friendItem = target.closest('.friend-item');
     if (friendItem && !target.classList.contains('friend-action-btn') && !target.classList.contains('join-invite-btn')) {
         const fUid = friendItem.dataset.uid;
@@ -937,7 +989,6 @@ document.addEventListener('click', async (e) => {
         
         const inviteBtn = document.getElementById('invite-friend-btn');
         inviteBtn.onclick = async () => {
-            // Must have a lobby to invite them to
             if (!window.currentLobbyCode) {
                 document.querySelector('.tab-btn[data-target="multiplayer"]').click();
             }
@@ -971,7 +1022,6 @@ document.addEventListener('click', async (e) => {
         return;
     }
 
-    // Class Selection
     if (target.classList.contains('class-btn')) {
         if (target.classList.contains('active')) {
             openMasteryModal(target.dataset.class);
@@ -982,10 +1032,9 @@ document.addEventListener('click', async (e) => {
         target.classList.add('active');
         selectedClass = target.dataset.class;
         
-        // Enforce Class-Locked Mastery Skins
         if (window.equippedItems && window.equippedItems.Skin && window.equippedItems.Skin.startsWith('skin_mastery_')) {
             if (window.equippedItems.Skin !== `skin_mastery_${selectedClass}`) {
-                window.equippedItems.Skin = null; // Unequip invalid mastery skin
+                window.equippedItems.Skin = null; 
                 saveUserData();
                 renderLocker();
             }
@@ -1011,7 +1060,6 @@ document.addEventListener('click', async (e) => {
         }
     }
 
-    // Equipment Logic
     const equipBtn = target.closest('.btn-equip');
     if (equipBtn) {
         const itemId = equipBtn.dataset.id;
@@ -1070,7 +1118,6 @@ document.addEventListener('click', async (e) => {
         return;
     }
 
-    // TAB SWITCHING
     if (target.classList.contains('tab-btn')) {
         const targetTab = target.dataset.target;
         
@@ -1096,9 +1143,9 @@ document.addEventListener('click', async (e) => {
         
         window.activePreviewItem = null; 
 
-        // Footer Visibility Rules
         const menuFooter = document.querySelector('.menu-footer');
-        const gmSelector = document.getElementById('gamemode-selector');
+        const mainBtn = document.getElementById('gamemodes-main-btn');
+        const tsSelector = document.getElementById('br-team-selector');
         const lobbyControls = document.getElementById('footer-center-lobby-controls');
         
         if (menuFooter) {
@@ -1110,7 +1157,8 @@ document.addEventListener('click', async (e) => {
         }
         
         if (targetTab === 'multiplayer') {
-            if (gmSelector) gmSelector.classList.remove('hidden');
+            if (mainBtn) mainBtn.classList.remove('hidden');
+            if (tsSelector && window.currentMainMode !== '1v1') tsSelector.classList.remove('hidden');
             if (lobbyControls) lobbyControls.classList.remove('hidden');
             
             if (!window.currentLobbyCode) {
@@ -1124,12 +1172,11 @@ document.addEventListener('click', async (e) => {
                     equipped: window.equippedItems || {}
                 };
                 
-                window.currentLobbyMode = currentLobbyMode;
-                
                 setDoc(doc(db, "lobbies", window.currentLobbyCode), {
-                    mode: currentLobbyMode,
+                    mainMode: window.currentMainMode,
+                    teamSize: window.currentTeamSize,
                     players: [myPlayerObj],
-                    inGame: false
+                    matchState: 'waiting'
                 }).then(() => {
                     listenToLobby(window.currentLobbyCode);
                 });
@@ -1139,8 +1186,11 @@ document.addEventListener('click', async (e) => {
             }
             
         } else {
-            if (gmSelector) gmSelector.classList.add('hidden');
+            if (mainBtn) mainBtn.classList.add('hidden');
+            if (tsSelector) tsSelector.classList.add('hidden');
             if (lobbyControls) lobbyControls.classList.add('hidden');
+            
+            document.getElementById('gamemodes-menu').classList.add('hidden');
         }
         
         if (targetTab === 'season') renderSeasonStore();
@@ -1152,7 +1202,7 @@ document.addEventListener('click', async (e) => {
 
 
 // ==========================================
-// NEW: AUTO-SPINNING SLOT MACHINE LOGIC
+// SLOT MACHINE LOGIC
 // ==========================================
 window.addEventListener('triggerSlotMachine', () => {
     const ui = document.getElementById('slot-machine-ui');
@@ -1164,16 +1214,13 @@ window.addEventListener('triggerSlotMachine', () => {
     const resultEl = document.getElementById('slot-result');
     resultEl.classList.add('hidden');
     
-    // Trigger physical lever animation
     const lever = document.getElementById('slot-lever');
     lever.classList.remove('pulled');
-    void lever.offsetWidth; // Force CSS reflow
+    void lever.offsetWidth; 
     lever.classList.add('pulled');
     
-    // Play actual slot machine spin sound
     if (sounds) sounds.play('slot_spin', 'ui'); 
 
-    // Reset and spin the color reels
     const reels = ['reel-1', 'reel-2', 'reel-3'].map(id => document.getElementById(id));
     reels.forEach(r => {
         r.classList.add('spinning');
@@ -1182,7 +1229,6 @@ window.addEventListener('triggerSlotMachine', () => {
         r.style.boxShadow = "";
     });
     
-    // Auto resolve after 4 seconds
     setTimeout(() => {
         reels.forEach(r => r.classList.remove('spinning'));
         applySlotMachineReward();
@@ -1203,7 +1249,6 @@ function applySlotMachineReward() {
     let chosenUpgrade = null;
     let isLegendary = false;
 
-    // 10% Chance for Legendary Active Ability
     if (roll < 0.10 && !p.activeAbility) {
         let abilities = UPGRADE_POOL.filter(u => u.isActiveAbility && (!u.classes || u.classes.includes(p.type)));
         if (abilities.length > 0) {
@@ -1211,20 +1256,19 @@ function applySlotMachineReward() {
             targetTier = 5;
             isLegendary = true;
         } else {
-            roll = 0.5; // fallback to stat roll if they already have an ability
+            roll = 0.5; 
         }
     }
 
-    // Roll for a random tier and upgrade
     if (!chosenUpgrade) {
         let stats = UPGRADE_POOL.filter(u => !u.isActiveAbility && (!u.classes || u.classes.includes(p.type)));
         chosenUpgrade = stats[Math.floor(Math.random() * stats.length)];
         
-        if (roll < 0.15) targetTier = 5;       // 15% Max T5
-        else if (roll < 0.35) targetTier = 4;  // 20% T4
-        else if (roll < 0.60) targetTier = 3;  // 25% T3
-        else if (roll < 0.85) targetTier = 2;  // 25% T2
-        else targetTier = 1;                   // 15% T1
+        if (roll < 0.15) targetTier = 5;       
+        else if (roll < 0.35) targetTier = 4;  
+        else if (roll < 0.60) targetTier = 3;  
+        else if (roll < 0.85) targetTier = 2;  
+        else targetTier = 1;                   
     }
 
     if (isLegendary) {
@@ -1237,7 +1281,6 @@ function applySlotMachineReward() {
         
         targetTier = Math.min(targetTier, maxAllowed);
         
-        // If they already have this tier or higher, just give them +1 to next available
         if (currentTier >= targetTier) {
             if (currentTier < maxAllowed) {
                 targetTier = currentTier + 1;
@@ -1249,12 +1292,11 @@ function applySlotMachineReward() {
                     currentTier = p.upgrades[chosenUpgrade.id] || 0;
                     targetTier = currentTier + 1;
                 } else {
-                    targetTier = currentTier; // Fully maxed out
+                    targetTier = currentTier; 
                 }
             }
         }
 
-        // Apply the difference so they jump straight to the rolled tier
         let diff = targetTier - currentTier;
         for (let i = 0; i < diff; i++) {
             p.applyUpgrade(chosenUpgrade.id);
@@ -1265,7 +1307,6 @@ function applySlotMachineReward() {
         text = `UPGRADED!\n${chosenUpgrade.title} T${targetTier}`;
     }
     
-    // Lock reels to the target color
     reels.forEach(r => {
         r.style.background = color;
         r.style.boxShadow = `inset 0 0 10px rgba(0,0,0,0.8), 0 0 15px ${color}`;
@@ -1277,10 +1318,8 @@ function applySlotMachineReward() {
     resultEl.style.color = color;
     resultEl.classList.remove('hidden');
     
-    // Play Custom Slot Win Sound
     if (sounds) sounds.play('slot_win', 'alert');
 
-    // Auto-hide the entire UI after 3 seconds
     setTimeout(() => {
         const ui = document.getElementById('slot-machine-ui');
         if (ui) {
@@ -1561,222 +1600,6 @@ function renderMainStore() {
 }
 
 // ==========================================
-// FRIENDS LIST RENDERING
-// ==========================================
-async function renderFriendsUI() {
-    const reqContainer = document.getElementById('friend-requests-container');
-    const reqList = document.getElementById('friend-requests-list');
-    const fList = document.getElementById('friends-list');
-    
-    if (!reqContainer || !reqList || !fList) return;
-
-    if (window.myRequests.length > 0) {
-        reqContainer.classList.remove('hidden');
-        reqList.innerHTML = '';
-        
-        for (let uid of window.myRequests) {
-            let data = friendCache[uid];
-            if (!data) {
-                const s = await getDoc(doc(db, "users", uid));
-                if (s.exists()) { 
-                    data = s.data(); 
-                    friendCache[uid] = data; 
-                }
-            }
-            if (data) {
-                reqList.innerHTML += `
-                    <div class="friend-item" style="border-color:#555; background:rgba(0,0,0,0.5);">
-                        <div class="friend-name" style="margin-left:5px;">${data.username}</div>
-                        <div class="friend-actions">
-                            <button class="friend-action-btn accept-req-btn yellow-btn-solid" data-uid="${uid}">✓</button>
-                            <button class="friend-action-btn deny-req-btn dark-btn-outline" data-uid="${uid}">✖</button>
-                        </div>
-                    </div>`;
-            }
-        }
-    } else {
-        reqContainer.classList.add('hidden');
-        reqList.innerHTML = '';
-    }
-
-    if (window.myFriends.length > 0) {
-        const activeInvites = window.myInvites.filter(inv => (Date.now() - inv.timestamp) < 60000);
-        const invitedUids = activeInvites.map(i => i.fromUid);
-
-        // Sort: Invites -> Online -> Offline
-        let sortedFriends = [...window.myFriends].sort((a, b) => {
-            const aHasInv = invitedUids.includes(a);
-            const bHasInv = invitedUids.includes(b);
-            if (aHasInv && !bHasInv) return -1;
-            if (bHasInv && !aHasInv) return 1;
-            
-            const aData = friendCache[a];
-            const bData = friendCache[b];
-            
-            const aOn = aData && (Date.now() - (aData.lastActive || 0)) < 65000;
-            const bOn = bData && (Date.now() - (bData.lastActive || 0)) < 65000;
-            
-            if (aOn && !bOn) return -1;
-            if (bOn && !aOn) return 1;
-            return 0;
-        });
-
-        fList.innerHTML = '';
-        
-        for (let uid of sortedFriends) {
-            let data = friendCache[uid];
-            if (!data) {
-                const s = await getDoc(doc(db, "users", uid));
-                if (s.exists()) { 
-                    data = s.data(); 
-                    friendCache[uid] = data; 
-                }
-            }
-            if (data) {
-                const isOnline = (Date.now() - (data.lastActive || 0)) < 65000;
-                const dotClass = isOnline ? '' : 'offline';
-                
-                let avatarIcon = '';
-                if (data.equipped && data.equipped.Banner && ITEMS_DB[data.equipped.Banner]) {
-                    avatarIcon = ITEMS_DB[data.equipped.Banner].icon;
-                }
-
-                // Check for golden invite style
-                const activeInvite = activeInvites.find(i => i.fromUid === uid);
-                
-                if (activeInvite) {
-                    fList.innerHTML += `
-                        <div class="friend-item has-invite" data-uid="${uid}">
-                            <div class="friend-avatar">
-                                ${avatarIcon}
-                                <div class="friend-online-dot ${dotClass}"></div>
-                            </div>
-                            <div class="friend-name">
-                                ${data.username}
-                                <span>INVITE PENDING</span>
-                            </div>
-                            <button class="friend-action-btn join-invite-btn yellow-btn-solid" data-hostuid="${uid}" data-hostname="${data.username}" data-code="${activeInvite.code}">JOIN</button>
-                        </div>`;
-                } else {
-                    fList.innerHTML += `
-                        <div class="friend-item" data-uid="${uid}">
-                            <div class="friend-avatar">
-                                ${avatarIcon}
-                                <div class="friend-online-dot ${dotClass}"></div>
-                            </div>
-                            <div class="friend-name">${data.username}</div>
-                            <span style="color:gray; font-size:0.8rem; font-weight:bold;">❯</span>
-                        </div>`;
-                }
-            }
-        }
-    } else {
-        fList.innerHTML = '<p style="color:gray; font-style:italic; font-size:0.9rem;">No friends yet. Add someone above!</p>';
-    }
-}
-
-// EXACT RESTORE OF THE OLD SLIDE-IN NOTIFICATION LOGIC
-function showInviteNotification(senderName, code, hostUid) {
-    const queue = document.getElementById('notif-queue');
-    const template = document.getElementById('invite-template');
-    
-    if (!queue || !template) return;
-
-    const clone = template.cloneNode(true);
-    clone.id = "";
-    
-    // Fix: Remove standard hidden classes and add 'active' so display:flex kicks in
-    clone.classList.remove('hidden', 'fade-out', 'show');
-    clone.classList.add('active'); 
-    
-    clone.querySelector('.invite-sender-name').innerText = `From: ${senderName}`;
-    
-    const btn = clone.querySelector('.accept-invite-btn');
-    btn.dataset.code = code;
-    btn.dataset.hostuid = hostUid;
-    btn.dataset.hostname = senderName;
-    
-    queue.appendChild(clone);
-    
-    // Double requestAnimationFrame ensures browser paints the flexbox before adding transform
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            clone.classList.add('show');
-        });
-    });
-    
-    if(sounds && sounds.play) {
-        sounds.play('notification', 'alert');
-    }
-
-    setTimeout(() => {
-        if(clone.parentNode) {
-            clone.classList.remove('show');
-            setTimeout(() => {
-                clone.classList.remove('active');
-                clone.remove();
-            }, 400);
-        }
-    }, 15000);
-}
-
-// ==========================================
-// HOLD-TO-CLAIM
-// ==========================================
-const startClaim = (e) => {
-    const btn = e.target.closest('.btn-claim');
-    if (!btn) return;
-    
-    e.preventDefault(); 
-    btn.classList.add('holding');
-    
-    const storeItem = btn.closest('.store-item');
-    if (storeItem) {
-        storeItem.classList.add('shaking');
-    }
-
-    btn.claimTimeout = setTimeout(() => {
-        const itemId = btn.dataset.id;
-        window.claimedItems[itemId] = true;
-        saveUserData(); 
-        
-        if(sounds && sounds.play) {
-            sounds.play('ui_claim', 'ui'); 
-        }
-        
-        btn.classList.remove('holding');
-        if (storeItem) {
-            storeItem.classList.remove('shaking');
-            storeItem.classList.add('claimed-pop');
-        }
-        
-        setTimeout(() => {
-            renderSeasonStore();
-            renderMainStore();
-            renderLocker();
-        }, 300); 
-    }, 1000); 
-};
-
-const stopClaim = (e) => {
-    document.querySelectorAll('.btn-claim.holding').forEach(btn => {
-        clearTimeout(btn.claimTimeout);
-        btn.classList.remove('holding');
-        
-        const storeItem = btn.closest('.store-item');
-        if (storeItem) {
-            storeItem.classList.remove('shaking');
-        }
-    });
-};
-
-document.addEventListener('mousedown', startClaim);
-document.addEventListener('touchstart', startClaim, {passive: false});
-document.addEventListener('mouseup', stopClaim);
-document.addEventListener('mouseleave', stopClaim);
-document.addEventListener('touchend', stopClaim);
-
-// ==========================================
 // PREVIEW CANVASES
 // ==========================================
 const lockerCanvas = document.getElementById('lockerPreviewCanvas');
@@ -1954,128 +1777,18 @@ function renderPreview() {
 window.previewAnimationId = requestAnimationFrame(renderPreview);
 
 // ==========================================
-// SETTINGS BINDINGS
+// PERSISTENT LOBBY RETURN LOGIC
 // ==========================================
-document.getElementById('settings-btn').addEventListener('click', () => { 
-    document.getElementById('settings-modal').classList.remove('hidden'); 
-});
-
-document.getElementById('close-settings-btn').addEventListener('click', () => {
-    window.gameSettings.highQuality = document.getElementById('set-hq').checked;
-    window.gameSettings.particles = document.getElementById('set-particles').checked;
-    window.gameSettings.showNames = document.getElementById('set-names').checked;
-    window.gameSettings.showFps = document.getElementById('set-fps').checked;
-    
-    window.gameSettings.volume = parseInt(document.getElementById('set-volume').value) / 100;
-    window.gameSettings.showLeaderboard = document.getElementById('set-leaderboard').checked;
-    window.gameSettings.showBadges = document.getElementById('set-badges').checked;
-    window.gameSettings.showNotifs = document.getElementById('set-notifs').checked;
-    window.gameSettings.showMinimap = document.getElementById('set-minimap').checked; 
-
-    localStorage.setItem('yepio_settings', JSON.stringify(window.gameSettings));
-
-    const fpsDisplay = document.getElementById('fps-display');
-    if (fpsDisplay) {
-        if (window.gameSettings.showFps) {
-            fpsDisplay.classList.remove('hidden');
-        } else {
-            fpsDisplay.classList.add('hidden');
-        }
-    }
-    
-    if (window.game) {
-        window.game.updateLeaderboard();
-        window.game.updateUpgradeBadges();
-    }
-    
-    document.getElementById('settings-modal').classList.add('hidden');
-});
-
-document.querySelectorAll('.keybind-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.keybind-btn').forEach(b => b.classList.remove('listening'));
-        listeningAction = e.target.dataset.action;
-        e.target.classList.add('listening');
-        e.target.innerText = "PRESS KEY";
-    });
-});
-
-let listeningAction = null;
-const formatKeyName = (key) => key === ' ' ? 'SPACE' : key.toUpperCase();
-
-document.addEventListener('keydown', (e) => {
-    if (listeningAction) {
-        e.preventDefault(); 
-        const key = e.key.toLowerCase();
-        window.gameSettings.keybinds[listeningAction] = key;
-        localStorage.setItem('yepio_settings', JSON.stringify(window.gameSettings));
-        
-        const btn = document.querySelector(`.keybind-btn[data-action="${listeningAction}"]`);
-        if (btn) { 
-            btn.innerText = formatKeyName(key); 
-            btn.classList.remove('listening'); 
-        }
-        listeningAction = null;
-    }
-});
-
-function updateMenuXPBar() {
-    const xpRequired = window.globalAccountLevel * 1000;
-    const progressPercent = Math.min(100, (window.globalAccountXP / xpRequired) * 100);
-    const bar = document.getElementById('menu-xp-bar');
-    const lvl = document.getElementById('menu-level');
-    
-    if (bar) {
-        bar.style.width = `${progressPercent}%`;
-    }
-    if (lvl) {
-        lvl.innerText = window.globalAccountLevel;
-    }
-    
-    const sBar = document.getElementById('season-progress-bar');
-    if (sBar) {
-        sBar.style.width = `${Math.min(100, (window.globalAccountLevel / 50) * 100)}%`;
-    }
-}
-
-document.getElementById('play-btn').addEventListener('click', () => {
-    if (!selectedClass) {
-        const info = document.getElementById('class-info');
-        if (info) {
-            info.innerText = "PLEASE SELECT A CLASS FIRST!";
-            info.style.color = "red";
-            info.classList.remove('fade-out', 'hidden');
-            
-            if (window.classInfoTimeout) {
-                clearTimeout(window.classInfoTimeout);
-            }
-            window.classInfoTimeout = setTimeout(() => {
-                info.classList.add('fade-out');
-            }, 2000);
-        }
-        return;
-    }
-    
-    setInGameStatus(true); 
-    
-    document.getElementById('main-menu').classList.add('hidden');
-    document.getElementById('game-ui').classList.remove('hidden');
-    
-    const hud = document.querySelector('.hud');
-    if(hud) {
-        hud.classList.remove('hidden');
-    }
-    
-    window.isInMatch = true;
-    game.start(selectedClass);
-});
-
 document.getElementById('return-lobby-btn').addEventListener('click', () => {
     setInGameStatus(false);
     window.isInMatch = false;
     
     document.getElementById('game-over-screen').classList.add('hidden');
     document.getElementById('game-ui').classList.add('hidden');
+    
+    const spectatorHud = document.getElementById('spectator-hud');
+    if (spectatorHud) spectatorHud.classList.add('hidden');
+    
     document.getElementById('main-menu').classList.remove('hidden');
     
     if (window.lastMatchStats) {
@@ -2110,20 +1823,26 @@ document.getElementById('return-lobby-btn').addEventListener('click', () => {
     
     if (window.currentLobbyCode) {
         document.querySelector('.tab-btn[data-target="multiplayer"]').click();
+        
+        // We stay in the lobby, just reset readiness
         const me = window.lobbyPlayers.find(p => p.uid === getMyUid());
         if (me) {
             const newPlayers = window.lobbyPlayers.map(p => p.uid === getMyUid() ? { ...p, ready: false } : p);
-            updateDoc(doc(db, "lobbies", window.currentLobbyCode), { 
-                players: newPlayers, 
-                inGame: false 
-            }).catch(e => {
+            
+            let updates = { players: newPlayers };
+            if (window.lobbyPlayers.length > 0 && window.lobbyPlayers[0].uid === getMyUid()) {
+                updates.matchState = 'waiting';
+            }
+            
+            updateDoc(doc(db, "lobbies", window.currentLobbyCode), updates).catch(e => {
                 console.error(e);
             });
         }
+    } else {
+        game.startDemo();
     }
     
     updateMenuXPBar(); 
-    game.startDemo();
 });
 
 // ==========================================

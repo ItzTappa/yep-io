@@ -59,6 +59,11 @@ html, body {
 }
 .footer-left-container { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; z-index: 2; }
 
+/* NEW MENU MODE BUTTONS */
+.menu-mode-btn { transition: background 0.2s, color 0.2s; border-radius: 4px; }
+.menu-mode-btn:hover { background: rgba(255, 255, 255, 0.1) !important; color: var(--text-main) !important; }
+.menu-mode-btn.active { color: var(--accent) !important; text-shadow: 0 0 10px rgba(255, 230, 0, 0.3); }
+
 .gamemode-selector { display: flex; background: rgba(0,0,0,0.6); border: 2px solid #444; border-radius: 8px; overflow: hidden; box-shadow: 0 0 10px rgba(0,0,0,0.5); width: max-content; }
 .mode-select-btn { background: transparent; color: gray; font-weight: bold; font-size: 0.9rem; padding: 10px 20px; border: none; border-right: 1px solid #333; cursor: pointer; transition: 0.2s; letter-spacing: 1px; }
 .mode-select-btn:last-child { border-right: none; }
@@ -337,7 +342,7 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 
 #notif-queue { 
     position: absolute; 
-    bottom: 40px; /* ALIGNED WITH UPGRADES & SLOT MACHINE */
+    bottom: 40px; 
     left: 20px; 
     display: flex; 
     flex-direction: column-reverse; 
@@ -349,7 +354,7 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 
 #upgrade-ui { 
     position: absolute; 
-    bottom: 40px; /* ALIGNED HORIZONTALLY */
+    bottom: 40px; 
     left: 50%; 
     transform: translateX(-50%); 
     display: flex; 
@@ -362,7 +367,7 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 
 #slot-machine-ui {
     position: absolute; 
-    bottom: 40px; /* ALIGNED HORIZONTALLY */
+    bottom: 40px; 
     right: 20px;
     width: 220px;
     background: linear-gradient(135deg, #222, #111);
@@ -375,7 +380,6 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
     transition: opacity 0.3s ease-out;
     z-index: 100;
     
-    /* This ensures that when the result text is injected, it expands UPWARDS */
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
@@ -543,58 +547,6 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
 #mobile-ability-btn { position: absolute; bottom: 140px; right: 40px; width: 60px; height: 60px; border-radius: 50%; background: rgba(255, 0, 255, 0.3); border: 2px solid rgba(255, 0, 255, 0.6); color: #fff; font-weight: bold; pointer-events: auto; backdrop-filter: blur(2px); z-index: 1001; font-size: 0.7rem; }
 #mobile-ability-btn:active { background: rgba(255, 0, 255, 0.6); transform: scale(0.9); }
 
-/* Match Awards (Game Over) - SHRUNK DOWN */
-.awards-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
-    margin-top: 10px;
-    margin-bottom: 20px;
-    width: 100%;
-    max-width: 800px;
-}
-.award-badge {
-    background: rgba(0,0,0,0.8);
-    border: 2px solid #555;
-    border-radius: 6px;
-    padding: 6px 10px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-width: 90px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-    transition: transform 0.2s, border-color 0.2s;
-}
-.award-badge:hover {
-    transform: scale(1.05);
-}
-.award-icon {
-    font-size: 1.2rem;
-    margin-bottom: 2px;
-}
-.award-title {
-    font-size: 0.65rem;
-    font-weight: bold;
-    color: var(--accent);
-    text-transform: uppercase;
-    text-align: center;
-    letter-spacing: 1px;
-}
-.award-desc {
-    font-size: 0.55rem;
-    color: #aaa;
-    text-align: center;
-    margin-top: 2px;
-    max-width: 80px;
-    line-height: 1.1;
-}
-.award-gold { border-color: #ffd700; box-shadow: 0 0 10px rgba(255,215,0,0.3); }
-.award-silver { border-color: #c0c0c0; }
-.award-bronze { border-color: #cd7f32; }
-.award-special { border-color: #ff00ff; box-shadow: 0 0 10px rgba(255,0,255,0.3); }
-
 /* MOBILE RESPONSIVE QUERIES */
 @media (max-width: 768px) {
     h1 { font-size: 3rem; }
@@ -692,10 +644,4 @@ h1 { font-size: 4.5rem; margin-bottom: 30px; letter-spacing: 5px; text-shadow: 0
     .hud-slot-lever::after { width: 10px; height: 10px; left: -1px; top: -5px; }
     @keyframes pullLever { 0% { top: -5px; } 50% { top: 15px; } 100% { top: -5px; } }
     #slot-result { font-size: 0.6rem; margin-top: 2px; }
-    
-    .awards-grid { gap: 5px; margin-top: 5px; margin-bottom: 10px; }
-    .award-badge { min-width: 70px; padding: 4px 6px; }
-    .award-icon { font-size: 1rem; margin-bottom: 1px; }
-    .award-title { font-size: 0.55rem; }
-    .award-desc { display: none; }
 }

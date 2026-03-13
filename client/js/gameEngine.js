@@ -30,6 +30,7 @@ export class GameEngine {
         
         this.lobbyCode = null; 
         this.isHost = false; 
+        this.hasSpawnedEnemies = false;
         
         this.mouseX = this.width / 2; 
         this.mouseY = this.height / 2;
@@ -161,7 +162,7 @@ export class GameEngine {
 
         if (leftZone) {
             leftZone.addEventListener('touchstart', (e) => {
-                if (this.isDemo || this.isGameOver) return; 
+                if (this.isDemo || this.isGameOver || (this.player && this.player.isDead)) return; 
                 e.preventDefault();
                 for (let i = 0; i < e.changedTouches.length; i++) {
                     const t = e.changedTouches[i];
@@ -184,7 +185,7 @@ export class GameEngine {
             }, {passive: false});
 
             leftZone.addEventListener('touchmove', (e) => {
-                if (this.isDemo || this.isGameOver) return; 
+                if (this.isDemo || this.isGameOver || (this.player && this.player.isDead)) return; 
                 e.preventDefault();
                 for (let i = 0; i < e.changedTouches.length; i++) {
                     const t = e.changedTouches[i];
@@ -225,7 +226,7 @@ export class GameEngine {
         }
 
         window.addEventListener('touchstart', (e) => {
-            if (this.isDemo || this.isGameOver) return;
+            if (this.isDemo || this.isGameOver || (this.player && this.player.isDead)) return;
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const t = e.changedTouches[i];
                 if ((!this.leftTouch.active || t.identifier !== this.leftTouch.id) && 
@@ -243,7 +244,7 @@ export class GameEngine {
         }, {passive: false});
 
         window.addEventListener('touchmove', (e) => {
-            if (this.isDemo || this.isGameOver) return;
+            if (this.isDemo || this.isGameOver || (this.player && this.player.isDead)) return;
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const t = e.changedTouches[i];
                 if (t.identifier === this.aimTouchId) {
@@ -272,12 +273,12 @@ export class GameEngine {
 
         if (dashBtn) {
             dashBtn.addEventListener('touchstart', (e) => {
-                if (this.isDemo || this.isGameOver) return;
+                if (this.isDemo || this.isGameOver || (this.player && this.player.isDead)) return;
                 e.preventDefault();
                 if (window.gameSettings && window.gameSettings.keybinds) this.keys[window.gameSettings.keybinds.dash] = true;
             });
             dashBtn.addEventListener('touchend', (e) => {
-                if (this.isDemo || this.isGameOver) return;
+                if (this.isDemo || this.isGameOver || (this.player && this.player.isDead)) return;
                 e.preventDefault();
                 if (window.gameSettings && window.gameSettings.keybinds) this.keys[window.gameSettings.keybinds.dash] = false;
             });
@@ -285,12 +286,12 @@ export class GameEngine {
         
         if (abilityBtn) {
             abilityBtn.addEventListener('touchstart', (e) => {
-                if (this.isDemo || this.isGameOver) return;
+                if (this.isDemo || this.isGameOver || (this.player && this.player.isDead)) return;
                 e.preventDefault();
                 if (window.gameSettings && window.gameSettings.keybinds) this.keys[window.gameSettings.keybinds.ability] = true;
             });
             abilityBtn.addEventListener('touchend', (e) => {
-                if (this.isDemo || this.isGameOver) return;
+                if (this.isDemo || this.isGameOver || (this.player && this.player.isDead)) return;
                 e.preventDefault();
                 if (window.gameSettings && window.gameSettings.keybinds) this.keys[window.gameSettings.keybinds.ability] = false;
             });
@@ -312,8 +313,8 @@ export class GameEngine {
         let attempts = 0;
         
         while (!isSafe && attempts < 100) {
-            x = Math.random() * this.worldSize; 
-            y = Math.random() * this.worldSize;
+            x = 500 + Math.random() * (this.worldSize - 1000); 
+            y = 500 + Math.random() * (this.worldSize - 1000);
             isSafe = true;
             
             if (this.player && distance(x, y, this.player.x, this.player.y) < 1000) {
@@ -339,8 +340,8 @@ export class GameEngine {
         let attempts = 0;
         
         while (!isSafe && attempts < 50) {
-            x = Math.random() * this.worldSize; 
-            y = Math.random() * this.worldSize; 
+            x = 100 + Math.random() * (this.worldSize - 200); 
+            y = 100 + Math.random() * (this.worldSize - 200); 
             isSafe = true;
             for (let orb of this.orbs) {
                 if (orb.type === 'health' && distance(x, y, orb.x, orb.y) < minDist) { 
@@ -454,6 +455,7 @@ export class GameEngine {
         this.isDemo = true; 
         this.isGameOver = false; 
         this.spectateTarget = null;
+        this.hasSpawnedEnemies = true;
         this.bots = []; 
         this.orbs = []; 
         this.projectiles = []; 
@@ -507,6 +509,7 @@ export class GameEngine {
         this.isDemo = false; 
         this.isGameOver = false; 
         this.spectateTarget = null;
+        this.hasSpawnedEnemies = true;
         this.bots = []; 
         this.orbs = []; 
         this.projectiles = []; 
@@ -640,13 +643,14 @@ export class GameEngine {
         // ==========================================
         let is1v1 = window.currentLobbyMode === '1v1';
         this.worldSize = is1v1 ? 3000 : 8000; 
-        this.stormActive = true; 
+        this.stormActive = !is1v1; 
         this.stormCenter = { x: this.worldSize / 2, y: this.worldSize / 2 };
-        this.stormRadius = is1v1 ? 2500 : 6000; 
+        this.stormRadius = is1v1 ? 0 : 6000; 
 
         this.isDemo = false; 
         this.isGameOver = false; 
         this.spectateTarget = null;
+        this.hasSpawnedEnemies = false;
         this.bots = []; 
         this.orbs = []; 
         this.projectiles = []; 
@@ -657,9 +661,12 @@ export class GameEngine {
         
         this.safeZones = [];
         this.safeZoneSpawnTimer = 0;
-        for(let i = 0; i < 3; i++) {
-            let pos = this.getSafeSpawnPosition(this.worldSize / 2);
-            this.safeZones.push(new SafeZone(pos.x, pos.y));
+        
+        if (!is1v1) {
+            for(let i = 0; i < 3; i++) {
+                let pos = this.getSafeSpawnPosition(4000);
+                this.safeZones.push(new SafeZone(pos.x, pos.y));
+            }
         }
 
         const gameUi = document.getElementById('game-ui');
@@ -704,36 +711,46 @@ export class GameEngine {
         const brUi = document.getElementById('br-ui');
         if (brUi) brUi.classList.remove('hidden'); 
 
-        // SPACING FOR MULTIPLAYER SPAWNS
-        let spawnX = this.worldSize / 2;
-        let spawnY = this.worldSize / 2;
-        let spacing = is1v1 ? 1000 : 150; 
+        // SPACING FOR MULTIPLAYER SPAWNS (Clustered perfectly for BR Intro Camera)
+        let spawnCenterX = this.worldSize / 2;
+        let spawnCenterY = this.worldSize / 2;
+        
+        if (!is1v1) {
+            spawnCenterX = 1000 + Math.random() * (this.worldSize - 2000);
+            spawnCenterY = 1000 + Math.random() * (this.worldSize - 2000);
+        }
+        
+        let spacing = is1v1 ? 1000 : 120; 
         let totalWidth = (players.length - 1) * spacing;
-        let startX = spawnX - totalWidth / 2;
+        let startX = spawnCenterX - totalWidth / 2;
 
         for (let i = 0; i < players.length; i++) {
             let pData = players[i];
             let px = startX + i * spacing;
-            let py = spawnY;
+            let py = spawnCenterY;
 
-            if (pData.id === 'local') {
+            if (pData.id === 'local' || pData.uid === getMyUid()) {
                 const activeBtn = document.querySelector('.class-btn.active');
-                let pClass = activeBtn ? activeBtn.dataset.class : 'triangle';
+                let pClass = activeBtn ? activeBtn.dataset.class : (pData.class || 'triangle');
                 
-                this.player = new Player(px, py, pClass, "");
-                this.player.color = pData.color; 
-                this.introTargetX = px;
-                this.introTargetY = py;
+                this.player = new Player(px, py, pClass, pData.name || "");
+                if (pData.equipped && pData.equipped.Color && ITEMS_DB[pData.equipped.Color]) {
+                    this.player.color = ITEMS_DB[pData.equipped.Color].value === 'gold' ? '#ffe600' : ITEMS_DB[pData.equipped.Color].value;
+                }
             } else {
-                let bot = new Bot(px, py, pData.classType || 'square', 0);
+                let botClass = pData.class || 'square';
+                let bot = new Bot(px, py, botClass, 0);
                 bot.name = pData.name;
-                bot.color = pData.color;
+                
+                if (pData.equipped && pData.equipped.Color && ITEMS_DB[pData.equipped.Color]) {
+                    bot.color = ITEMS_DB[pData.equipped.Color].value === 'gold' ? '#ffe600' : ITEMS_DB[pData.equipped.Color].value;
+                }
                 
                 // NEW: In 1v1 mode, remote players are enemies, not teammates.
                 let isFriendly = !is1v1;
                 bot.isTeammate = isFriendly; 
                 bot.isRemotePlayer = true; 
-                bot.remoteId = pData.id; 
+                bot.remoteId = pData.uid || pData.id; 
                 
                 this.bots.push(bot);
                 if (isFriendly) {
@@ -754,6 +771,8 @@ export class GameEngine {
                 b.id = 'b' + i; 
                 this.bots.push(b);
             }
+            
+            this.hasSpawnedEnemies = true;
             
             setTimeout(() => {
                 if (window.gameSocket) {
@@ -815,6 +834,8 @@ export class GameEngine {
                     bot.upgradeProgress = -999999; 
                     this.bots.push(bot);
                 });
+                
+                this.hasSpawnedEnemies = true;
             });
 
             window.gameSocket.on('hostBotSync', (data) => {
@@ -872,8 +893,8 @@ export class GameEngine {
                     tm.x = data.x; 
                     tm.y = data.y; 
                     tm.angle = data.angle;
-                    if (data.health) tm.health = data.health;
                     if (data.maxHealth) tm.maxHealth = data.maxHealth;
+                    if (data.health) tm.health = Math.min(tm.maxHealth, data.health); // Prevent huge health bar bug
                     if (data.points !== undefined) tm.points = data.points; 
                 }
             });
@@ -899,15 +920,17 @@ export class GameEngine {
             });
         }
 
+        // ==========================================
+        // NEW: CINEMATIC BR INTRO SEQUENCE
+        // ==========================================
         this.isCinematicIntro = true;
         this.introTimer = 0;
-        this.camera.x = spawnX;
-        this.camera.y = spawnY;
+        this.introTargetX = spawnCenterX;
+        this.introTargetY = spawnCenterY;
+        this.camera.x = spawnCenterX;
+        this.camera.y = spawnCenterY;
         
-        if (players.length <= 2) this.introStartZoom = 0.8;
-        else if (players.length === 3) this.introStartZoom = 0.65;
-        else this.introStartZoom = 0.5;
-        
+        this.introStartZoom = is1v1 ? 0.8 : 0.5; // Deep zoom out for BR
         this.cameraZoom = this.introStartZoom;
 
         this.pointsToNextUpgrade = 15; 
@@ -956,7 +979,7 @@ export class GameEngine {
             const li = document.createElement('li'); 
             let displayPts = p.points >= 1000 ? (p.points / 1000).toFixed(1) + 'k' : Math.floor(p.points);
             li.innerText = `#${index + 1} ${p.isPlayer ? "YOU" : p.name} - ${displayPts} Pts`;
-            if (p === this.player) li.style.color = '#00ffcc';
+            if (p === this.player || (p.isTeammate && !p.isDead)) li.style.color = '#00ffcc';
             list.appendChild(li);
         });
     }
@@ -1005,7 +1028,7 @@ export class GameEngine {
     }
 
     showNextUpgrade() {
-        if (this.pendingUpgrades <= 0 || this.isDemo || this.isGameOver || !this.player) return;
+        if (this.pendingUpgrades <= 0 || this.isDemo || this.isGameOver || !this.player || this.player.isDead) return;
         
         this.isChoosingUpgrade = true; 
         this.currentUpgradeChoices = getWeightedUpgrades(this.player, 3);
@@ -1050,7 +1073,7 @@ export class GameEngine {
     }
 
     selectUpgrade(index) {
-        if (this.isDemo || this.isGameOver || !this.player) return;
+        if (this.isDemo || this.isGameOver || !this.player || this.player.isDead) return;
         
         const choice = this.currentUpgradeChoices[index];
         this.player.applyUpgrade(choice.id); 
@@ -1067,7 +1090,7 @@ export class GameEngine {
     }
 
     triggerUpgradeReady() {
-        if (this.isDemo || this.isGameOver) return;
+        if (this.isDemo || this.isGameOver || (this.player && this.player.isDead)) return;
         
         const xpBarContainer = document.querySelector('.xp-bar-container');
         if (xpBarContainer) {
@@ -1122,6 +1145,8 @@ export class GameEngine {
     processDeath(victim, killer) {
         if (victim.isDead) return;
         victim.isDead = true;
+        
+        let is1v1 = window.currentLobbyMode === '1v1';
 
         if (victim === this.player) {
             this.playSoundAt('player_death', victim.x, victim.y, 1.0, 'heavy');
@@ -1153,14 +1178,16 @@ export class GameEngine {
             }
         }
 
-        let orbsToSpawn = Math.min(orbReward, 100); 
-        if (orbsToSpawn > 0) {
-            let valuePerOrb = Math.max(1, Math.floor(orbReward / orbsToSpawn));
-            for (let o = 0; o < orbsToSpawn; o++) {
-                this.orbs.push(new Orb(victim.x, victim.y, 'xp', valuePerOrb, null, 180));
+        if (!is1v1) {
+            let orbsToSpawn = Math.min(orbReward, 100); 
+            if (orbsToSpawn > 0) {
+                let valuePerOrb = Math.max(1, Math.floor(orbReward / orbsToSpawn));
+                for (let o = 0; o < orbsToSpawn; o++) {
+                    this.orbs.push(new Orb(victim.x, victim.y, 'xp', valuePerOrb, null, 180));
+                }
+            } else if (totalTargetPoints < 3) {
+                this.orbs.push(new Orb(victim.x, victim.y, 'xp', 1, null, 100));
             }
-        } else if (totalTargetPoints < 3) {
-            this.orbs.push(new Orb(victim.x, victim.y, 'xp', 1, null, 100));
         }
         
         if (killer && killer.medicDrop > 0 && Math.random() < (killer.medicDrop * 0.15)) {
@@ -1171,37 +1198,71 @@ export class GameEngine {
             this.orbs.push(new Orb(victim.x, victim.y, 'health'));
         }
         
+        // ==========================================
+        // NEW: SPECTATOR / END OF MATCH LOGIC
+        // ==========================================
         if (victim === this.player) {
             this.screenShake = 25; 
-            this.handleGameOver(killer);
+            
+            // Hide upgrade cards if open
+            const ui = document.getElementById('upgrade-ui');
+            if (ui) ui.classList.add('hidden'); 
+            
+            let aliveTeammate = this.teammates.find(t => !t.isDead);
+            
+            if (!is1v1 && aliveTeammate) {
+                // Team is still alive! Spectate teammate.
+                this.spectateTarget = aliveTeammate;
+                const specHud = document.getElementById('spectator-hud');
+                const specName = document.getElementById('spectating-name');
+                if (specHud && specName) {
+                    specHud.classList.remove('hidden');
+                    specName.innerText = aliveTeammate.name;
+                }
+            } else {
+                // Team Wiped OR 1v1 Mode
+                this.handleGameOver(killer);
+            }
         } else {
             const botIndex = this.bots.indexOf(victim);
             if (botIndex > -1) {
                 this.bots.splice(botIndex, 1);
             }
             
-            if (this.spectateTarget === victim) {
-                this.spectateTarget = killer;
-                const killerNameEl = document.getElementById('go-killer-name');
-                if (killerNameEl) {
-                    killerNameEl.innerText = killer ? killer.name : "UNKNOWN";
+            if (victim.isTeammate) {
+                // Our teammate died. Are we spectating them?
+                if (this.player.isDead && this.spectateTarget === victim) {
+                    let aliveTeammate = this.teammates.find(t => !t.isDead);
+                    if (aliveTeammate) {
+                        this.spectateTarget = aliveTeammate;
+                        const specName = document.getElementById('spectating-name');
+                        if (specName) specName.innerText = aliveTeammate.name;
+                    } else {
+                        // Whole team wiped out
+                        const specHud = document.getElementById('spectator-hud');
+                        if(specHud) specHud.classList.add('hidden');
+                        this.handleGameOver(killer);
+                    }
                 }
-            }
-
-            let isSinglePlayer = !this.lobbyCode;
-            
-            // Only respawn bots if not in a storm-active mode
-            if (!this.isDemo && !this.stormActive && (this.isHost || isSinglePlayer)) { 
-                setTimeout(() => {
-                    if (this.isGameOver) return;
-                    
-                    const safePos = this.getSafeSpawnPosition(1500); 
-                    const types = ['triangle', 'square', 'circle'];
-                    
-                    let newBot = new Bot(safePos.x, safePos.y, types[Math.floor(Math.random() * 3)], 0); 
-                    newBot.id = 'b_respawn' + Math.random();
-                    this.bots.push(newBot);
-                }, 3000); 
+            } else {
+                // An enemy died
+                if (is1v1) {
+                    if (!this.player.isDead) {
+                        this.handleGameOver(null); // We won the 1v1!
+                    }
+                } else {
+                    let isSinglePlayer = !this.lobbyCode;
+                    if (!this.isDemo && !this.stormActive && (this.isHost || isSinglePlayer)) { 
+                        setTimeout(() => {
+                            if (this.isGameOver) return;
+                            const safePos = this.getSafeSpawnPosition(1500); 
+                            const types = ['triangle', 'square', 'circle'];
+                            let newBot = new Bot(safePos.x, safePos.y, types[Math.floor(Math.random() * 3)], 0); 
+                            newBot.id = 'b_respawn' + Math.random();
+                            this.bots.push(newBot);
+                        }, 3000); 
+                    }
+                }
             }
         }
     }
@@ -1223,19 +1284,38 @@ export class GameEngine {
 
         const allPlayers = [this.player, ...this.bots];
         allPlayers.sort((a, b) => b.points - a.points);
-        const rank = allPlayers.indexOf(this.player) + 1;
+        let rank = allPlayers.indexOf(this.player) + 1;
         const totalPlayers = allPlayers.length;
+
+        // Force rank 1 if we won 1v1 or BR organically
+        if (killer === null) rank = 1;
 
         const statsGrid = document.querySelector('.stats-grid');
         if (statsGrid) statsGrid.classList.remove('hidden'); 
 
+        const goTitleText = document.getElementById('go-title-text');
         const rankEl = document.getElementById('go-placement');
-        if (rankEl) {
-            let suffix = "th";
-            if (rank % 10 === 1 && rank % 100 !== 11) suffix = "st";
-            else if (rank % 10 === 2 && rank % 100 !== 12) suffix = "nd";
-            else if (rank % 10 === 3 && rank % 100 !== 13) suffix = "rd";
-            rankEl.innerText = `${rank}${suffix}`;
+        
+        if (rank === 1) {
+            if (goTitleText) {
+                goTitleText.innerText = "VICTORY!";
+                goTitleText.style.color = "#ffe600";
+                goTitleText.style.textShadow = "0 0 20px #ffe600";
+            }
+            if (rankEl) rankEl.innerText = "1st";
+        } else {
+            if (goTitleText) {
+                goTitleText.innerText = "MATCH OVER";
+                goTitleText.style.color = "red";
+                goTitleText.style.textShadow = "0 0 20px red";
+            }
+            if (rankEl) {
+                let suffix = "th";
+                if (rank % 10 === 1 && rank % 100 !== 11) suffix = "st";
+                else if (rank % 10 === 2 && rank % 100 !== 12) suffix = "nd";
+                else if (rank % 10 === 3 && rank % 100 !== 13) suffix = "rd";
+                rankEl.innerText = `${rank}${suffix}`;
+            }
         }
         
         const ptsEl = document.getElementById('go-points');
@@ -1274,6 +1354,7 @@ export class GameEngine {
 
     update() {
         this.frameCount++;
+        let is1v1 = window.currentLobbyMode === '1v1';
         
         if (this.frameCount % 30 === 0) this.updateLeaderboard(); 
 
@@ -1289,7 +1370,7 @@ export class GameEngine {
         // ==========================================
         // NEW: 1v1 PASSIVE UPGRADE TRICKLE
         // ==========================================
-        if (window.currentLobbyMode === '1v1' && !this.isDemo && !this.isGameOver && this.player && !this.player.isDead) {
+        if (is1v1 && !this.isDemo && !this.isGameOver && this.player && !this.player.isDead) {
             // Grants roughly ~9 points per second, creating a steady upgrade curve without farming
             let passiveXP = 0.15; 
             this.player.points += passiveXP;
@@ -1297,8 +1378,18 @@ export class GameEngine {
             pointsGainedThisFrame += passiveXP;
         }
 
-        // ORB SPAWNING (Bypassed in 1v1 mode)
-        let desiredOrbs = this.isDemo ? 1000 : (window.currentLobbyMode === '1v1' ? 0 : 3000);
+        // BATTLE ROYALE WIN CONDITION
+        if (!this.isDemo && !this.isGameOver && !is1v1 && this.hasSpawnedEnemies) {
+            let enemiesAlive = this.bots.filter(b => !b.isDead && !b.isTeammate).length;
+            if (enemiesAlive === 0 && this.frameCount > 180) {
+                if (!this.player.isDead || this.teammates.some(t => !t.isDead)) {
+                    this.handleGameOver(null); // Whole team wins!
+                }
+            }
+        }
+
+        // ORB SPAWNING (Bypassed entirely in 1v1 mode)
+        let desiredOrbs = this.isDemo ? 1000 : (is1v1 ? 0 : 3000);
         if (this.orbs.length < desiredOrbs) {
             let spawnCount = Math.min(100, desiredOrbs - this.orbs.length);
             for(let i = 0; i < spawnCount; i++) {
@@ -1496,7 +1587,10 @@ export class GameEngine {
             }
         }
 
-        if (!this.isDemo && !this.isGameOver && this.player) {
+        // ==========================================
+        // PLAYER INPUT (IGNORED IF DEAD OR CINEMATIC)
+        // ==========================================
+        if (!this.isDemo && !this.isGameOver && this.player && !this.player.isDead) {
             let dx = 0; 
             let dy = 0;
             let binds = { up: 'w', down: 's', left: 'a', right: 'd', dash: ' ', ability: 'e' };
@@ -1601,7 +1695,7 @@ export class GameEngine {
                 }
             }
 
-            if (this.safeZones.length < 3) {
+            if (this.safeZones.length < 3 && !is1v1) {
                 if (this.safeZoneSpawnTimer > 0) {
                     this.safeZoneSpawnTimer--;
                 } else {
@@ -1946,7 +2040,7 @@ export class GameEngine {
 
             let collectedBy = null;
             
-            if (!this.isDemo && !this.isGameOver && !this.isCinematicIntro && this.player) {
+            if (!this.isDemo && !this.isGameOver && !this.isCinematicIntro && this.player && !this.player.isDead) {
                 let pullRadius = 150 + (this.player.magnet * 100);
                 
                 let distP = distance(this.player.x, this.player.y, orb.x, orb.y);
@@ -2000,7 +2094,7 @@ export class GameEngine {
             }
         }
 
-        if (pointsGainedThisFrame > 0 && !this.isDemo && !this.isGameOver && this.player) {
+        if (pointsGainedThisFrame > 0 && !this.isDemo && !this.isGameOver && this.player && !this.player.isDead) {
             while (this.player.upgradeProgress >= this.pointsToNextUpgrade) {
                 this.player.upgradeProgress -= this.pointsToNextUpgrade;
                 this.player.upgradeCount++;
@@ -2012,7 +2106,7 @@ export class GameEngine {
             }
         }
 
-        if (!this.isDemo && !this.isGameOver && this.player) {
+        if (!this.isDemo && !this.isGameOver && this.player && !this.player.isDead) {
             let displayEl = document.getElementById('level-display');
             let barEl = document.getElementById('xp-bar');
             
@@ -2022,27 +2116,6 @@ export class GameEngine {
             if (barEl) {
                 barEl.style.width = Math.min(100, (this.player.upgradeProgress / this.pointsToNextUpgrade) * 100) + '%';
             }
-        }
-
-        if (this.isHost && this.frameCount % 5 === 0 && this.lobbyCode && window.gameSocket) {
-            let syncData = [];
-            for (let b of this.bots) {
-                if (!b.isRemotePlayer) {
-                    syncData.push({ 
-                        id: b.id, 
-                        x: Math.round(b.x), 
-                        y: Math.round(b.y), 
-                        h: Math.round(b.health), 
-                        d: b.isDead,
-                        pts: Math.round(b.points), 
-                        type: b.type,
-                        c: b.color, 
-                        u: b.upgrades || {}, 
-                        n: b.name 
-                    });
-                }
-            }
-            window.gameSocket.emit('hostBotSync', { code: this.lobbyCode, bots: syncData });
         }
     }
 
@@ -2063,23 +2136,30 @@ export class GameEngine {
             targetCamY = this.spectateTarget ? this.spectateTarget.y : this.camera.y;
             glideSpeed = 0.02; 
             this.cameraZoom += (1.0 - this.cameraZoom) * 0.05;
+        } else if (this.player && this.player.isDead && this.spectateTarget) {
+            // SPECTATING ALIVE TEAMMATE
+            targetCamX = this.spectateTarget.x;
+            targetCamY = this.spectateTarget.y;
+            glideSpeed = 0.15;
+            this.cameraZoom += (1.0 - this.cameraZoom) * 0.1;
         } else if (this.isCinematicIntro) {
             this.introTimer++;
-            if (this.introTimer < 120) {
+            if (this.introTimer < 60) {
                 targetCamX = this.introTargetX; 
                 targetCamY = this.introTargetY; 
                 glideSpeed = 1.0; 
-            } else if (this.introTimer < 240) {
-                let progress = (this.introTimer - 120) / 120;
+                this.cameraZoom = this.introStartZoom;
+            } else if (this.introTimer < 180) {
+                let progress = (this.introTimer - 60) / 120;
                 let ease = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-                targetCamX = this.player ? this.player.x : this.worldSize/2; 
-                targetCamY = this.player ? this.player.y : this.worldSize/2;
+                targetCamX = this.player ? this.player.x : this.introTargetX; 
+                targetCamY = this.player ? this.player.y : this.introTargetY;
                 glideSpeed = 0.05 + (ease * 0.1); 
                 this.cameraZoom = this.introStartZoom + (1.0 - this.introStartZoom) * ease;
             } else {
                 this.isCinematicIntro = false;
-                targetCamX = this.player ? this.player.x : this.worldSize/2; 
-                targetCamY = this.player ? this.player.y : this.worldSize/2; 
+                targetCamX = this.player ? this.player.x : this.introTargetX; 
+                targetCamY = this.player ? this.player.y : this.introTargetY; 
                 this.cameraZoom = 1.0;
             }
         } else {
@@ -2204,6 +2284,7 @@ export class GameEngine {
         if (!mmCanvas) return;
         const ctx = mmCanvas.getContext('2d');
         const dpr = window.devicePixelRatio || 1;
+        let is1v1 = window.currentLobbyMode === '1v1';
         
         if (mmCanvas.width !== 220 * dpr) {
             mmCanvas.width = 220 * dpr;
@@ -2255,8 +2336,13 @@ export class GameEngine {
         this.bots.forEach(b => {
             if (!b.isDead) {
                 aliveCount++;
-                if (b.isTeammate) drawDot(b.x, b.y, '#00ffcc', 3);
-                else drawDot(b.x, b.y, '#ff4444', 2);
+                
+                // NEW: BR Minimap hides enemies, 1v1 minimap shows the 1 enemy
+                if (b.isTeammate) {
+                    drawDot(b.x, b.y, '#00ffcc', 3);
+                } else if (is1v1 || this.isDemo || this.isGameOver) {
+                    drawDot(b.x, b.y, '#ff4444', 2);
+                }
             }
         });
 
@@ -2282,6 +2368,9 @@ export class GameEngine {
             const cx = (this.camera.x * scale) - viewW/2;
             const cy = (this.camera.y * scale) - viewH/2;
             ctx.strokeRect(cx, cy, viewW, viewH);
+        } else if (this.player && this.player.isDead && this.spectateTarget && !this.spectateTarget.isDead) {
+            // Highlight spectated teammate
+            drawDot(this.spectateTarget.x, this.spectateTarget.y, '#0096ff', 4);
         }
 
         const countDisplay = document.getElementById('player-count-display');
