@@ -361,7 +361,7 @@ export class GameEngine {
     }
     
     spawnSlotMachine(x, y) {
-        this.slotMachines = []; // Enforce 1 limit even with dev command
+        this.slotMachines = []; 
         this.slotMachines.push(new LuckySlotMachine(x, y));
     }
 
@@ -1216,9 +1216,7 @@ export class GameEngine {
         const rank = allPlayers.indexOf(this.player) + 1;
         const totalPlayers = allPlayers.length;
 
-        // ==========================================
-        // END OF MATCH STATS (RESTORED MAIN GRID)
-        // ==========================================
+        // END OF MATCH STATS
         const statsGrid = document.querySelector('.stats-grid');
         if (statsGrid) statsGrid.classList.remove('hidden'); 
 
@@ -1242,52 +1240,6 @@ export class GameEngine {
             const m = Math.floor(timeAlive / 60);
             const s = timeAlive % 60;
             timeEl.innerText = m > 0 ? `${m}m ${s}s` : `${s}s`;
-        }
-
-        // ==========================================
-        // DYNAMIC AWARDS (SMALL RIBBONS BELOW STATS)
-        // ==========================================
-        let titles = [];
-        let maxKills = Math.max(...allPlayers.map(p => p.kills || 0));
-        let maxPoints = Math.max(...allPlayers.map(p => p.points || 0));
-
-        if (this.player.points >= maxPoints && this.player.points > 0) {
-            titles.push({ icon: '👑', name: 'Most Points', desc: 'Highest overall score', color: 'award-gold' });
-        }
-        if (this.player.kills >= maxKills && this.player.kills > 0) {
-            titles.push({ icon: '⚔️', name: 'Most Eliminations', desc: 'Lethal force', color: 'award-silver' });
-        }
-        if (this.player.kills === 0 && timeAlive > 120) {
-            titles.push({ icon: '🕊️', name: 'Pacifist', desc: 'Survived long with 0 kills', color: 'award-bronze' });
-        }
-        if (this.distanceTraveled > 15000) {
-            titles.push({ icon: '🏃', name: 'Marathoner', desc: 'Most distance traveled', color: 'award-special' });
-        }
-        if (rank === 1 && this.player.kills > 0) {
-            titles.push({ icon: '🏆', name: 'Champion', desc: 'Match Winner', color: 'award-gold' });
-        }
-        if (this.player.kills > 0 && this.player.health < this.player.maxHealth * 0.2) {
-            titles.push({ icon: '🔥', name: 'Comeback Player', desc: 'Clutched on low health', color: 'award-special' });
-        }
-        if (titles.length === 0) {
-            titles.push({ icon: '👍', name: 'Participant', desc: 'Fought bravely', color: 'award-bronze' });
-        }
-
-        let awardsHtml = '';
-        titles.forEach(t => {
-            awardsHtml += `
-            <div class="award-badge ${t.color}">
-                <div class="award-icon">${t.icon}</div>
-                <div class="award-title">${t.name}</div>
-                <div class="award-desc">${t.desc}</div>
-            </div>`;
-        });
-
-        const awardsContainer = document.getElementById('go-awards-container');
-        if (awardsContainer) {
-            awardsContainer.innerHTML = awardsHtml;
-            awardsContainer.classList.remove('hidden');
-            awardsContainer.style.display = 'flex';
         }
 
         window.lastMatchStats = {
