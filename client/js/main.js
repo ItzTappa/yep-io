@@ -1172,11 +1172,11 @@ window.addEventListener('triggerSlotMachine', () => {
         r.style.boxShadow = "";
     });
     
-    // Auto resolve after 2 seconds
+    // Auto resolve after 4 seconds
     setTimeout(() => {
         reels.forEach(r => r.classList.remove('spinning'));
         applySlotMachineReward();
-    }, 2000);
+    }, 4000);
 });
 
 function applySlotMachineReward() {

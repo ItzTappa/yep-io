@@ -361,6 +361,7 @@ export class GameEngine {
     }
     
     spawnSlotMachine(x, y) {
+        this.slotMachines = []; // Enforce 1 limit even with dev command
         this.slotMachines.push(new LuckySlotMachine(x, y));
     }
 
@@ -522,13 +523,6 @@ export class GameEngine {
             this.safeZones.push(new SafeZone(pos.x, pos.y));
         }
         
-        for (let i = 0; i < 5; i++) {
-            if (Math.random() < 0.25) {
-                let pos = this.getSafeSpawnPosition(1000);
-                this.slotMachines.push(new LuckySlotMachine(pos.x, pos.y));
-            }
-        }
-        
         this.player = new Player(this.worldSize / 2, this.worldSize / 2, playerClass, "");
 
         this.camera.x = this.player.x; 
@@ -663,13 +657,6 @@ export class GameEngine {
         for(let i = 0; i < 3; i++) {
             let pos = this.getSafeSpawnPosition(4000);
             this.safeZones.push(new SafeZone(pos.x, pos.y));
-        }
-
-        for (let i = 0; i < 5; i++) {
-            if (Math.random() < 0.25) {
-                let pos = this.getSafeSpawnPosition(1000);
-                this.slotMachines.push(new LuckySlotMachine(pos.x, pos.y));
-            }
         }
 
         const gameUi = document.getElementById('game-ui');
@@ -1371,17 +1358,35 @@ export class GameEngine {
             }
         }
 
-        // Slot Machine Update & Collision
-        this.slotMachines.forEach(sm => sm.update());
-        
-        if (!this.isDemo && !this.isGameOver && this.player && !this.player.isDead) {
-            for (let i = this.slotMachines.length - 1; i >= 0; i--) {
-                let sm = this.slotMachines[i];
+        // ==========================================
+        // NEW: SLOT MACHINE LIFESPAN & LIMIT LOGIC
+        // ==========================================
+        for (let i = this.slotMachines.length - 1; i >= 0; i--) {
+            let sm = this.slotMachines[i];
+            sm.update();
+            
+            // Handle Despawn
+            if (sm.lifeTimer <= 0) {
+                this.slotMachines.splice(i, 1);
+                continue;
+            }
+            
+            // Handle Player Collision (Activation)
+            if (!this.isDemo && !this.isGameOver && this.player && !this.player.isDead) {
                 if (distance(this.player.x, this.player.y, sm.x, sm.y) < this.player.size + sm.size) {
                     this.slotMachines.splice(i, 1);
                     window.dispatchEvent(new CustomEvent('triggerSlotMachine'));
-                    break; 
+                    continue; 
                 }
+            }
+        }
+        
+        // Natural Random Spawning (Limits map to exactly 1 slot machine at a time)
+        if (!this.isDemo && !this.isGameOver && this.slotMachines.length === 0) {
+            // Approx. ~0.02% chance per frame to spawn one (Roughly every 1-2 minutes)
+            if (Math.random() < 0.0002) {
+                let pos = this.getSafeSpawnPosition(1000);
+                this.slotMachines.push(new LuckySlotMachine(pos.x, pos.y));
             }
         }
 
@@ -1734,7 +1739,6 @@ export class GameEngine {
 
             bot.updateBot(allPlayers, this.isCinematicIntro);
             
-            // NPC Wall Avoidance (Soft Repulsion)
             let margin = 300;
             let avoidForce = 0.05;
             if (bot.x < margin) bot.vx += (margin - bot.x) * 0.002;

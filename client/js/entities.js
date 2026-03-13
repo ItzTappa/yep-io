@@ -1990,16 +1990,22 @@ export class LuckySlotMachine {
         this.y = y;
         this.size = 30; // Collision size
         this.time = Math.random() * 100;
+        
+        // Random lifespan between 10 and 30 seconds (assuming 60 FPS)
+        this.lifeTimer = Math.floor(600 + Math.random() * 1200); 
     }
     
     update() {
         this.time += 0.1;
+        this.lifeTimer--;
     }
     
     draw(ctx) {
+        // Rapid flash in the last 3 seconds before despawn
+        if (this.lifeTimer < 180 && Math.floor(this.lifeTimer / 8) % 2 === 0) return;
+
         ctx.save();
         
-        // Periodic bounce calculation
         let bounce = Math.abs(Math.sin(this.time)) * 15;
         ctx.translate(this.x, this.y - bounce);
         
@@ -2008,7 +2014,6 @@ export class LuckySlotMachine {
             ctx.shadowColor = '#ffe600';
         }
         
-        // Main Slot Machine Body
         ctx.fillStyle = '#111';
         ctx.fillRect(-15, -20, 30, 40);
         
@@ -2016,17 +2021,14 @@ export class LuckySlotMachine {
         ctx.lineWidth = 2;
         ctx.strokeRect(-15, -20, 30, 40);
         
-        // Inner Screen
         ctx.fillStyle = '#222';
         ctx.fillRect(-10, -10, 20, 15);
         
-        // Reels
         ctx.fillStyle = '#fff';
         ctx.fillRect(-8, -8, 4, 11);
         ctx.fillRect(-2, -8, 4, 11);
         ctx.fillRect(4, -8, 4, 11);
         
-        // Side Lever
         ctx.fillStyle = '#555';
         ctx.fillRect(15, -5, 6, 3);
         ctx.fillStyle = '#ff0044';
@@ -2034,7 +2036,6 @@ export class LuckySlotMachine {
         ctx.arc(22, -4, 4, 0, Math.PI * 2);
         ctx.fill();
         
-        // Top Light (Blinking effect)
         if (Math.floor(this.time * 2) % 2 === 0) {
             ctx.fillStyle = '#ff0044';
         } else {
