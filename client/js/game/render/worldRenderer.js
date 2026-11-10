@@ -42,6 +42,7 @@ export function drawWorld(engine) {
     for (const bot of engine.bots) if (!bot.isDead && visible(bot.x, bot.y, 300)) bot.draw(ctx);
     for (const r of engine.remotes) if (!r.isDead && visible(r.x, r.y, 300)) r.draw(ctx);
     if (!engine.isDemo && engine.player && !engine.player.isDead) engine.player.draw(ctx);
+    engine.tutorial?.draw(ctx);
     engine.admin?.draw(ctx, engine);
     if (settings.damageNumbers && !engine.isDemo) engine.damageNumbers.draw(ctx);
 

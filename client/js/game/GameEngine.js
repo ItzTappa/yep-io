@@ -6,6 +6,8 @@
 //   solo  - PLAY button: you vs 49 bots, bots respawn, ends when you die
 //   br    - multiplayer battle royale: your team vs bots, shrinking storm, last team standing
 //   duel  - multiplayer 1v1 on a small map, no bots or orbs
+//   tutorial - the training arena (first PLAY, or Settings > Play Tutorial): small empty map, you
+//          can't die, game/tutorial.js spawns what each step teaches. No XP, quests or history.
 import { TICK_MS, WORLD, MATCH, STORM } from '../config.js';
 import { BALANCE } from '../data/balance.js';
 import { settings, saveSettings } from '../core/settings.js';
@@ -13,6 +15,7 @@ import { sounds } from '../core/sound.js';
 import { distance, createRng } from '../core/math.js';
 import { setVisible, $ } from '../core/dom.js';
 import { randomClass } from '../data/classes.js';
+import { bannerFor } from '../data/items.js';
 import { Player } from '../entities/Player.js';
 import { Bot } from '../entities/Bot.js';
 import { RemotePlayer } from '../entities/RemotePlayer.js';
@@ -100,9 +103,13 @@ export class GameEngine {
         return this.mode === 'br' || this.mode === 'duel';
     }
 
-    // Bots leave you alone during the first tutorial steps (or with the admin "pacifist" command).
+    get isTutorial() {
+        return this.mode === 'tutorial';
+    }
+
+    // Bots leave you alone with the admin "pacifist" command.
     get botsIgnorePlayer() {
-        return !!this.tutorial?.calm || this.adminPacifist;
+        return this.adminPacifist;
     }
 
     // ==========================================
@@ -163,8 +170,7 @@ export class GameEngine {
         this.startLoop();
     }
 
-    // tutorial: run the first-match tutorial (bots leave you alone while you learn the controls).
-    startSolo(playerClass, { name = '', equipped = null, tutorial = false } = {}) {
+    startSolo(playerClass, { name = '', equipped = null } = {}) {
         this.mode = 'solo';
         this.resetWorld(WORLD.solo);
         this.config = { orbCount: MATCH.xpOrbs };
@@ -186,7 +192,22 @@ export class GameEngine {
         this.spawnOrbs();
         this.matchStats.totalPlayers = this.bots.length + 1;
         this.beginMatch({ intro: false });
-        if (tutorial) this.tutorial = new Tutorial(this, { onDone: () => this.hooks.onTutorialDone?.() });
+    }
+
+    // The training arena. hooks.onTutorialDone(completed) when it's finished or skipped,
+    // hooks.onTutorialExit('play' | 'menu') when the player chooses what to do next.
+    startTutorial(playerClass, { name = '', equipped = null } = {}) {
+        this.mode = 'tutorial';
+        this.resetWorld(WORLD.tutorial);
+        this.config = { orbCount: 0 };
+        this.player = new Player(this.worldSize / 2, this.worldSize / 2, playerClass, name, equipped);
+        this.matchStats.totalPlayers = 1;
+        this.beginMatch({ intro: false });
+        hud.setLeaderboardVisible(false);
+        this.tutorial = new Tutorial(this, {
+            onDone: (completed) => this.hooks.onTutorialDone?.(completed),
+            onExit: (choice) => this.hooks.onTutorialExit?.(choice)
+        });
     }
 
     // match: { mode: 'br' | 'duel', hostId, seed, players: [{ id, name, classType, equipped }] }
@@ -440,7 +461,9 @@ export class GameEngine {
         if (shake && target === this.player) this.shake(shake);
 
         const authority = this.damageAuthority(target, attacker);
-        if (authority === 'apply') {
+        if (target === this.player && this.isTutorial) {
+            target.health = Math.max(1, target.health - final); // can't die in the training arena
+        } else if (authority === 'apply') {
             target.health -= final;
             if (target.health <= 0) this.kill(target, attacker);
         } else if (authority === 'report') {
@@ -562,7 +585,7 @@ export class GameEngine {
     }
 
     checkMatchOutcome(killer) {
-        if (this.isDemo || this.isGameOver || !this.player) return;
+        if (this.isDemo || this.isTutorial || this.isGameOver || !this.player) return;
         const p = this.player;
 
         if (this.mode === 'solo') {
@@ -642,12 +665,13 @@ export class GameEngine {
     stat(name, amount = 1) {
         if (this.isDemo || this.isGameOver || !this.player || !(amount > 0)) return;
         this.tutorial?.onStat(name);
+        if (this.isTutorial) return; // practice doesn't count for quests
         for (const reward of this.hooks.onStat?.(name, amount) || []) this.completeQuest(reward);
     }
 
     // Your best value this match (points) for "in one match" quests.
     statBest(name, value) {
-        if (this.isDemo || this.isGameOver || !this.player) return;
+        if (this.isDemo || this.isTutorial || this.isGameOver || !this.player) return;
         for (const reward of this.hooks.onStatBest?.(name, value) || []) this.completeQuest(reward);
     }
 
@@ -658,7 +682,7 @@ export class GameEngine {
     }
 
     addXP(amount) {
-        if (this.isDemo || amount <= 0) return;
+        if (this.isDemo || this.isTutorial || amount <= 0) return;
         amount = Math.floor(amount);
         this.matchStats.xpEarned += amount;
         const levels = this.hooks.addAccountXP?.(amount) || [];
@@ -671,11 +695,16 @@ export class GameEngine {
         const now = performance.now();
         if (now > this.forfeitArmedUntil) {
             this.forfeitArmedUntil = now + 2500;
-            hud.showMatchToast(this.player.isDead ? 'PRESS ESC AGAIN TO STOP SPECTATING' : 'PRESS ESC AGAIN TO LEAVE THE MATCH');
+            hud.showMatchToast(this.isTutorial ? 'PRESS ESC AGAIN TO LEAVE THE TUTORIAL'
+                : this.player.isDead ? 'PRESS ESC AGAIN TO STOP SPECTATING' : 'PRESS ESC AGAIN TO LEAVE THE MATCH');
             return;
         }
         this.forfeitArmedUntil = 0;
         hud.hideMatchToast();
+        if (this.isTutorial) {
+            this.tutorial?.leave();
+            return;
+        }
         if (!this.player.isDead) {
             this.kill(this.player, FORFEIT_SOURCE);
         }
@@ -762,7 +791,7 @@ export class GameEngine {
 
         this.fps.frames += steps > 0 ? 1 : 0;
         if (time - this.fps.since >= 1000) {
-            hud.setFps(settings.showFps && !this.isDemo ? this.fps.frames : null);
+            hud.setFps(settings.adminFps && !this.isDemo ? this.fps.frames : null);
             this.fps.frames = 0;
             this.fps.since = time;
         }
@@ -830,7 +859,13 @@ export class GameEngine {
         const rows = ships
             .filter(s => s && !s.isDead)
             .sort((a, b) => b.points - a.points)
-            .map(s => ({ name: s === p ? 'YOU' : s.name, points: s.points, highlight: s === p || s.isTeammate }));
+            .map(s => ({
+                name: s === p ? 'YOU' : s.name,
+                points: s.points,
+                highlight: s === p || s.isTeammate,
+                // your own banner checks your account name (your ship has no name tag in solo)
+                banner: bannerFor(s.equipped, s === p ? s.name || this.hooks.localName?.() : s.name)
+            }));
         hud.renderLeaderboard(rows);
     }
 

@@ -28,7 +28,7 @@ export function updateSafeZones(engine) {
                 engine.safeZoneRespawnTimer = MATCH.safeZoneRespawnTicks;
             }
         }
-        if (zones.length < MATCH.safeZones && engine.mode !== 'duel') {
+        if (zones.length < MATCH.safeZones && engine.mode !== 'duel' && !engine.isTutorial) {
             if (engine.safeZoneRespawnTimer > 0) {
                 engine.safeZoneRespawnTimer--;
             } else {

@@ -9,12 +9,13 @@ export const DEFAULT_SETTINGS = {
     highQuality: true,
     particles: true,
     showNames: true,
-    showFps: false,
     volume: 1.0,
     showLeaderboard: true,
     showBadges: true,
     showNotifs: true,
     showMinimap: true,
+    minimapEnemies: false,   // red enemy dots on the minimap
+    adminFps: false,         // FPS counter, switched with the admin /fps command (old showFps saves are ignored)
     damageNumbers: true,
     zoom: 1,                 // in-match camera zoom (mouse wheel or + / -)
     keybinds: { ...DEFAULT_KEYBINDS }

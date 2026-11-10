@@ -2,13 +2,12 @@
 import { $, setVisible } from '../core/dom.js';
 import { settings, saveSettings, keyLabel, DEFAULT_KEYBINDS } from '../core/settings.js';
 import { sounds } from '../core/sound.js';
-import { setTutorialDone } from '../services/profile.js';
 
 let listeningFor = null;   // action waiting for a key press
 let onApplyHook = null;
 const RESERVED_KEYS = ['escape', '/', '`', '1', '2', '3', '=', '+', '-', '_'];
 
-export function initSettingsModal({ onApply }) {
+export function initSettingsModal({ onApply, onPlayTutorial }) {
     onApplyHook = onApply;
     $('settings-btn').addEventListener('click', openSettings);
     $('close-settings-btn').addEventListener('click', applyAndClose);
@@ -24,9 +23,10 @@ export function initSettingsModal({ onApply }) {
         settings.keybinds = { ...DEFAULT_KEYBINDS };
         stopListening();
     });
+    // Saves the settings, closes them and starts the training arena.
     $('replay-tutorial-btn').addEventListener('click', () => {
-        setTutorialDone(false);
-        $('replay-tutorial-btn').textContent = '✔ TUTORIAL IN YOUR NEXT SOLO MATCH';
+        applyAndClose();
+        onPlayTutorial?.();
     });
 
     // Capture phase so the key never reaches the game or the dev console.
@@ -50,7 +50,6 @@ export function openSettings() {
         input.checked = !!settings[input.dataset.setting];
     }
     $('set-volume').value = Math.round(settings.volume * 100);
-    $('replay-tutorial-btn').textContent = 'REPLAY TUTORIAL';
     stopListening();
     setVisible($('settings-modal'), true);
 }

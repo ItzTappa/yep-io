@@ -34,7 +34,7 @@
     .leaderboard { width: 110px; padding: 8px; background: rgba(0,0,0,0.7); }
     .leaderboard h3 { font-size: 0.7rem; margin-bottom: 5px; }
     #leaderboard-list { font-size: 0.65rem; }
-    #leaderboard-list li { margin-bottom: 2px; }
+    #leaderboard-list li { height: 13px; margin-bottom: 2px; gap: 3px; }
     #minimap-container { width: 100px; height: 100px; }
     #minimap-canvas { width: 100px; height: 100px; }
     #player-count-display { font-size: 0.9rem; padding: 4px; }
@@ -134,6 +134,7 @@
     .tut-title { font-size: 1rem; }
     .tut-text { font-size: 0.75rem; line-height: 1.4; }
     .tut-step { font-size: 0.6rem; }
+    .tut-btn { font-size: 0.75rem; padding: 6px 12px; }
     .go-quests { min-width: 0; width: 92vw; }
     .go-quest { font-size: 0.8rem; padding: 6px 10px; }
 }

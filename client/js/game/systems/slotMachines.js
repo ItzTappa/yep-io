@@ -22,7 +22,8 @@ export function updateSlotMachines(engine) {
         }
     }
 
-    if (!engine.isDemo && !engine.isGameOver && machines.length === 0 && Math.random() < MATCH.slotMachineChancePerTick) {
+    // (the tutorial places its own)
+    if (!engine.isDemo && !engine.isTutorial && !engine.isGameOver && machines.length === 0 && Math.random() < MATCH.slotMachineChancePerTick) {
         const pos = engine.getSafeSpawnPosition(1000);
         machines.push(new LuckySlotMachine(pos.x, pos.y));
     }

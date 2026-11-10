@@ -9,6 +9,10 @@
 //   rim       near-black hull with a glowing edge       (legendary)
 //   crystal   faceted gem                               (legendary)
 //   shimmer   white with a moving sheen                 (legendary)
+//   duo       two colours split down the middle         (rare)
+//   tri       value -> value2 -> value3 gradient        (epic)
+//   holo      shifting rainbow foil with a sheen        (legendary)
+//   molten    dark rock with glowing lava veins         (legendary)
 import { shade, rgba, outlineFor } from './palette.js';
 
 const time = () => performance.now() / 1000;
@@ -23,6 +27,8 @@ export function glowFor(color, finish) {
         case 'rim': return { color: finish.rim, blur: 14 };
         case 'flare': return { color: '#f59e0b', blur: 16 };
         case 'galaxy': return { color: '#8b5cf6', blur: 14 };
+        case 'holo': return { color: `hsl(${(time() * 60) % 360}, 90%, 70%)`, blur: 14 };
+        case 'molten': return { color: '#ff5a1f', blur: 14 };
         default: return { color, blur: 12 };
     }
 }
@@ -35,6 +41,10 @@ export function finishOutline(color, finish) {
         case 'rim': return finish.rim;
         case 'metal': return shade(color, -0.55);
         case 'gradient': return shade(finish.value2, -0.4);
+        case 'duo': return shade(finish.value2, -0.35);
+        case 'tri': return shade(finish.value3, -0.4);
+        case 'holo': return '#64748b';
+        case 'molten': return '#1a0904';
         default: return outlineFor(color);
     }
 }
@@ -95,17 +105,56 @@ export function paintBody(ctx, color, finish, s) {
             ctx.fillStyle = g;
             break;
         }
+        case 'duo': {
+            const g = ctx.createLinearGradient(-s, -s, s, s);
+            g.addColorStop(0, color);
+            g.addColorStop(0.5, color);
+            g.addColorStop(0.5, finish.value2);
+            g.addColorStop(1, finish.value2);
+            ctx.fillStyle = g;
+            break;
+        }
+        case 'tri': {
+            const g = ctx.createLinearGradient(-s, -s, s, s);
+            g.addColorStop(0, color);
+            g.addColorStop(0.5, finish.value2);
+            g.addColorStop(1, finish.value3);
+            ctx.fillStyle = g;
+            break;
+        }
+        case 'holo': {
+            const g = ctx.createLinearGradient(-s, -s, s, s);
+            const h = (t * 50) % 360;
+            for (let i = 0; i <= 4; i++) g.addColorStop(i / 4, `hsl(${(h + i * 70) % 360}, 85%, 74%)`);
+            ctx.fillStyle = g;
+            break;
+        }
+        case 'molten': {
+            const g = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 1.2);
+            g.addColorStop(0, '#3a1608');
+            g.addColorStop(1, '#170803');
+            ctx.fillStyle = g;
+            break;
+        }
         default:
             ctx.fillStyle = color;
     }
     ctx.fill();
 }
 
+// Lava veins for the molten finish (in units of the ship size).
+const VEINS = [
+    [[-1.1, -0.3], [-0.5, -0.45], [-0.05, -0.1], [0.5, -0.4], [1.1, -0.2]],
+    [[-1, 0.5], [-0.4, 0.25], [0.15, 0.55], [0.85, 0.3]],
+    [[-0.2, -1], [0.05, -0.45], [-0.05, -0.1], [0.1, 0.35], [-0.05, 1]]
+];
+
 // Extra layer clipped inside the body (sheen, stars, facets, neon rim). Path must still be traced.
 export function paintOverlay(ctx, color, finish, s, hq) {
     if (!finish) return;
     const t = time();
     switch (finish.type) {
+        case 'holo':
         case 'shimmer':
         case 'metal': {
             ctx.save();
@@ -115,7 +164,7 @@ export function paintOverlay(ctx, color, finish, s, hq) {
             const x = (((t * speed) % 1.6) - 0.8) * s * 3;
             const g = ctx.createLinearGradient(x - s * 0.3, 0, x + s * 0.3, 0);
             g.addColorStop(0, 'rgba(255, 255, 255, 0)');
-            g.addColorStop(0.5, finish.type === 'shimmer' ? 'rgba(186, 230, 253, 0.85)' : 'rgba(255, 255, 255, 0.5)');
+            g.addColorStop(0.5, finish.type === 'shimmer' ? 'rgba(186, 230, 253, 0.85)' : finish.type === 'holo' ? 'rgba(255, 255, 255, 0.65)' : 'rgba(255, 255, 255, 0.5)');
             g.addColorStop(1, 'rgba(255, 255, 255, 0)');
             ctx.fillStyle = g;
             ctx.fillRect(x - s * 0.3, -s * 2, s * 0.6, s * 4);
@@ -163,6 +212,25 @@ export function paintOverlay(ctx, color, finish, s, hq) {
             ctx.strokeStyle = color;
             ctx.lineWidth = Math.max(2.5, s * 0.16);
             ctx.stroke();
+            ctx.restore();
+            break;
+        }
+        case 'molten': {
+            ctx.save();
+            ctx.clip();
+            const pulse = 0.65 + 0.35 * Math.sin(t * 3);
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.lineJoin = 'round';
+            for (const vein of VEINS) {
+                for (const [width, rgb, alpha] of [[s * 0.3, '255, 90, 31', 0.22], [s * 0.1, '255, 120, 40', 0.9], [s * 0.035, '255, 230, 140', 0.8]]) {
+                    if (!hq && width > s * 0.2) continue;
+                    ctx.strokeStyle = `rgba(${rgb}, ${alpha * pulse})`;
+                    ctx.lineWidth = Math.max(0.6, width);
+                    ctx.beginPath();
+                    vein.forEach(([x, y], i) => (i ? ctx.lineTo(x * s, y * s) : ctx.moveTo(x * s, y * s)));
+                    ctx.stroke();
+                }
+            }
             ctx.restore();
             break;
         }

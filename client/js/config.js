@@ -8,7 +8,8 @@ export const WORLD = {
     demo: 4000,
     solo: 8000,
     br: 8000,
-    duel: 3000
+    duel: 3000,
+    tutorial: 2400
 };
 
 export const MATCH = {

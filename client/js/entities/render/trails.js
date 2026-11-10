@@ -1,7 +1,8 @@
 // Movement trails. Every Trail cosmetic has a style; each style spawns its own particles behind the
 // ship and knows how to draw them. Also handles the plain dash afterimage and thruster flames.
 //
-// Styles: puff, spark, ribbon, laser, bubble, void, ember, echo, frost, electric, nebula, comet, rainbow
+// Styles: puff, spark, ribbon, laser, bubble, void, ember, echo, frost, electric, nebula, comet, rainbow,
+//         hearts, pixel, petals, smoke, shards
 import { traceBody } from './shapes.js';
 import { rgba, mix, outlineFor } from './palette.js';
 
@@ -64,6 +65,35 @@ export function spawnTrail(e, item, dashing) {
             break;
         case 'frost':
             push(e, { ...base, x: x + jitter(10), y: y + jitter(10), ...out(Math.random() * 1.5 + 0.5, 1.6), size: 2.5 + Math.random() * 2, decay: 0.03, rot: Math.random() * Math.PI, spin: jitter(0.2) });
+            break;
+        case 'hearts':
+            if (e.trailTick % 3 === 0 || dashing) {
+                push(e, { ...base, x: x + jitter(10), y: y + jitter(10), ...out(Math.random() * 1.2 + 0.4, 1.4), size: 3 + Math.random() * 2.5, decay: 0.025, rot: jitter(0.6), alt: Math.random() < 0.35 });
+                if (item.rarity >= 5 && Math.random() < 0.5) {
+                    push(e, { ...base, style: 'spark', color: base.color2 || '#ffffff', x: x + jitter(12), y: y + jitter(12), ...out(Math.random() * 2 + 0.5, 2), size: 1.2 + Math.random(), decay: 0.05, twinkle: Math.random() * 6 });
+                }
+            }
+            break;
+        case 'pixel':
+            if (e.trailTick % 2 === 0 || dashing) {
+                push(e, { ...base, x: x + jitter(12), y: y + jitter(12), ...out(Math.random() * 1.2 + 0.3, 1.2), size: e.size * (0.18 + Math.random() * 0.12), decay: 0.035, alt: Math.random() < 0.4 });
+            }
+            break;
+        case 'petals':
+            if (e.trailTick % 2 === 0 || dashing) {
+                push(e, { ...base, x: x + jitter(10), y: y + jitter(10), ...out(Math.random() * 1.6 + 0.4, 1.8), size: 3 + Math.random() * 2, decay: 0.022, rot: Math.random() * Math.PI, spin: jitter(0.16), alt: Math.random() < 0.4 });
+            }
+            break;
+        case 'smoke':
+            push(e, { ...base, x: x + jitter(6), y: y + jitter(6), ...out(Math.random() * 1 + 0.4, 1.2), size: e.size * (0.3 + Math.random() * 0.12), decay: 0.02 });
+            if (base.color2 && Math.random() < 0.45) {
+                push(e, { ...base, style: 'ember', color: base.color2, x: x + jitter(10), y: y + jitter(10), ...out(Math.random() * 2 + 1, 2), size: 1 + Math.random() * 1.3, decay: 0.035, twinkle: Math.random() * 6 });
+            }
+            break;
+        case 'shards':
+            for (let i = 0; i < rate; i++) {
+                push(e, { ...base, x: x + jitter(10), y: y + jitter(10), ...out(Math.random() * 2.2 + 0.6, 1.8), size: 2.5 + Math.random() * 2.5, decay: 0.035, rot: Math.random() * Math.PI * 2, spin: jitter(0.3) });
+            }
             break;
         case 'electric':
             // A fresh crackling bolt every other tick, plus the odd spark.
@@ -222,6 +252,54 @@ function drawTrailParticle(ctx, p, a, hq) {
             }
             ctx.strokeStyle = rgba(p.color, a * 0.7);
             ctx.lineWidth = 1.5;
+            ctx.stroke();
+            break;
+        case 'hearts': {
+            ctx.translate(p.x, p.y - (1 - a) * 6);   // float up a little as they fade
+            ctx.rotate(p.rot);
+            const sz = p.size * (0.7 + a * 0.3);
+            ctx.fillStyle = rgba(p.alt && p.color2 ? p.color2 : p.color, a * 0.95);
+            ctx.beginPath();
+            ctx.moveTo(0, sz * 0.9);
+            ctx.bezierCurveTo(-sz * 1.4, -sz * 0.1, -sz * 0.6, -sz * 1.2, 0, -sz * 0.45);
+            ctx.bezierCurveTo(sz * 0.6, -sz * 1.2, sz * 1.4, -sz * 0.1, 0, sz * 0.9);
+            ctx.fill();
+            break;
+        }
+        case 'pixel': {
+            const sz = Math.max(2, Math.round(p.size * (0.4 + a * 0.6)));
+            ctx.fillStyle = rgba(p.alt && p.color2 ? p.color2 : p.color, a > 0.5 ? 1 : a * 2);
+            ctx.fillRect(Math.round(p.x - sz / 2), Math.round(p.y - sz / 2), sz, sz);
+            break;
+        }
+        case 'petals':
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot);
+            ctx.fillStyle = rgba(p.alt && p.color2 ? p.color2 : p.color, a * 0.9);
+            ctx.beginPath();
+            ctx.ellipse(0, 0, p.size, p.size * 0.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = rgba('#ffffff', a * 0.35);
+            ctx.beginPath();
+            ctx.ellipse(-p.size * 0.25, 0, p.size * 0.4, p.size * 0.18, 0, 0, Math.PI * 2);
+            ctx.fill();
+            break;
+        case 'smoke':
+            ctx.fillStyle = rgba(p.color, a * 0.32);
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * (0.6 + (1 - a) * 1.1), 0, Math.PI * 2);
+            ctx.fill();
+            break;
+        case 'shards':
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot);
+            ctx.fillStyle = rgba(p.color, a * 0.8);
+            ctx.beginPath();
+            ctx.moveTo(p.size, 0); ctx.lineTo(-p.size * 0.6, -p.size * 0.5); ctx.lineTo(-p.size * 0.3, p.size * 0.6);
+            ctx.closePath(); ctx.fill();
+            ctx.strokeStyle = rgba(p.color2 || '#ffffff', a);
+            ctx.lineWidth = 1;
             ctx.stroke();
             break;
         case 'frost':

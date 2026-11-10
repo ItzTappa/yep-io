@@ -50,6 +50,22 @@ function stripes(k, angle, step, width, style) {
     ctx.restore();
 }
 
+// A pointy-top hexagon path.
+function hex(ctx, x, y, radius) {
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+        const a = Math.PI / 6 + (i / 6) * Math.PI * 2;
+        ctx.lineTo(x + Math.cos(a) * radius, y + Math.sin(a) * radius);
+    }
+    ctx.closePath();
+}
+
+// A polyline through points given in units of r (k.r).
+function polyline(ctx, pts, r) {
+    ctx.beginPath();
+    pts.forEach(([x, y], i) => (i ? ctx.lineTo(x * r, y * r) : ctx.moveTo(x * r, y * r)));
+}
+
 // Small deterministic pseudo-random numbers (same every frame unless `seed` changes).
 const rand = (seed) => {
     const x = Math.sin(seed * 127.1) * 43758.5453;
@@ -805,6 +821,500 @@ export const SKINS = {
                 ctx.lineTo(Math.cos(a) * rad, Math.sin(a) * rad);
             }
             ctx.closePath(); ctx.fill();
+            ctx.restore();
+        }
+    },
+
+    // ---------- added Nov 2026 ----------
+    polka: {
+        draw(k) {
+            const { ctx, s, r } = k;
+            clip(k);
+            const step = Math.max(6, r * 0.5);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+            for (let iy = -4; iy <= 4; iy++) {
+                for (let ix = -4; ix <= 4; ix++) {
+                    const x = ix * step + (iy % 2 ? step / 2 : 0);
+                    const y = iy * step * 0.87;
+                    if (Math.abs(x) > s * 1.2 || Math.abs(y) > s * 1.2) continue;
+                    circle(ctx, x, y, Math.max(1.6, r * 0.12)); ctx.fill();
+                }
+            }
+            ctx.restore();
+        }
+    },
+
+    split: {
+        draw(k) {
+            const { ctx, s, r } = k;
+            clip(k);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+            ctx.beginPath();
+            ctx.moveTo(-s * 2, -s * 2); ctx.lineTo(s * 2, s * 2); ctx.lineTo(-s * 2, s * 2);
+            ctx.closePath(); ctx.fill();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.lineWidth = Math.max(1.4, r * 0.09);
+            ctx.beginPath(); ctx.moveTo(-s * 2, -s * 2); ctx.lineTo(s * 2, s * 2); ctx.stroke();
+            ctx.restore();
+        }
+    },
+
+    honeycomb: {
+        draw(k) {
+            const { ctx, s, r } = k;
+            clip(k);
+            const h = Math.max(5, r * 0.34);
+            const w = h * Math.sqrt(3);
+            ctx.fillStyle = 'rgba(251, 191, 36, 0.55)';
+            hex(ctx, w * 0.5, -h * 1.5, h * 0.82); ctx.fill();
+            hex(ctx, -w, 0, h * 0.82); ctx.fill();
+            hex(ctx, w * 0.5, h * 1.5, h * 0.82); ctx.fill();
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.38)';
+            ctx.lineWidth = Math.max(1.2, r * 0.07);
+            for (let row = -5; row <= 5; row++) {
+                for (let col = -5; col <= 5; col++) {
+                    const x = col * w + (row % 2 ? w / 2 : 0);
+                    const y = row * h * 1.5;
+                    if (Math.abs(x) > s * 1.3 || Math.abs(y) > s * 1.3) continue;
+                    hex(ctx, x, y, h); ctx.stroke();
+                }
+            }
+            ctx.restore();
+        }
+    },
+
+    pixel: {
+        draw(k) {
+            const { ctx, s, r, color } = k;
+            clip(k);
+            const sq = Math.max(3, r * 0.3);
+            const tones = [shade(color, -0.35), shade(color, -0.15), shade(color, 0.2), shade(color, 0.45)];
+            const n = Math.ceil(s / sq) + 1;
+            for (let ix = -n; ix <= n; ix++) {
+                for (let iy = -n; iy <= n; iy++) {
+                    const v = rand(ix * 7.3 + iy * 13.1);
+                    if (v < 0.35) continue;
+                    ctx.fillStyle = tones[Math.floor(v * 4) % 4];
+                    ctx.fillRect(ix * sq, iy * sq, sq, sq);
+                }
+            }
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.fillRect(sq * 0.5, -sq * 1.5, sq, sq);
+            ctx.restore();
+        }
+    },
+
+    tiger: {
+        outline: '#3a1a04',
+        draw(k) {
+            const { ctx, s, r } = k;
+            clip(k);
+            const g = ctx.createLinearGradient(0, -r, 0, r);
+            g.addColorStop(0, '#f59e0b');
+            g.addColorStop(0.5, '#f97316');
+            g.addColorStop(1, '#ea580c');
+            fillAll(k, g);
+            ctx.fillStyle = '#1c1208';
+            for (let i = -3; i <= 3; i++) {
+                const x = i * r * 0.42;
+                const depth = r * (0.45 + rand(i + 3) * 0.35);
+                const w = r * 0.12;
+                for (const side of [-1, 1]) {
+                    const edge = side * s * 1.3;
+                    ctx.beginPath();
+                    ctx.moveTo(x - w, edge);
+                    ctx.quadraticCurveTo(x - w * 0.4, side * (s * 1.3 - depth * 0.6), x + w * 0.6, side * (s * 1.3 - depth));
+                    ctx.quadraticCurveTo(x + w * 0.5, side * (s * 1.3 - depth * 0.5), x + w, edge);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            }
+            ctx.restore();
+        }
+    },
+
+    scales: {
+        draw(k) {
+            const { ctx, s, r, color } = k;
+            clip(k);
+            const R = Math.max(4, r * 0.27);
+            for (let row = -7; row <= 7; row++) {
+                for (let col = -7; col <= 7; col++) {
+                    const x = col * R * 1.6 + (row % 2 ? R * 0.8 : 0);
+                    const y = row * R * 0.85;
+                    if (Math.abs(x) > s * 1.3 || Math.abs(y) > s * 1.3) continue;
+                    ctx.beginPath();
+                    ctx.arc(x, y, R, 0, Math.PI);
+                    ctx.closePath();
+                    ctx.fillStyle = shade(color, row % 2 ? -0.28 : -0.12);
+                    ctx.fill();
+                    ctx.strokeStyle = rgba(shade(color, 0.4), 0.8);
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(x, y, R * 0.92, 0.25, Math.PI - 0.25);
+                    ctx.stroke();
+                }
+            }
+            ctx.restore();
+        }
+    },
+
+    sakura: {
+        draw(k) {
+            const { ctx, r, time } = k;
+            clip(k);
+            fillAll(k, 'rgba(255, 228, 236, 0.28)');
+            const flower = (x, y, size, rot) => {
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(rot);
+                for (let i = 0; i < 5; i++) {
+                    ctx.rotate((Math.PI * 2) / 5);
+                    ctx.fillStyle = i % 2 ? '#fbcfe8' : '#fdf2f8';
+                    ellipse(ctx, size * 0.55, 0, size * 0.55, size * 0.34);
+                    ctx.fill();
+                }
+                ctx.fillStyle = '#facc15';
+                circle(ctx, 0, 0, size * 0.22); ctx.fill();
+                ctx.restore();
+            };
+            const sway = Math.sin(time * 1.5) * 0.15;
+            flower(r * 0.15, -r * 0.3, r * 0.42, sway);
+            flower(-r * 0.45, r * 0.35, r * 0.3, -sway + 1);
+            flower(r * 0.55, r * 0.45, r * 0.22, sway + 2);
+            ctx.restore();
+        }
+    },
+
+    lava: {
+        outline: '#170803',
+        draw(k) {
+            const { ctx, s, r, time, hq } = k;
+            clip(k);
+            fillAll(k, '#2b1208');
+            stripes(k, Math.PI / 5, Math.max(8, r * 0.6), Math.max(3, r * 0.25), 'rgba(0, 0, 0, 0.25)');
+            const pulse = 0.65 + 0.35 * Math.sin(time * 3);
+            const cracks = [
+                [[-1.2, -0.25], [-0.55, -0.4], [-0.1, -0.12], [0.45, -0.45], [1.2, -0.2]],
+                [[-1.1, 0.55], [-0.35, 0.3], [0.2, 0.6], [0.9, 0.35]],
+                [[-0.25, -1.1], [0, -0.45], [-0.1, -0.12], [0.1, 0.35], [-0.05, 1.1]]
+            ];
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.lineJoin = 'round';
+            for (const pts of cracks) {
+                if (hq) {
+                    ctx.strokeStyle = `rgba(255, 90, 31, ${0.25 * pulse})`;
+                    ctx.lineWidth = Math.max(4, r * 0.32);
+                    polyline(ctx, pts, r); ctx.stroke();
+                }
+                ctx.strokeStyle = `rgba(255, 120, 40, ${0.9 * pulse})`;
+                ctx.lineWidth = Math.max(1.6, r * 0.11);
+                polyline(ctx, pts, r); ctx.stroke();
+                ctx.strokeStyle = `rgba(255, 230, 140, ${0.8 * pulse})`;
+                ctx.lineWidth = Math.max(0.6, r * 0.035);
+                polyline(ctx, pts, r); ctx.stroke();
+            }
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.restore();
+        }
+    },
+
+    stardust: {
+        outline: '#1e1b4b',
+        draw(k) {
+            const { ctx, s, r, time } = k;
+            clip(k);
+            fillAll(k, '#120a2a');
+            ctx.globalCompositeOperation = 'lighter';
+            const blobs = [['168, 85, 247', 0.55, -0.3, -0.2], ['236, 72, 153', 0.45, 0.35, 0.25], ['59, 130, 246', 0.5, -0.1, 0.45]];
+            blobs.forEach(([rgb, size, bx, by], i) => {
+                const x = (bx + Math.sin(time * 0.6 + i * 2) * 0.12) * r;
+                const y = (by + Math.cos(time * 0.5 + i) * 0.12) * r;
+                const g = ctx.createRadialGradient(x, y, 0, x, y, r * size * 1.6);
+                g.addColorStop(0, `rgba(${rgb}, 0.7)`);
+                g.addColorStop(1, `rgba(${rgb}, 0)`);
+                ctx.fillStyle = g;
+                ctx.fillRect(-s * 2, -s * 2, s * 4, s * 4);
+            });
+            for (let i = 0; i < 12; i++) {
+                const x = (rand(i * 3.1) * 2 - 1) * s;
+                const y = (rand(i * 5.7 + 1) * 2 - 1) * s;
+                const tw = 0.3 + 0.7 * Math.abs(Math.sin(time * 2.2 + i * 1.7));
+                ctx.fillStyle = `rgba(255, 255, 255, ${tw})`;
+                ctx.fillRect(x, y, i % 4 === 0 ? 2 : 1.2, i % 4 === 0 ? 2 : 1.2);
+            }
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.restore();
+        }
+    },
+
+    frostbite: {
+        outline: '#0c4a6e',
+        draw(k) {
+            const { ctx, r } = k;
+            clip(k);
+            const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 1.4);
+            g.addColorStop(0, 'rgba(240, 249, 255, 0.95)');
+            g.addColorStop(0.6, 'rgba(186, 230, 253, 0.9)');
+            g.addColorStop(1, 'rgba(56, 189, 248, 0.9)');
+            fillAll(k, g);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+            ctx.lineCap = 'round';
+            ctx.lineWidth = Math.max(1.4, r * 0.07);
+            const arm = r * 0.62;
+            for (let i = 0; i < 6; i++) {
+                ctx.save();
+                ctx.rotate((i / 6) * Math.PI * 2);
+                ctx.beginPath();
+                ctx.moveTo(0, 0); ctx.lineTo(arm, 0);
+                for (const at of [0.45, 0.72]) {
+                    ctx.moveTo(arm * at, 0); ctx.lineTo(arm * (at + 0.16), -arm * 0.17);
+                    ctx.moveTo(arm * at, 0); ctx.lineTo(arm * (at + 0.16), arm * 0.17);
+                }
+                ctx.stroke();
+                ctx.restore();
+            }
+            ctx.strokeStyle = 'rgba(14, 116, 144, 0.35)';
+            ctx.lineWidth = 1;
+            circle(ctx, 0, 0, r * 0.82); ctx.stroke();
+            ctx.restore();
+        }
+    },
+
+    samurai: {
+        outline: '#3f0a0a',
+        draw(k) {
+            const { ctx, s, r } = k;
+            clip(k);
+            fillAll(k, '#9b1c1c');
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+            for (let y = -s * 1.2; y < s * 1.2; y += r * 0.3) ctx.fillRect(-s * 2, y, s * 4, Math.max(1, r * 0.06));
+            ctx.strokeStyle = '#2b0606';
+            ctx.lineWidth = Math.max(1, r * 0.05);
+            for (let x = -s * 1.2; x < s * 1.2; x += r * 0.3) {
+                ctx.beginPath(); ctx.moveTo(x, -s * 2); ctx.lineTo(x, s * 2); ctx.stroke();
+            }
+            ctx.restore();
+            // golden crest (kuwagata) pointing forward
+            glow(k, '#fbbf24', 8);
+            ctx.fillStyle = '#fbbf24';
+            ctx.strokeStyle = '#92400e';
+            ctx.lineWidth = 1;
+            for (const side of [-1, 1]) {
+                ctx.beginPath();
+                ctx.moveTo(-r * 0.05, 0);
+                ctx.quadraticCurveTo(r * 0.25, side * r * 0.12, r * 0.62, side * r * 0.5);
+                ctx.quadraticCurveTo(r * 0.3, side * r * 0.08, -r * 0.05, side * r * 0.06);
+                ctx.closePath(); ctx.fill(); ctx.stroke();
+            }
+            ctx.fillStyle = '#fde68a';
+            circle(ctx, -r * 0.05, 0, r * 0.13); ctx.fill(); ctx.stroke();
+            noGlow(k);
+        }
+    },
+
+    thunder: {
+        outline: '#0f172a',
+        draw(k) {
+            const { ctx, s, r, time, hq } = k;
+            clip(k);
+            fillAll(k, '#1e293b');
+            ctx.fillStyle = 'rgba(148, 163, 184, 0.18)';
+            for (let i = 0; i < 4; i++) {
+                ellipse(ctx, (rand(i + 2) - 0.5) * s * 1.6, (rand(i * 3 + 1) - 0.5) * s * 1.4, r * 0.55, r * 0.28); ctx.fill();
+            }
+            const seed = Math.floor(time * 6);
+            const flash = rand(seed * 0.7) > 0.25;
+            if (flash) {
+                const pts = [];
+                let x = -s * 1.1;
+                let y = (rand(seed) - 0.5) * r * 0.6;
+                while (x < s * 1.1) {
+                    pts.push([x / r, y / r]);
+                    x += r * 0.28;
+                    y += (rand(seed + x) - 0.5) * r * 0.55;
+                }
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.lineJoin = 'round';
+                if (hq) {
+                    ctx.strokeStyle = 'rgba(250, 204, 21, 0.3)';
+                    ctx.lineWidth = Math.max(4, r * 0.3);
+                    polyline(ctx, pts, r); ctx.stroke();
+                }
+                ctx.strokeStyle = '#fde047';
+                ctx.lineWidth = Math.max(1.6, r * 0.1);
+                polyline(ctx, pts, r); ctx.stroke();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = Math.max(0.6, r * 0.035);
+                polyline(ctx, pts, r); ctx.stroke();
+                ctx.globalCompositeOperation = 'source-over';
+            }
+            ctx.restore();
+        }
+    },
+
+    phoenix: {
+        outline: '#7c2d12',
+        behind(k) {
+            const { ctx, r, time } = k;
+            for (const side of [-1, 1]) {
+                const flick = 1 + Math.sin(time * 11 + side) * 0.06;
+                ctx.save();
+                ctx.translate(-r * 0.15, side * r * 0.45);
+                ctx.scale(flick, flick);
+                const g = ctx.createLinearGradient(0, 0, -r * 1.1, side * r * 1.3);
+                g.addColorStop(0, '#fde68a');
+                g.addColorStop(0.45, '#f97316');
+                g.addColorStop(1, 'rgba(185, 28, 28, 0.85)');
+                ctx.fillStyle = g;
+                ctx.strokeStyle = '#9a3412';
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.moveTo(r * 0.35, 0);
+                ctx.quadraticCurveTo(-r * 0.1, side * r * 0.9, -r * 0.95, side * r * 1.35);
+                ctx.lineTo(-r * 0.55, side * r * 0.95);
+                ctx.lineTo(-r * 0.95, side * r * 0.95);
+                ctx.lineTo(-r * 0.5, side * r * 0.6);
+                ctx.lineTo(-r * 0.85, side * r * 0.5);
+                ctx.quadraticCurveTo(-r * 0.3, side * r * 0.25, r * 0.35, 0);
+                ctx.closePath();
+                ctx.fill(); ctx.stroke();
+                ctx.restore();
+            }
+        },
+        draw(k) {
+            const { ctx, r, time } = k;
+            clip(k);
+            const g = ctx.createRadialGradient(r * 0.15, 0, 0, 0, 0, r * 1.3);
+            g.addColorStop(0, '#fff7cc');
+            g.addColorStop(0.35, '#fbbf24');
+            g.addColorStop(0.75, '#f97316');
+            g.addColorStop(1, '#b91c1c');
+            fillAll(k, g);
+            ctx.strokeStyle = 'rgba(154, 52, 18, 0.55)';
+            ctx.lineWidth = Math.max(1.2, r * 0.07);
+            for (let i = 0; i < 3; i++) {
+                const x = -r * 0.2 - i * r * 0.28;
+                ctx.beginPath();
+                ctx.moveTo(x + r * 0.2, -r * 0.35);
+                ctx.lineTo(x, 0);
+                ctx.lineTo(x + r * 0.2, r * 0.35);
+                ctx.stroke();
+            }
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.fillStyle = `rgba(255, 247, 204, ${0.35 + 0.2 * Math.sin(time * 6)})`;
+            circle(ctx, r * 0.25, 0, r * 0.25); ctx.fill();
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.restore();
+        }
+    },
+
+    blackhole: {
+        outline: '#c2410c',
+        draw(k) {
+            const { ctx, s, r, time, hq } = k;
+            clip(k);
+            fillAll(k, '#05010d');
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.save();
+            ctx.rotate(-0.35);
+            for (let i = 0; i < 4; i++) {
+                const rr = r * (0.5 + i * 0.16);
+                const spin = time * (1.6 - i * 0.25);
+                ctx.strokeStyle = i % 2 ? 'rgba(251, 146, 60, 0.55)' : 'rgba(253, 224, 71, 0.6)';
+                ctx.lineWidth = Math.max(1, r * (0.1 - i * 0.015));
+                ctx.beginPath();
+                ctx.ellipse(0, 0, rr, rr * 0.36, 0, spin, spin + Math.PI * 1.4);
+                ctx.stroke();
+            }
+            ctx.restore();
+            if (hq) {
+                const g = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, r * 0.55);
+                g.addColorStop(0, 'rgba(0, 0, 0, 0)');
+                g.addColorStop(0.7, 'rgba(255, 237, 213, 0.35)');
+                g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = g;
+                ctx.fillRect(-s, -s, s * 2, s * 2);
+            }
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = '#000000';
+            circle(ctx, 0, 0, r * 0.3); ctx.fill();
+            ctx.strokeStyle = 'rgba(255, 247, 237, 0.9)';
+            ctx.lineWidth = Math.max(1, r * 0.045);
+            circle(ctx, 0, 0, r * 0.32); ctx.stroke();
+            ctx.restore();
+        }
+    },
+
+    royal: {
+        outline: '#facc15',
+        draw(k) {
+            const { ctx, r, time } = k;
+            clip(k);
+            const g = ctx.createRadialGradient(-r * 0.2, -r * 0.2, 0, 0, 0, r * 1.4);
+            g.addColorStop(0, '#7e22ce');
+            g.addColorStop(1, '#2e1065');
+            fillAll(k, g);
+            ctx.strokeStyle = '#facc15';
+            ctx.lineWidth = Math.max(1, r * 0.06);
+            circle(ctx, 0, 0, r * 0.78); ctx.stroke();
+            for (const side of [-1, 1]) {
+                ctx.beginPath();
+                ctx.moveTo(-r * 0.55, side * r * 0.1);
+                ctx.bezierCurveTo(-r * 0.4, side * r * 0.55, r * 0.05, side * r * 0.2, -r * 0.1, side * r * 0.42);
+                ctx.moveTo(r * 0.55, side * r * 0.1);
+                ctx.bezierCurveTo(r * 0.4, side * r * 0.55, -r * 0.05, side * r * 0.2, r * 0.1, side * r * 0.42);
+                ctx.stroke();
+            }
+            ctx.restore();
+            glow(k, '#ffffff', 10);
+            ctx.fillStyle = '#e0f2fe';
+            ctx.strokeStyle = '#facc15';
+            ctx.lineWidth = 1.2;
+            const j = r * 0.2;
+            ctx.beginPath();
+            ctx.moveTo(j, 0); ctx.lineTo(0, -j * 1.2); ctx.lineTo(-j, 0); ctx.lineTo(0, j * 1.2);
+            ctx.closePath(); ctx.fill(); ctx.stroke();
+            noGlow(k);
+            const tw = 0.5 + 0.5 * Math.sin(time * 4);
+            ctx.strokeStyle = `rgba(255, 255, 255, ${tw})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(-j * 0.5, -j * 0.6); ctx.lineTo(-j * 0.1, -j * 0.6);
+            ctx.moveTo(-j * 0.3, -j * 0.8); ctx.lineTo(-j * 0.3, -j * 0.4);
+            ctx.stroke();
+        }
+    },
+
+    reactor: {
+        outline: '#0e7490',
+        draw(k) {
+            const { ctx, r, time, hq } = k;
+            clip(k);
+            fillAll(k, '#06161c');
+            ctx.globalCompositeOperation = 'lighter';
+            const pulse = 0.75 + 0.25 * Math.sin(time * 5);
+            const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 0.55 * pulse);
+            g.addColorStop(0, 'rgba(236, 254, 255, 1)');
+            g.addColorStop(0.35, 'rgba(34, 211, 238, 0.9)');
+            g.addColorStop(1, 'rgba(8, 145, 178, 0)');
+            ctx.fillStyle = g;
+            circle(ctx, 0, 0, r * 0.6); ctx.fill();
+            ctx.lineCap = 'round';
+            [[0.62, 1.4, 3], [0.86, -0.9, 4]].forEach(([rad, speed, gaps]) => {
+                for (let i = 0; i < gaps; i++) {
+                    const a = time * speed + (i / gaps) * Math.PI * 2;
+                    if (hq) {
+                        ctx.strokeStyle = 'rgba(34, 211, 238, 0.25)';
+                        ctx.lineWidth = Math.max(3, r * 0.16);
+                        ctx.beginPath(); ctx.arc(0, 0, r * rad, a, a + Math.PI * 2 / gaps - 0.5); ctx.stroke();
+                    }
+                    ctx.strokeStyle = 'rgba(165, 243, 252, 0.9)';
+                    ctx.lineWidth = Math.max(1.2, r * 0.06);
+                    ctx.beginPath(); ctx.arc(0, 0, r * rad, a, a + Math.PI * 2 / gaps - 0.5); ctx.stroke();
+                }
+            });
+            ctx.globalCompositeOperation = 'source-over';
             ctx.restore();
         }
     }

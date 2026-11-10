@@ -4,7 +4,7 @@ import { state } from '../core/state.js';
 import { emit } from '../core/events.js';
 import { ACCOUNT } from '../config.js';
 import { BALANCE } from '../data/balance.js';
-import { getItem, SEASON_ITEM_IDS, MASTERY_KILLS, masterySkinId, ITEMS_DB } from '../data/items.js';
+import { getItem, SEASON_ITEM_IDS, MASTERY_KILLS, masterySkinId, ITEMS_DB, isOwnerName } from '../data/items.js';
 import { scheduleSave, saveNow } from './account.js';
 import { hourlyProgress, addHourlyProgress, shopEntryFor } from './shop.js';
 
@@ -112,6 +112,24 @@ export function onClassChanged(classType) {
         emit('profile:changed');
         scheduleSave();
     }
+}
+
+// The owner's account (an admin username) gets the OWNER banner, equipped the first time.
+export function grantOwnerBanner() {
+    if (!isOwnerName(state.account.username) || state.profile.unlocked.b_owner) return;
+    state.profile.unlocked.b_owner = true;
+    if (!state.profile.equipped.Banner) state.profile.equipped.Banner = 'b_owner';
+    emit('profile:changed');
+    scheduleSave();
+}
+
+// Gives a cosmetic without the usual claim rules (tutorial reward).
+export function grantItem(itemId) {
+    if (!getItem(itemId) || state.profile.unlocked[itemId]) return false;
+    state.profile.unlocked[itemId] = true;
+    emit('profile:changed');
+    scheduleSave();
+    return true;
 }
 
 // ---------- tutorial ----------

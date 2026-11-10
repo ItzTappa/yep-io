@@ -291,7 +291,7 @@
                     <div class="setting-row"><label for="set-badges">Show Upgrade Badges</label><input type="checkbox" id="set-badges" data-setting="showBadges"></div>
                     <div class="setting-row"><label for="set-notifs">Show Notifications</label><input type="checkbox" id="set-notifs" data-setting="showNotifs"></div>
                     <div class="setting-row"><label for="set-minimap">Show Minimap</label><input type="checkbox" id="set-minimap" data-setting="showMinimap"></div>
-                    <div class="setting-row"><label for="set-fps">Show FPS Counter</label><input type="checkbox" id="set-fps" data-setting="showFps"></div>
+                    <div class="setting-row"><label for="set-mm-enemies">Show Enemies on Minimap</label><input type="checkbox" id="set-mm-enemies" data-setting="minimapEnemies"></div>
                     <div class="setting-row"><label for="set-dmg">Damage Numbers &amp; Hit Markers</label><input type="checkbox" id="set-dmg" data-setting="damageNumbers"></div>
                 </div>
                 <div class="settings-col mobile-controls-col">
@@ -304,7 +304,7 @@
                     <div class="setting-row"><label>Use Ability</label><button class="keybind-btn ability-bind" data-action="ability">E</button></div>
                     <div class="settings-actions">
                         <button id="reset-keybinds-btn" class="keybind-reset">RESET CONTROLS</button>
-                        <button id="replay-tutorial-btn" class="keybind-reset">REPLAY TUTORIAL</button>
+                        <button id="replay-tutorial-btn" class="keybind-reset">PLAY TUTORIAL</button>
                     </div>
                 </div>
             </div>
@@ -336,13 +336,6 @@
                 <span id="level-display">0 PTS</span>
             </div>
             <div id="safezone-indicator" class="hidden">SAFE ZONE · WEAPONS OFFLINE</div>
-
-            <!-- First-match tutorial -->
-            <div id="tutorial-panel" class="hidden">
-                <div class="tut-top"><span id="tut-step" class="tut-step">STEP 1 / 6</span><button id="tut-skip-btn" class="tut-skip">SKIP TUTORIAL</button></div>
-                <div id="tut-title" class="tut-title">MOVE</div>
-                <div id="tut-text" class="tut-text"></div>
-            </div>
 
             <div id="right-hud-column" class="right-hud-column">
                 <div id="leaderboard-container" class="leaderboard">
@@ -376,6 +369,18 @@
                     <div class="notif-text">BAR FILLED!</div>
                     <div class="notif-level">UPGRADE READY</div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Tutorial (training arena). Outside .hud so its buttons sit above the phone touch controls. -->
+        <div id="tutorial-panel" class="hidden">
+            <div class="tut-top"><span id="tut-step" class="tut-step">STEP 1</span><button id="tut-skip-btn" class="tut-skip">SKIP TUTORIAL</button></div>
+            <div id="tut-title" class="tut-title"></div>
+            <div id="tut-text" class="tut-text"></div>
+            <div id="tut-actions" class="tut-actions hidden">
+                <button id="tut-next-btn" class="tut-btn">CONTINUE ▶</button>
+                <button id="tut-play-btn" class="tut-btn">PLAY A MATCH</button>
+                <button id="tut-menu-btn" class="tut-btn secondary">BACK TO MENU</button>
             </div>
         </div>
 

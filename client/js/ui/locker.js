@@ -2,7 +2,7 @@
 import { $, escapeHtml, setVisible } from '../core/dom.js';
 import { state } from '../core/state.js';
 import { on } from '../core/events.js';
-import { CATEGORIES, getItem, itemColor } from '../data/items.js';
+import { CATEGORIES, getItem, itemColor, isOwnerName } from '../data/items.js';
 import { toggleEquip } from '../services/profile.js';
 import { openPreview } from './previews.js';
 import { itemIconHtml } from './itemThumbnails.js';
@@ -60,6 +60,7 @@ function renderLocker() {
     const owned = Object.keys(state.profile.unlocked)
         .map(getItem)
         .filter(item => item && item.category === category && (!item.masteryClass || item.masteryClass === state.selectedClass))
+        .filter(item => !item.ownerOnly || isOwnerName(state.account.username))
         .sort((a, b) => (b.rarity || 1) - (a.rarity || 1));
 
     $('locker-item-grid').innerHTML = `

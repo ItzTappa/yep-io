@@ -64,3 +64,7 @@
 /* READY / START button states */
 #ready-btn.ready-active { background: #00ffcc; box-shadow: 0 0 10px rgba(0,255,204,0.3); }
 #ready-btn.is-waiting { background: #555; color: #ccc; box-shadow: none; cursor: default; }
+
+/* The owner banner: a gold OWNER tag in front of the name */
+.owner-tag { display: inline-block; margin-right: 8px; padding: 1px 7px; border-radius: 5px; background: linear-gradient(#fde68a, #f59e0b); border: 1px solid #92400e; color: #1c1206; font-size: 0.65em; font-weight: 900; letter-spacing: 1px; vertical-align: middle; text-shadow: none; }
+.owner-tag.big { margin: 0; font-size: 0.95rem; padding: 4px 10px; }

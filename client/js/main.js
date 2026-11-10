@@ -2,7 +2,7 @@
 // server and Firebase, and switches between the menus and matches.
 import { $, setVisible } from './core/dom.js';
 import { state } from './core/state.js';
-import { emit } from './core/events.js';
+import { emit, on } from './core/events.js';
 import { settings } from './core/settings.js';
 import { sounds } from './core/sound.js';
 import { DEV_TOOLS_ENABLED } from './config.js';
@@ -10,7 +10,7 @@ import { GameEngine } from './game/GameEngine.js';
 import { applyHudSettings } from './game/hud/hud.js';
 import { network } from './services/network.js';
 import { initAccount, setInGame } from './services/account.js';
-import { addAccountXP, recordMatch, setTutorialDone } from './services/profile.js';
+import { addAccountXP, recordMatch, setTutorialDone, grantItem, grantOwnerBanner } from './services/profile.js';
 import { startQuestMatch, trackQuestStat, reportQuestBest, endQuestMatch } from './services/quests.js';
 import { startShopClock } from './services/shop.js';
 import { initMenu, switchTab } from './ui/menu.js';
@@ -38,7 +38,17 @@ const engine = new GameEngine($('gameCanvas'), {
     onMatchQuests: (summary) => endQuestMatch(summary),
     onMatchEnd: (summary) => recordMatch(summary),
     onSlotMachine: () => playSlotMachine(engine),
-    onTutorialDone: () => setTutorialDone(true)
+    localName: () => state.account.username || '',
+    // Finishing the tutorial gives the Graduate banner; skipping or leaving just marks it seen.
+    onTutorialDone: (completed) => {
+        setTutorialDone(true);
+        if (completed) grantItem('t_graduate');
+    },
+    onTutorialExit: (choice) => {
+        hideSlotMachine();
+        if (choice === 'play') startSolo(engine.player?.type || state.selectedClass || 'circle');
+        else returnToMenu();
+    }
 });
 if (DEV_TOOLS_ENABLED) window.game = engine; // handy in the browser console while developing
 engine.startDemo();
@@ -52,9 +62,16 @@ function enterMatch() {
     setInGame(true);
 }
 
+// PLAY: new players go to the training arena first.
 function startSolo(classType) {
+    if (!state.profile.tutorialDone) return startTutorial(classType);
     enterMatch();
-    engine.startSolo(classType, { equipped: state.profile.equipped, tutorial: !state.profile.tutorialDone });
+    engine.startSolo(classType, { equipped: state.profile.equipped });
+}
+
+function startTutorial(classType) {
+    enterMatch();
+    engine.startTutorial(classType, { equipped: state.profile.equipped });
 }
 
 function startMultiplayerMatch(match) {
@@ -113,6 +130,9 @@ initSettingsModal({
     onApply: () => {
         applyHudSettings();
         if (state.inMatch) engine.refreshBadges();
+    },
+    onPlayTutorial: () => {
+        if (!state.inMatch) startTutorial(state.selectedClass || 'circle');
     }
 });
 initMasteryModal();
@@ -120,3 +140,4 @@ initDevConsole(engine);
 startShopClock();
 network.connect();
 initAccount();
+on('account:changed', grantOwnerBanner);

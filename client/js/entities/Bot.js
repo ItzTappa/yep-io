@@ -116,8 +116,11 @@ export class Bot extends Entity {
             }
         }
 
-        this.rubberBandPoints(referencePoints);
-        this.levelUpFromPoints();
+        // Tutorial targets and the training bot stay exactly as they were made.
+        if (!this.trainingDummy) {
+            this.rubberBandPoints(referencePoints);
+            this.levelUpFromPoints();
+        }
 
         const speedBoost = this.abilityTimer > 0 && (this.activeAbility === 'overdrive' || this.activeAbility === 'sonic_boom') ? 2.5 : 1.0;
         const speed = this.speed * speedBoost;

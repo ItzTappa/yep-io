@@ -7,6 +7,7 @@ import { sounds } from '../core/sound.js';
 import { network } from '../services/network.js';
 import { showToast, showError } from './toast.js';
 import { switchTab } from './menu.js';
+import { bannerFor } from '../data/items.js';
 
 let creating = null;     // in-flight "create lobby" request
 let countdownTimer = null;
@@ -185,11 +186,18 @@ function renderSlots(lobby) {
         html += `
             <div class="player-slot ${p.ready ? 'ready' : ''} ${p.inMatch ? 'in-match' : ''}">
                 <canvas class="lobby-preview-canvas" id="lobby-canvas-${i}"></canvas>
-                <div class="name">${escapeHtml(p.name)}${role ? ` <span class="role-tag">${role}</span>` : ''}</div>
+                <div class="name">${bannerHtml(p.id === state.myNetId ? state.profile.equipped : p.equipped, p.name)}${escapeHtml(p.name)}${role ? ` <span class="role-tag">${role}</span>` : ''}</div>
                 <div class="status ${statusClass}">${status}</div>
             </div>`;
     }
     $('player-slots-container').innerHTML = html;
+}
+
+// The banner in front of a lobby name: the gold OWNER tag, or the banner's emoji.
+function bannerHtml(equipped, name) {
+    const banner = bannerFor(equipped, name);
+    if (!banner) return '';
+    return banner.badge === 'owner' ? '<span class="owner-tag">OWNER</span>' : `${escapeHtml(banner.value)} `;
 }
 
 function renderReadyButton(lobby) {

@@ -59,6 +59,7 @@ export function thumbnailUrl(itemId, classType = state.selectedClass || 'triangl
 // HTML for an item's icon: a rendered preview, or the emoji for banners.
 export function itemIconHtml(item) {
     if (!item) return '✖';
+    if (item.badge === 'owner') return '<span class="owner-tag big">OWNER</span>';
     if (item.category === 'Banner') return escapeHtml(item.icon);
     return `<img class="item-thumb" src="${thumbnailUrl(item.id)}" alt="${escapeHtml(item.name)}" draggable="false">`;
 }

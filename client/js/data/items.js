@@ -1,3 +1,5 @@
+import { ADMIN_USERNAMES } from '../config.js';
+
 // Every cosmetic in the game: season rewards, the hourly shop pool and class mastery skins.
 // To add an item, add an entry here. Rotating items (isRotating) can appear in the hourly shop.
 // Never delete or rename an id that players may own; retire it from the shop instead (isRotating: false).
@@ -21,6 +23,7 @@ export const RARITY_NAMES = { 1: 'Common', 2: 'Uncommon', 3: 'Rare', 4: 'Epic', 
 const skin = (id, name, rarity, value, icon) => ({ id, name, category: 'Skin', icon, rarity, value, isRotating: true });
 const trail = (id, name, rarity, value, style, icon, extra = {}) => ({ id, name, category: 'Trail', icon, rarity, value, style, isRotating: true, ...extra });
 const color = (id, name, rarity, value, icon, extra = {}) => ({ id, name, category: 'Color', icon, rarity, value, isRotating: true, ...extra });
+const banner = (id, name, rarity, emoji) => ({ id, name, category: 'Banner', icon: emoji, rarity, value: emoji, isRotating: true });
 
 export const ITEMS_DB = {
     // ==========================================
@@ -35,7 +38,7 @@ export const ITEMS_DB = {
     // ROTATING SHOP ITEMS
     // ==========================================
 
-    // --- SKINS (30) ---
+    // --- SKINS (46) ---
     'r_skn_1':  skin('r_skn_1',  'Ghost',       3, 'ghost',       '👻'),
     'r_skn_2':  skin('r_skn_2',  'Assassin',    4, 'assassin',    '🗡️'),
     'r_skn_3':  skin('r_skn_3',  'Paladin',     2, 'paladin',     '🛡️'),
@@ -66,8 +69,24 @@ export const ITEMS_DB = {
     'r_skn_28': skin('r_skn_28', 'Hazard',      2, 'hazard',      '⚠️'),
     'r_skn_29': skin('r_skn_29', 'Crystal',     4, 'crystal',     '💎'),
     'r_skn_30': skin('r_skn_30', 'Aurora',      5, 'aurora',      '🌈'),
+    'r_skn_31': skin('r_skn_31', 'Honeycomb',   2, 'honeycomb',   '🍯'),
+    'r_skn_32': skin('r_skn_32', 'Duo',         1, 'split',       '◐'),
+    'r_skn_33': skin('r_skn_33', 'Polka',       1, 'polka',       '⚪'),
+    'r_skn_34': skin('r_skn_34', 'Tiger',       3, 'tiger',       '🐯'),
+    'r_skn_35': skin('r_skn_35', 'Dragon Scale', 3, 'scales',     '🐉'),
+    'r_skn_36': skin('r_skn_36', '8-Bit',       2, 'pixel',       '👾'),
+    'r_skn_37': skin('r_skn_37', 'Sakura',      3, 'sakura',      '🌸'),
+    'r_skn_38': skin('r_skn_38', 'Magma Rock',  4, 'lava',        '🌋'),
+    'r_skn_39': skin('r_skn_39', 'Stardust',    4, 'stardust',    '✨'),
+    'r_skn_40': skin('r_skn_40', 'Frostbite',   4, 'frostbite',   '❄️'),
+    'r_skn_41': skin('r_skn_41', 'Samurai',     4, 'samurai',     '⛩️'),
+    'r_skn_42': skin('r_skn_42', 'Stormcaller', 4, 'thunder',     '⛈️'),
+    'r_skn_43': skin('r_skn_43', 'Phoenix',     5, 'phoenix',     '🔥'),
+    'r_skn_44': skin('r_skn_44', 'Event Horizon', 5, 'blackhole', '🕳️'),
+    'r_skn_45': skin('r_skn_45', 'Royalty',     5, 'royal',       '👑'),
+    'r_skn_46': skin('r_skn_46', 'Reactor',     5, 'reactor',     '⚛️'),
 
-    // --- BANNERS (30) ---
+    // --- BANNERS (44) ---
     'r_ban_1':  { id: 'r_ban_1',  name: 'Kingpin',    category: 'Banner', icon: '👑', rarity: 5, value: '👑', isRotating: true },
     'r_ban_2':  { id: 'r_ban_2',  name: 'Scorcher',   category: 'Banner', icon: '🔥', rarity: 2, value: '🔥', isRotating: true },
     'r_ban_3':  { id: 'r_ban_3',  name: 'Voltage',    category: 'Banner', icon: '⚡', rarity: 3, value: '⚡', isRotating: true },
@@ -98,8 +117,22 @@ export const ITEMS_DB = {
     'r_ban_28': { id: 'r_ban_28', name: 'Angelic',    category: 'Banner', icon: '👼', rarity: 4, value: '👼', isRotating: true },
     'r_ban_29': { id: 'r_ban_29', name: 'Royal',      category: 'Banner', icon: '🤴', rarity: 3, value: '🤴', isRotating: true },
     'r_ban_30': { id: 'r_ban_30', name: 'Empress',    category: 'Banner', icon: '👸', rarity: 3, value: '👸', isRotating: true },
+    'r_ban_31': banner('r_ban_31', 'Dragon',     4, '🐉'),
+    'r_ban_32': banner('r_ban_32', 'Sly Fox',    2, '🦊'),
+    'r_ban_33': banner('r_ban_33', 'Lone Wolf',  3, '🐺'),
+    'r_ban_34': banner('r_ban_34', 'Pride',      3, '🦁'),
+    'r_ban_35': banner('r_ban_35', 'Superstar',  4, '🌟'),
+    'r_ban_36': banner('r_ban_36', 'Moonlight',  2, '🌙'),
+    'r_ban_37': banner('r_ban_37', 'Gamer',      2, '🎮'),
+    'r_ban_38': banner('r_ban_38', 'Big Brain',  3, '🧠'),
+    'r_ban_39': banner('r_ban_39', 'Bomber',     3, '💣'),
+    'r_ban_40': banner('r_ban_40', 'Planetary',  4, '🪐'),
+    'r_ban_41': banner('r_ban_41', 'Wildcard',   3, '🃏'),
+    'r_ban_42': banner('r_ban_42', 'Unicorn',    5, '🦄'),
+    'r_ban_43': banner('r_ban_43', 'Trident',    4, '🔱'),
+    'r_ban_44': banner('r_ban_44', 'Vortex',     2, '🌀'),
 
-    // --- TRAILS (32) ---
+    // --- TRAILS (43) ---
     'r_trl_1':  trail('r_trl_1',  'Crimson',      2, '#ef4444', 'puff',     '🔴'),
     'r_trl_2':  trail('r_trl_2',  'Emerald',      2, '#22c55e', 'puff',     '🟢'),
     'r_trl_3':  trail('r_trl_3',  'Sapphire',     2, '#3b82f6', 'puff',     '🔵'),
@@ -132,8 +165,19 @@ export const ITEMS_DB = {
     'r_trl_30': trail('r_trl_30', 'Nebula',       4, '#a855f7', 'nebula',   '🌌', { color2: '#ec4899' }),
     'r_trl_31': trail('r_trl_31', 'Comet',        4, '#7dd3fc', 'comet',    '☄️'),
     'r_trl_32': trail('r_trl_32', 'Prism',        5, '#ffffff', 'rainbow',  '🌈'),
+    'r_trl_33': trail('r_trl_33', 'Lovestruck',   3, '#f472b6', 'hearts',   '💕', { color2: '#fda4af' }),
+    'r_trl_34': trail('r_trl_34', '8-Bit',        2, '#22d3ee', 'pixel',    '👾', { color2: '#a3e635' }),
+    'r_trl_35': trail('r_trl_35', 'Sakura',       3, '#fbcfe8', 'petals',   '🌸', { color2: '#ffffff' }),
+    'r_trl_36': trail('r_trl_36', 'Smokescreen',  1, '#6b7280', 'smoke',    '💨'),
+    'r_trl_37': trail('r_trl_37', 'Shatter',      4, '#bae6fd', 'shards',   '🧊', { color2: '#ffffff' }),
+    'r_trl_38': trail('r_trl_38', 'Synthwave',    4, '#ff4fd8', 'laser',    '🎹'),
+    'r_trl_39': trail('r_trl_39', 'Lagoon',       1, '#2dd4bf', 'bubble',   '🫧'),
+    'r_trl_40': trail('r_trl_40', 'Ashfall',      3, '#57534e', 'smoke',    '🌫️', { color2: '#fb923c' }),
+    'r_trl_41': trail('r_trl_41', 'Retro Gold',   3, '#facc15', 'pixel',    '🪙', { color2: '#f97316' }),
+    'r_trl_42': trail('r_trl_42', 'Heartbreaker', 5, '#ef4444', 'hearts',   '💘', { color2: '#ffffff' }),
+    'r_trl_43': trail('r_trl_43', 'Meteor',       4, '#fb923c', 'comet',    '☄️'),
 
-    // --- COLORS (32) ---
+    // --- COLORS (47) ---
     'r_col_1':  color('r_col_1',  'Red',          1, '#ef4444', '🔴'),
     'r_col_2':  color('r_col_2',  'Blue',         1, '#3b82f6', '🔵'),
     'r_col_3':  color('r_col_3',  'Green',        1, '#22c55e', '🟢'),
@@ -166,13 +210,37 @@ export const ITEMS_DB = {
     'r_col_29': color('r_col_29', 'Abyss',        5, '#0b1530', '🌊', { finish: 'rim', rim: '#38bdf8' }),
     'r_col_30': color('r_col_30', 'Amethyst',     5, '#a855f7', '🔮', { finish: 'crystal' }),
     'r_col_9':  color('r_col_9',  'Radiance',     5, '#ffffff', '✨', { finish: 'shimmer' }),
+    'r_col_34': color('r_col_34', 'Mint',         1, '#6ee7b7', '🍃'),
+    'r_col_35': color('r_col_35', 'Sky',          1, '#7dd3fc', '🌤️'),
+    'r_col_36': color('r_col_36', 'Blush',        1, '#fda4af', '🌷'),
+    'r_col_37': color('r_col_37', 'Lime',         1, '#84cc16', '🍋'),
+    'r_col_38': color('r_col_38', 'Charcoal',     2, '#374151', '🪨'),
+    'r_col_39': color('r_col_39', 'Sand',         2, '#d6b98c', '🏜️'),
+    'r_col_40': color('r_col_40', 'Ocean',        3, '#22d3ee', '🌊', { finish: 'gradient', value2: '#1e40af' }),
+    'r_col_41': color('r_col_41', 'Twilight',     3, '#f472b6', '🌆', { finish: 'gradient', value2: '#6d28d9' }),
+    'r_col_42': color('r_col_42', 'Split Fire',   3, '#fb923c', '🌗', { finish: 'duo', value2: '#1f2937' }),
+    'r_col_43': color('r_col_43', 'Ember',        4, '#fb923c', '🔥', { finish: 'pulse' }),
+    'r_col_44': color('r_col_44', 'Sunset',       4, '#fde047', '🌅', { finish: 'tri', value2: '#fb7185', value3: '#7c3aed' }),
+    'r_col_45': color('r_col_45', 'Rose Gold',    5, '#e8a39a', '🌹', { finish: 'metal' }),
+    'r_col_46': color('r_col_46', 'Holographic',  5, '#c4b5fd', '💿', { finish: 'holo' }),
+    'r_col_47': color('r_col_47', 'Emerald',      5, '#10b981', '💚', { finish: 'crystal' }),
+    'r_col_48': color('r_col_48', 'Molten Core',  5, '#ff5a1f', '🌋', { finish: 'molten' }),
 
     // ==========================================
     // CLASS MASTERY SKINS (500 kills with a class)
     // ==========================================
     'skin_mastery_triangle': { id: 'skin_mastery_triangle', category: 'Skin', icon: '🏆', value: 'golden', name: 'Golden Jet', rarity: 5, hideFromStore: true, masteryClass: 'triangle' },
     'skin_mastery_square':   { id: 'skin_mastery_square',   category: 'Skin', icon: '🏆', value: 'golden', name: 'Golden Tank', rarity: 5, hideFromStore: true, masteryClass: 'square' },
-    'skin_mastery_circle':   { id: 'skin_mastery_circle',   category: 'Skin', icon: '🏆', value: 'golden', name: 'Golden Soldier', rarity: 5, hideFromStore: true, masteryClass: 'circle' }
+    'skin_mastery_circle':   { id: 'skin_mastery_circle',   category: 'Skin', icon: '🏆', value: 'golden', name: 'Golden Soldier', rarity: 5, hideFromStore: true, masteryClass: 'circle' },
+
+    // ==========================================
+    // SPECIAL BANNERS (never in a shop)
+    // ==========================================
+    // Finishing the tutorial.
+    't_graduate': { id: 't_graduate', name: 'Graduate', category: 'Banner', icon: '🎓', rarity: 2, value: '🎓', hideFromStore: true },
+    // The game's owner (ADMIN_USERNAMES in config.js): shows a gold OWNER tag before the name.
+    // Only drawn for a player whose name is an admin username, so copying the id does nothing.
+    'b_owner': { id: 'b_owner', name: 'Owner', category: 'Banner', icon: '👑', rarity: 5, value: 'OWNER', badge: 'owner', color: '#facc15', hideFromStore: true, ownerOnly: true }
 };
 
 export const CATEGORIES = ['Skin', 'Trail', 'Banner', 'Color'];
@@ -187,6 +255,16 @@ export const itemColor = (item) => item ? (item.color || RARITY_COLORS[item.rari
 export const masterySkinId = (classType) => `skin_mastery_${classType}`;
 export const isMasterySkin = (id) => !!getItem(id)?.masteryClass;
 
+// The owner's name (an admin username, see config.js).
+export const isOwnerName = (name) => ADMIN_USERNAMES.includes(String(name || '').toLowerCase());
+
+// The banner to show for a player, or null. Owner-only banners only count for the owner's name.
+export function bannerFor(equipped, name) {
+    const banner = getItem(equipped?.Banner);
+    if (!banner || banner.category !== 'Banner') return null;
+    return banner.ownerOnly && !isOwnerName(name) ? null : banner;
+}
+
 // Body colour for a loadout (the "Color" slot).
 export function bodyColorFor(equipped) {
     return getItem(equipped?.Color)?.value || DEFAULT_BODY_COLOR;
@@ -195,7 +273,7 @@ export function bodyColorFor(equipped) {
 // Special paint for the "Color" slot (gradient, metal, neon...), or null for a flat colour.
 export function bodyFinishFor(equipped) {
     const item = getItem(equipped?.Color);
-    return item?.finish ? { type: item.finish, value2: item.value2, rim: item.rim } : null;
+    return item?.finish ? { type: item.finish, value2: item.value2, value3: item.value3, rim: item.rim } : null;
 }
 
 // A loadout safe to render for a class: drops unknown items and other classes' mastery skins.

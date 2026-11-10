@@ -1,16 +1,23 @@
 // Draws a ship, back to front:
-//   trail -> ability effect -> regen aura -> armour -> thrusters -> barrels -> spikes ->
-//   skin (behind layer) -> body paint -> skin -> outline -> orbiters -> facing arrow -> name & bars
+//   trail -> ability effect -> auras -> evasion shimmer -> armour -> missile pods -> thrusters /
+//   afterburner -> rear gun -> guns -> executioner blades -> spikes -> shockwave emitters ->
+//   skin (behind layer) -> body paint -> skin -> outline -> medic badge -> ability core ->
+//   orbiters -> facing arrow -> name & bars   (the upgrade parts live in upgradeParts.js)
 // Metal parts sit under the body so it overlaps their roots, like a turret on a hull.
 // `preview: true` is for menu canvases (locker, store, lobby) and skips the in-game extras.
 import { settings } from '../../core/settings.js';
-import { getItem } from '../../data/items.js';
+import { getItem, bannerFor } from '../../data/items.js';
 import { traceBody } from './shapes.js';
 import { SKINS, skinContext } from './skins.js';
 import { paintBody, paintOverlay, glowFor, finishOutline } from './finishes.js';
 import { drawTrail } from './trails.js';
 import { STEEL, TIER_GLOW, rgba } from './palette.js';
 import { armorTierOf, bladeRingRadius, orbiterPositions, ORBITER_BLADE_RADIUS, REPULSOR_RANGE } from '../geometry.js';
+import {
+    roundRect, metalPath, hasGuns, drawGuns, drawRearGun, drawMissilePods, drawExecutionerBlades,
+    drawShockwaveEmitters, drawAfterburner, drawEvasionShimmer, drawMedicBadge, drawAbilityCore,
+    drawAuras, drawMagnetField, auraReach
+} from './upgradeParts.js';
 
 const outlineWidth = (e) => Math.max(2, Math.min(3.2, e.size * 0.11));
 const HIT_FLASH_MS = 110;
@@ -26,24 +33,36 @@ export function drawEntity(ctx, e, { preview = false } = {}) {
     const oldAlpha = ctx.globalAlpha;
     if (e.isCloaked) ctx.globalAlpha = 0.2;
 
+    // Ghost Dash: see-through while dashing.
+    if (e.ghostDash && e.dashTimer > 0) ctx.globalAlpha *= 0.45;
+
     drawAbilityEffect(ctx, e, hq);
-    drawRegenAura(ctx, e);
+    if (!preview) drawMagnetField(ctx, e);
+    drawAuras(ctx, e);
 
     ctx.save();
     ctx.translate(e.x, e.y);
     ctx.rotate(e.angle);
+    drawEvasionShimmer(ctx, e);
     const armor = drawArmor(ctx, e);
+    drawMissilePods(ctx, e, armor);
     drawThrusters(ctx, e, armor);
-    drawBarrels(ctx, e, armor);
+    drawAfterburner(ctx, e, armor, e.rearVisual === 'thrusters');
+    drawRearGun(ctx, e, armor);
+    drawGuns(ctx, e, armor, !preview);
+    drawExecutionerBlades(ctx, e, armor);
     drawSpikes(ctx, e, armor);
+    drawShockwaveEmitters(ctx, e, armor);
     drawHull(ctx, e, hq);
+    drawMedicBadge(ctx, e);
+    drawAbilityCore(ctx, e);
     ctx.restore();
 
     ctx.globalAlpha = oldAlpha;
     if (preview) return;
 
     if (e.orbiters > 0 && !e.isCloaked) drawOrbiters(ctx, e, hq);
-    if (e.isPlayer && e.frontVisual !== 'gun' && e.frontVisual !== 'spikes' && !e.isCloaked) drawFacingArrow(ctx, e, armor);
+    if (e.isPlayer && !hasGuns(e) && !(e.spikes > 0) && !e.isCloaked) drawFacingArrow(ctx, e, armor);
     if (!e.isCloaked) drawNameAndBars(ctx, e, armor);
 }
 
@@ -105,27 +124,6 @@ function drawHull(ctx, e, hq) {
 
 // ---------- metal parts (drawn in ship space: centred, facing +x) ----------
 
-function metalPath(ctx, fill = STEEL.mid) {
-    ctx.fillStyle = fill;
-    ctx.fill();
-    ctx.strokeStyle = STEEL.edge;
-    ctx.lineWidth = 2;
-    ctx.lineJoin = 'round';
-    ctx.stroke();
-}
-
-function roundRect(ctx, x, y, w, h, r) {
-    const rad = Math.min(r, w / 2, h / 2);
-    ctx.beginPath();
-    ctx.moveTo(x + rad, y);
-    ctx.arcTo(x + w, y, x + w, y + h, rad);
-    ctx.arcTo(x + w, y + h, x, y + h, rad);
-    ctx.arcTo(x, y + h, x, y, rad);
-    ctx.arcTo(x, y, x + w, y, rad);
-    ctx.closePath();
-}
-
-// Armour: a plated metal shell around the hull. Returns how far it sticks out.
 function drawArmor(ctx, e) {
     if (e.bodyVisual !== 'armor') return 0;
     const tier = Math.max(1, armorTierOf(e));
@@ -235,32 +233,6 @@ function drawThrusters(ctx, e, armor) {
 }
 
 // Gun barrels: steel tubes with a dark muzzle; from tier 3 a stripe in the ship colour.
-function drawBarrels(ctx, e, armor) {
-    if (e.frontVisual !== 'gun') return;
-    const tier = Math.max(1, Math.max(e.upgrades.fireRate || 0, e.upgrades.damage || 0, e.upgrades.multiShot || 0));
-    const guns = e.multiShot + 1;
-    const len = 13 + tier * 3.2;
-    const width = Math.min(6.5 + tier * 1.3, 18 / Math.sqrt(guns) + 4);
-    const spread = 0.2;
-    const start = -(spread * (guns - 1)) / 2;
-    const base = frontEdge(e) + armor - 7;
-
-    for (let i = 0; i < guns; i++) {
-        ctx.save();
-        ctx.rotate(start + i * spread);
-        roundRect(ctx, base, -width / 2, len, width, 2);
-        metalPath(ctx, STEEL.mid);
-        ctx.fillStyle = STEEL.edge;
-        ctx.fillRect(base + len - 3.5, -width / 2 + 1, 2.5, width - 2);
-        if (tier >= 3) {
-            ctx.fillStyle = e.color;
-            ctx.fillRect(base + len * 0.45, -width / 2 + 1, 2.5, width - 2);
-        }
-        ctx.restore();
-    }
-}
-
-// Ramming spikes: steel blades around the hull (a single ram blade on a Jet's nose).
 function drawSpikes(ctx, e, armor) {
     if (e.spikes <= 0) return;
     const spike = (x, y, angle, len, base) => {
@@ -303,7 +275,8 @@ function drawSpikes(ctx, e, armor) {
                 spike(px, py, normal, 5 + e.spikes * 1.8, 3 + e.spikes * 0.4);
             }
         }
-    } else if (e.frontVisual === 'spikes') {
+    } else if (!hasGuns(e)) {
+        // Jet: one big ram spike on the nose (guns take the nose when it has them)
         spike(e.size + armor - 2, 0, 0, 6 + e.spikes * 3, e.size * 0.3);
     }
 }
@@ -438,40 +411,6 @@ function drawAbilityEffect(ctx, e, hq) {
     ctx.restore();
 }
 
-function drawRegenAura(ctx, e) {
-    if (e.auraVisual !== 'regen') return;
-    // More tiers: a brighter ring, a soft inner glow and more orbiting crosses.
-    const tier = Math.min(5, Math.max(1, e.upgrades.regen || 0, e.upgrades.vampirism || 0));
-    const t = performance.now() / 1000;
-    const radius = (e.type === 'square' ? e.size / 1.5 : e.size) + 12 + tier;
-    ctx.save();
-    ctx.translate(e.x, e.y);
-    if (tier >= 3) {
-        const g = ctx.createRadialGradient(0, 0, radius * 0.5, 0, 0, radius);
-        g.addColorStop(0, 'rgba(74, 222, 128, 0)');
-        g.addColorStop(1, `rgba(74, 222, 128, ${0.04 * tier})`);
-        ctx.fillStyle = g;
-        ctx.beginPath(); ctx.arc(0, 0, radius, 0, Math.PI * 2); ctx.fill();
-    }
-    ctx.strokeStyle = `rgba(74, 222, 128, ${0.16 + tier * 0.04 + 0.12 * Math.sin(t * 3)})`;
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(0, 0, radius, 0, Math.PI * 2); ctx.stroke();
-    ctx.strokeStyle = 'rgba(134, 239, 172, 0.85)';
-    ctx.lineWidth = 2;
-    const crosses = 2 + tier;
-    for (let i = 0; i < crosses; i++) {
-        const a = t * 0.8 + (i / crosses) * Math.PI * 2;
-        const x = Math.cos(a) * radius;
-        const y = Math.sin(a) * radius;
-        ctx.beginPath();
-        ctx.moveTo(x - 3, y); ctx.lineTo(x + 3, y);
-        ctx.moveTo(x, y - 3); ctx.lineTo(x, y + 3);
-        ctx.stroke();
-    }
-    ctx.restore();
-}
-
-// Orbiters: violet saw blades on a faint orbit ring.
 function drawOrbiters(ctx, e, hq) {
     ctx.save();
     ctx.strokeStyle = 'rgba(167, 139, 250, 0.16)';
@@ -479,7 +418,27 @@ function drawOrbiters(ctx, e, hq) {
     ctx.beginPath(); ctx.arc(e.x, e.y, e.size + 25, 0, Math.PI * 2); ctx.stroke();
 
     const spin = (Date.now() / 90) * e.overclock;
-    for (const pos of orbiterPositions(e)) {
+    const overclock = e.upgrades.overclock || 0;
+    const positions = orbiterPositions(e);
+    if (overclock > 0) {
+        // Overclock: cyan motion streaks behind each blade.
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.lineCap = 'round';
+        for (const pos of positions) {
+            const r = Math.hypot(pos.x - e.x, pos.y - e.y);
+            const a = Math.atan2(pos.y - e.y, pos.x - e.x);
+            const tail = 0.22 + overclock * 0.06;
+            ctx.strokeStyle = 'rgba(34, 211, 238, 0.2)';
+            ctx.lineWidth = ORBITER_BLADE_RADIUS * 0.7;
+            ctx.beginPath(); ctx.arc(e.x, e.y, r, a - tail, a); ctx.stroke();
+            ctx.strokeStyle = 'rgba(165, 243, 252, 0.6)';
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(e.x, e.y, r, a - tail * 0.7, a); ctx.stroke();
+        }
+        ctx.restore();
+    }
+    for (const pos of positions) {
         ctx.save();
         ctx.translate(pos.x, pos.y);
         ctx.rotate(spin);
@@ -495,9 +454,9 @@ function drawOrbiters(ctx, e, hq) {
             ctx.quadraticCurveTo(Math.cos(a + 0.45) * R * 0.35, Math.sin(a + 0.45) * R * 0.35, Math.cos(a + Math.PI / 2) * R * 0.42, Math.sin(a + Math.PI / 2) * R * 0.42);
         }
         ctx.closePath();
-        ctx.fillStyle = '#c4b5fd';
+        ctx.fillStyle = overclock > 0 ? '#cffafe' : '#c4b5fd';
         ctx.fill();
-        ctx.strokeStyle = '#4c1d95';
+        ctx.strokeStyle = overclock > 0 ? '#0e7490' : '#4c1d95';
         ctx.lineWidth = 1.3;
         ctx.stroke();
         ctx.fillStyle = '#1e1b4b';
@@ -513,7 +472,7 @@ function drawFacingArrow(ctx, e, armor) {
     let extra = 0;
     if (e.abilityTimer > 0 && ['shield', 'juggernaut'].includes(e.activeAbility)) extra = 16;
     else if (e.abilityTimer > 0 && ['overdrive', 'sonic_boom', 'minigun', 'phase_strike'].includes(e.activeAbility)) extra = 10;
-    if (e.auraVisual === 'regen') extra = Math.max(extra, 14);
+    extra = Math.max(extra, auraReach(e) - 2);
 
     ctx.save();
     ctx.translate(e.x, e.y);
@@ -530,6 +489,34 @@ function drawFacingArrow(ctx, e, armor) {
     ctx.lineWidth = 1;
     ctx.stroke();
     ctx.restore();
+}
+
+// A gold "OWNER" tag in front of the name (the owner banner). Font is already set for the name.
+function drawOwnerTag(ctx, cx, y, name) {
+    const nameW = ctx.measureText(name).width;
+    ctx.font = '900 9px "Segoe UI", sans-serif';
+    const tagW = ctx.measureText('OWNER').width + 10;
+    const gap = 5;
+    const left = cx - (tagW + gap + nameW) / 2;
+    const g = ctx.createLinearGradient(0, y - 11, 0, y + 3);
+    g.addColorStop(0, '#fde68a');
+    g.addColorStop(1, '#f59e0b');
+    roundRect(ctx, left, y - 11, tagW, 14, 4);
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.strokeStyle = '#92400e';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = '#1c1206';
+    ctx.textAlign = 'center';
+    ctx.fillText('OWNER', left + tagW / 2, y);
+    ctx.font = 'bold 12px "Segoe UI", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.lineWidth = 3;
+    ctx.strokeText(name, left + tagW + gap, y);
+    ctx.fillStyle = '#ffe680';
+    ctx.fillText(name, left + tagW + gap, y);
 }
 
 // Health you just lost stays on the bar for a moment, then drains away (shows how hard a hit was).
@@ -569,7 +556,7 @@ function drawNameAndBars(ctx, e, armor) {
         if (e.activeAbility === 'shield' || e.activeAbility === 'juggernaut') offset = Math.max(offset, 18);
         else if (['overdrive', 'sonic_boom', 'phase_strike', 'minigun'].includes(e.activeAbility)) offset = Math.max(offset, 12);
     }
-    if (e.auraVisual === 'regen') offset = Math.max(offset, 16);
+    offset = Math.max(offset, auraReach(e));
     if (e.orbiters > 0) offset = Math.max(offset, 36);
     const half = e.type === 'square' ? e.size / 2 : e.size;
 
@@ -578,14 +565,18 @@ function drawNameAndBars(ctx, e, armor) {
         ctx.font = 'bold 12px "Segoe UI", sans-serif';
         ctx.textAlign = 'center';
         ctx.lineJoin = 'round';
-        const banner = getItem(e.equipped.Banner);
-        const text = banner ? `${banner.value} ${e.name}` : e.name;
+        const banner = bannerFor(e.equipped, e.name);
         const y = e.y - half - 16 - offset;
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
         ctx.lineWidth = 3;
-        ctx.strokeText(text, e.x, y);
-        ctx.fillStyle = '#ffffff';
-        ctx.fillText(text, e.x, y);
+        if (banner?.badge === 'owner') {
+            drawOwnerTag(ctx, e.x, y, e.name);
+        } else {
+            const text = banner ? `${banner.value} ${e.name}` : e.name;
+            ctx.strokeText(text, e.x, y);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(text, e.x, y);
+        }
         ctx.restore();
     }
 

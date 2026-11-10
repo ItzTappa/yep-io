@@ -1,6 +1,8 @@
-// The minimap (top right) and the "ALIVE: N" counter under it. Enemies are small red dots (that
-// fade out when they die), teammates cyan, you yellow; slot machines flash.
+// The minimap (top right) and the "ALIVE: N" counter under it. Teammates are cyan, you yellow, slot
+// machines flash. Enemies (small red dots that fade out when they die) only with
+// Settings > Show Enemies on Minimap.
 import { $, setupHiDpiCanvas } from '../../core/dom.js';
+import { settings } from '../../core/settings.js';
 
 const SIZE = 220;
 const ENEMY_DOT = 1.2;
@@ -53,12 +55,12 @@ export function drawMinimap(engine) {
         if (ship.isDead) continue;
         alive++;
         if (ship.isTeammate) dot(ship.x, ship.y, '#00ffcc', 3);
-        else dot(ship.x, ship.y, '#ff4444', ENEMY_DOT);
+        else if (settings.minimapEnemies) dot(ship.x, ship.y, '#ff4444', ENEMY_DOT);
     }
 
     const now = performance.now();
     engine.minimapGhosts = engine.minimapGhosts.filter(g => now - g.at < GHOST_FADE_MS);
-    for (const ghost of engine.minimapGhosts) {
+    for (const ghost of settings.minimapEnemies ? engine.minimapGhosts : []) {
         ctx.globalAlpha = 1 - (now - ghost.at) / GHOST_FADE_MS;
         dot(ghost.x, ghost.y, '#ff4444', ENEMY_DOT);
     }

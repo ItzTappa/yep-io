@@ -18,6 +18,8 @@ import { SafeZone } from '../entities/SafeZone.js';
 import { devSetLevel, devUnlockAll, devSetHourly, addAccountXP, setTutorialDone } from '../services/profile.js';
 import { completeAllQuests, resetQuests } from '../services/quests.js';
 import { scheduleSave } from '../services/account.js';
+import { settings, saveSettings } from '../core/settings.js';
+import { $, setVisible } from '../core/dom.js';
 
 export const TABS = [
     { id: 'all', label: 'ALL' },
@@ -197,6 +199,8 @@ export const COMMANDS = [
         run: (e, n) => { e.timeScale = Math.max(0.05, Math.min(3, n)); return `Game speed x${e.timeScale}.`; } },
     { name: 'zoom', tab: 'match', needs: 'match', arg: num(0.5, 'zoom'), desc: 'Camera zoom (1 = normal, smaller = see more).',
         run: (e, n) => { e.zoomTarget = Math.max(0.15, Math.min(3, n)); return `Zoom x${e.zoomTarget}.`; } },
+    { name: 'fps', tab: 'match', desc: 'Show the FPS counter in matches.', on: () => !!settings.adminFps,
+        run: () => { settings.adminFps = !settings.adminFps; saveSettings(); if (!settings.adminFps) setVisible($('fps-display'), false); return `FPS counter ${settings.adminFps ? 'ON' : 'OFF'}.`; } },
     { name: 'shake', tab: 'match', needs: 'match', arg: num(30, 'strength'), desc: 'Shake the screen.',
         run: (e, n) => { e.camera.shake = n; return `Screen shake ${n}.`; } },
 
@@ -279,8 +283,8 @@ export const COMMANDS = [
         } },
     { name: 'questsreset', tab: 'progress', desc: 'Start today\'s and this week\'s quests over.',
         run: () => { resetQuests(); emit('profile:changed'); return 'Quest progress reset.'; } },
-    { name: 'tutorial', tab: 'progress', desc: 'Play the tutorial again in your next solo match.',
-        run: () => { setTutorialDone(false); return 'The tutorial will play in your next solo match.'; } },
+    { name: 'tutorial', tab: 'progress', desc: 'Show the tutorial again the next time you press PLAY.',
+        run: () => { setTutorialDone(false); return 'The tutorial will start the next time you press PLAY.'; } },
     { name: 'hourlykills', tab: 'progress', arg: num(100, 'kills'), desc: 'Set this hour\'s kills (hourly shop).',
         run: (e, n) => { devSetHourly('kills', n); return `Hourly kills set to ${n}.`; } },
     { name: 'hourlydist', tab: 'progress', arg: num(1000000, 'distance'), desc: 'Set this hour\'s distance (hourly shop).',

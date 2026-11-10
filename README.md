@@ -75,14 +75,16 @@ client/
       pickups.js         Orbs, particles, Lucky Slot Machine
       upgradePicker.js   Picks the 3 upgrade cards
       geometry.js        Ability durations, orbiter/blade-ring positions (shared by drawing + gameplay)
-      render/            How ships look: entityRenderer.js, skins.js, shapes.js
+      render/            How ships look: entityRenderer.js (draw order), skins.js, trails.js,
+                         finishes.js (colour paints), upgradeParts.js (guns, pods, auras...), shapes.js
 
     game/              The match itself
       GameEngine.js      Starts matches, 60 Hz loop, damage/death rules, match results, upgrade cards
       combat.js          Teams, immunity, shot spread, kill XP
       abilities.js       What each E-key ability does (+ shockwave/afterburner)
       input.js           Keyboard, mouse, touch joystick, mobile buttons
-      tutorial.js        The first-match tutorial steps (bots leave you alone until FIGHT)
+      tutorial.js        The training arena (first PLAY, or Settings > Play Tutorial): spawns what
+                         each step teaches; you can't die there
       systems/           One file per mechanic: playerControl, bots, collisions (spikes/orbiters),
                          projectiles, orbs, zones (safe zones + storm), slotMachines
       net/matchSync.js   Multiplayer sync (who controls what is explained at the top)

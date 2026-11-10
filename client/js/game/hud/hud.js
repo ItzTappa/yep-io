@@ -27,7 +27,11 @@ export function applyHudSettings() {
     $('leaderboard-container').style.display = settings.showLeaderboard ? 'block' : 'none';
     $('upgrade-badges').style.display = settings.showBadges ? 'flex' : 'none';
     $('minimap-container').style.display = settings.showMinimap ? 'block' : 'none';
-    if (!settings.showFps) setVisible($('fps-display'), false);
+    if (!settings.adminFps) setVisible($('fps-display'), false);
+}
+
+export function setLeaderboardVisible(visible) {
+    $('leaderboard-container').style.display = visible && settings.showLeaderboard ? 'block' : 'none';
 }
 
 export function updatePointsBar(points, progress, needed, kills = 0) {
@@ -116,15 +120,36 @@ export function setLowHealth(low) {
     if (el.classList.contains('on') !== low) el.classList.toggle('on', low);
 }
 
-// rows: [{ name, points, highlight }] already sorted, best first.
+// rows: [{ name, points, highlight, banner }] already sorted, best first. The banner (emoji, or the
+// gold OWNER tag) sits to the left of the name.
 export function renderLeaderboard(rows) {
     if (!settings.showLeaderboard) return;
     const list = $('leaderboard-list');
     const limit = window.innerWidth <= 768 ? 5 : 10;
     list.replaceChildren(...rows.slice(0, limit).map((row, i) => {
         const li = document.createElement('li');
-        li.textContent = `#${i + 1} ${row.name} - ${formatPoints(row.points)} Pts`;
         if (row.highlight) li.style.color = '#00ffcc';
+        const rank = document.createElement('span');
+        rank.className = 'lb-rank';
+        rank.textContent = `#${i + 1}`;
+        const name = document.createElement('span');
+        name.className = 'lb-name';
+        if (row.banner?.badge === 'owner') {
+            const tag = document.createElement('span');
+            tag.className = 'owner-tag';
+            tag.textContent = 'OWNER';
+            name.append(tag);
+        } else if (row.banner) {
+            const emoji = document.createElement('span');
+            emoji.className = 'lb-banner';
+            emoji.textContent = row.banner.value;
+            name.append(emoji);
+        }
+        name.append(row.name);
+        const pts = document.createElement('span');
+        pts.className = 'lb-points';
+        pts.textContent = `${formatPoints(row.points)} Pts`;
+        li.append(rank, name, pts);
         return li;
     }));
 }
