@@ -1,0 +1,7 @@
+# Installed by `npm install` (Render does this on every deploy)
+node_modules/
+
+# macOS folder metadata
+.DS_Store
+
+*.log

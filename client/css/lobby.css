@@ -1,0 +1,61 @@
+/* Multiplayer lobby tab and the game-mode / team-size selectors. */
+
+/* NEW MENU MODE BUTTONS */
+.menu-mode-btn { padding: 10px 20px; font-weight: bold; background: transparent; color: gray; border: none; text-align: left; cursor: pointer; transition: background 0.2s, color 0.2s; border-radius: 4px; }
+.menu-mode-btn:hover { background: rgba(255, 255, 255, 0.1) !important; color: var(--text-main) !important; }
+.menu-mode-btn.active { color: var(--accent) !important; text-shadow: 0 0 10px rgba(255, 230, 0, 0.3); }
+
+.gamemode-selector { display: flex; background: rgba(0,0,0,0.6); border: 2px solid #444; border-radius: 8px; overflow: hidden; box-shadow: 0 0 10px rgba(0,0,0,0.5); width: max-content; }
+.mode-select-btn { background: transparent; color: gray; font-weight: bold; font-size: 0.9rem; padding: 10px 20px; border: none; border-right: 1px solid #333; cursor: pointer; transition: 0.2s; letter-spacing: 1px; }
+.mode-select-btn:last-child { border-right: none; }
+.mode-select-btn.active { background: var(--accent); color: black; box-shadow: inset 0 0 10px rgba(255,255,255,0.5); }
+.mode-select-btn:hover:not(.active) { color: white; background: rgba(255,255,255,0.1); }
+
+/* ==========================================
+   MULTIPLAYER LOBBY STYLES (CENTERED)
+========================================== */
+#multiplayer.active { display: flex; flex-direction: column; height: 100%; width: 100%; align-items: center; justify-content: flex-start; }
+.multiplayer-container { display: flex; flex-direction: column; align-items: center; width: 100%; height: 100%; flex-grow: 1; }
+
+.lobby-header { display: flex; flex-direction: column; align-items: center; margin-top: 20px; margin-bottom: 0px; flex-shrink: 0; }
+.lobby-title { font-size: 2.2rem; color: var(--accent); margin-bottom: 20px; letter-spacing: 3px; font-weight: 900;}
+.lobby-header-controls { display: flex; gap: 30px; justify-content: center; height: 60px; }
+
+.control-box { display: flex; width: 340px; background: rgba(0,0,0,0.8); border: 2px solid #444; border-radius: 8px; overflow: hidden; }
+.code-label { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; color: gray; letter-spacing: 2px; }
+.code-label span { color: white; margin-left: 10px; letter-spacing: 4px; font-size: 1.8rem; }
+
+#join-code-input { flex: 1; background: transparent; border: none; color: white; font-size: 1.5rem; font-weight: bold; text-align: center; text-transform: uppercase; outline: none; letter-spacing: 3px; width: 100%; }
+#join-code-input::placeholder { color: #555; letter-spacing: 1px; }
+
+.control-btn { padding: 0 30px; border: none; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: filter 0.2s, background 0.2s; }
+.dark-btn { background: #333; color: white; border-left: 2px solid #444; } .dark-btn:hover { background: #444; }
+.yellow-btn { background: var(--accent); color: black; border-left: 2px solid var(--accent); } .yellow-btn:hover { filter: brightness(1.1); }
+
+.player-slots { display: flex; gap: 50px; justify-content: center; align-items: center; flex-grow: 1; width: 100%; }
+.player-slot { width: 220px; background: transparent; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+
+.player-slot .name { margin-top: 15px; font-weight: bold; color: var(--accent); font-size: 1.3rem; letter-spacing: 1px; text-transform: uppercase; text-shadow: 0 0 10px rgba(255,230,0,0.3); display: flex; flex-direction: row; gap: 8px; align-items: baseline; justify-content: center; }
+.player-slot .status { margin-top: 5px; font-weight: bold; color: gray; font-size: 1.1rem; letter-spacing: 2px; }
+.player-slot.ready .status { color: #00ffcc; text-shadow: 0 0 10px rgba(0,255,204,0.5); }
+
+.lobby-preview-canvas { width: 160px; height: 160px; background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%); border-radius: 50%; display: block; margin: 0 auto; transition: box-shadow 0.3s, border-color 0.3s; border: 2px solid transparent;}
+.player-slot.ready .lobby-preview-canvas { border-color: #00ffcc; box-shadow: 0 0 25px rgba(0,255,204,0.3); }
+.player-slot.empty .lobby-preview-canvas { display: flex; align-items: center; justify-content: center; font-size: 4rem; color: #555; border: 2px dashed #555; }
+
+/* Game mode button + dropdown above the season level box */
+#br-team-selector { margin-bottom: 10px; }
+#gamemodes-main-btn { margin-bottom: 10px; width: auto; padding: 0 20px; height: 50px; font-size: 1.1rem; }
+#gamemodes-menu { position: absolute; bottom: 100%; left: 0; background: rgba(0,0,0,0.9); border: 2px solid #555; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 5px; z-index: 200; margin-bottom: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+.lobby-controls-locked .mode-select-btn, .lobby-controls-locked #gamemodes-main-btn { opacity: 0.6; cursor: not-allowed; }
+
+/* Player slots */
+.player-slot .name .role-tag { font-size: 0.7rem; color: gray; }
+.player-slot .status.host-status { color: var(--accent); }
+.player-slot.in-match .status { color: #ff9900; }
+.player-slot.empty .name { color: gray; }
+.player-slot.empty .lobby-preview-canvas.slot-placeholder { font-size: 3rem; border-radius: 50%; }
+
+/* READY / START button states */
+#ready-btn.ready-active { background: #00ffcc; box-shadow: 0 0 20px rgba(0,255,204,0.5); }
+#ready-btn.is-waiting { background: #555; color: #ccc; box-shadow: none; cursor: default; }

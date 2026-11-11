@@ -1,0 +1,93 @@
+/* Settings, account / friends and class mastery popups. */
+
+/* ==========================================
+   SETTINGS & ACCOUNT MODAL (FRIENDS LIST)
+========================================== */
+.modal { position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 300; pointer-events: auto;}
+.settings-content { background: #222; border: 2px solid var(--accent); padding: 30px; border-radius: 12px; width: 400px; max-height: 90vh; overflow-y: auto; box-shadow: 0 0 20px rgba(255, 230, 0, 0.2); pointer-events: auto; }
+.settings-content h2 { text-align: center; margin-bottom: 25px; color: var(--accent); letter-spacing: 2px; }
+
+.settings-content.wide-settings { width: 750px; max-width: 95vw; overflow-y: hidden; }
+.settings-layout { display: flex; gap: 30px; width: 100%; }
+.settings-col { flex: 1; display: flex; flex-direction: column; }
+.settings-col:first-child { border-right: 2px solid #444; padding-right: 30px; }
+
+.setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 1.1rem; }
+.setting-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer; }
+
+/* ACCOUNT / FRIENDS SPECIFIC */
+.acc-input { width: 100%; padding: 12px; border-radius: 5px; background: #111; color: white; border: 2px solid #444; outline: none; font-size: 1.1rem; text-align: center; transition: border-color 0.2s; }
+.acc-input:focus { border-color: var(--accent); }
+
+.password-wrapper { position: relative; width: 100%; }
+.password-wrapper .acc-input { padding-left: 45px; padding-right: 45px; }
+#toggle-pass-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: transparent; border: none; font-size: 1.2rem; cursor: pointer; opacity: 0.5; transition: opacity 0.2s; display: flex; align-items: center; justify-content: center; }
+#toggle-pass-btn:hover { opacity: 1; }
+
+.friend-search-bar { display: flex; gap: 10px; }
+.friend-item { display: flex; align-items: center; justify-content: space-between; background: #111; padding: 10px; border-radius: 6px; border: 1px solid #333; cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s; }
+.friend-item:hover { border-color: var(--accent); }
+.friend-avatar { width: 35px; height: 35px; background: #222; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; position: relative; border: 1px solid #444; }
+.friend-online-dot { position: absolute; bottom: -4px; right: -4px; width: 12px; height: 12px; background: #00ffcc; border-radius: 50%; border: 2px solid #111; box-shadow: 0 0 5px #00ffcc; }
+.friend-online-dot.offline { background: #555; box-shadow: none; }
+.friend-name { flex: 1; margin-left: 15px; font-weight: bold; color: white; font-size: 1.1rem; display: flex; flex-direction: column; }
+.friend-action-btn { padding: 5px 15px; font-size: 0.8rem; height: 30px; margin-left: 5px; }
+
+/* Golden Invite Class */
+.friend-item.has-invite { border-color: var(--accent); box-shadow: 0 0 15px rgba(255,230,0,0.3); background: rgba(40, 40, 0, 0.6); }
+.friend-item.has-invite .friend-name span { color: var(--accent) !important; font-size: 0.75rem; text-transform: uppercase; font-style: italic; }
+
+.slider { -webkit-appearance: none; appearance: none; width: 150px; height: 8px; border-radius: 4px; background: #444; outline: none; border: 1px solid #222; }
+.slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 5px rgba(255, 230, 0, 0.8); }
+
+.controls-title { color: var(--accent); margin-bottom: 15px; text-align: center; letter-spacing: 1px; }
+.keybind-btn { background: #333; border: 2px solid #555; color: white; padding: 5px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; min-width: 80px; text-transform: uppercase; transition: border-color 0.2s; }
+.ability-bind { color: #ff00ff; border-color: #ff00ff; }
+
+.modal-intro { margin-bottom: 15px; }
+.modal-intro.small { font-size: 0.85rem; }
+.modal-wide-btn { width: 100%; height: 45px; font-size: 1rem; }
+.modal-close-btn { margin-top: 15px; }
+.mobile-controls-col .controls-title { margin-top: 0; }
+#close-settings-btn { margin-top: 20px; }
+.keybind-btn.listening { border-color: var(--accent); color: var(--accent); }
+.keybind-reset { background: transparent; border: 1px solid #555; color: #aaa; padding: 6px 12px; border-radius: 5px; font-size: 0.75rem; font-weight: bold; letter-spacing: 1px; cursor: pointer; align-self: flex-end; }
+.keybind-reset:hover { color: white; border-color: #888; }
+
+/* Class mastery */
+.two-col { grid-template-columns: 1fr 1fr; }
+.mastery-stats { margin-bottom: 30px; }
+.mastery-reward-box { text-align: center; background: rgba(0,0,0,0.4); border: 2px solid #555; padding: 20px; border-radius: 8px; }
+.mastery-reward-box h3 { color: #ffe600; letter-spacing: 2px; margin-bottom: 10px; }
+#mastery-progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #ffcc00, #ffe600); transition: width 0.5s ease-out; }
+#mastery-req-text { margin-bottom: 15px; }
+#mastery-req-text.unlocked { color: #00ffcc; }
+
+/* Account & friends */
+.acc-message { color: #ff4444; font-size: 0.9rem; text-align: center; min-height: 20px; margin-bottom: 10px; font-weight: bold; }
+.acc-message.info { color: white; }
+.acc-buttons { display: flex; gap: 10px; margin-top: 10px; }
+.acc-buttons .footer-btn { flex: 1; height: 45px; font-size: 1rem; }
+.profile-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; border-bottom: 2px solid #333; padding-bottom: 12px; margin-bottom: 20px; }
+.profile-header h2 { margin: 0; color: var(--accent); }
+#fp-username { flex: 1; text-align: right; }
+#acc-logout-btn { width: 120px; height: 35px; font-size: 0.8rem; border-color: #ff4444; color: #ff4444; }
+#back-to-friends-btn { width: 80px; height: 40px; font-size: 0.9rem; }
+#friend-search-input { flex: 1; text-align: left; padding-left: 15px; }
+#add-friend-btn { width: 80px; height: 45px; font-size: 0.9rem; }
+#friend-search-msg { color: var(--accent); font-size: 0.8rem; min-height: 15px; margin-top: 5px; text-align: center; }
+#friend-search-msg.error { color: #ff4444; }
+#friend-search-msg.success { color: #00ffcc; }
+.list-title { font-size: 0.9rem; text-align: left; margin-top: 15px; }
+.friend-list { display: flex; flex-direction: column; gap: 5px; }
+#friend-requests-list { margin-bottom: 15px; }
+.friend-list.scrolling { max-height: 250px; overflow-y: auto; padding-right: 5px; }
+.friend-empty { color: gray; font-style: italic; font-size: 0.9rem; }
+.friend-item.request { border-color: #555; background: rgba(0,0,0,0.5); }
+.friend-item .friend-chevron { color: gray; font-size: 0.8rem; font-weight: bold; }
+.invite-btn { margin-top: 20px; font-size: 1.1rem; }
+
+/* "MATCH STARTING IN 3" */
+#match-countdown-overlay { position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0,0,0,0.8); z-index: 9998; display: flex; flex-direction: column; justify-content: center; align-items: center; pointer-events: none; }
+.countdown-label { font-size: 2rem; color: white; letter-spacing: 5px; text-transform: uppercase; margin-bottom: 20px; }
+#countdown-text { font-size: 8rem; font-weight: bold; color: var(--accent); text-shadow: 0 0 30px var(--accent); }

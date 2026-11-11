@@ -3,14 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' 'unsafe-eval' *;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://apis.google.com; connect-src 'self' ws: wss: https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://www.gstatic.com; frame-src https://*.firebaseapp.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self'">
     <title>yep.io</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/menu.css">
+    <link rel="stylesheet" href="css/lobby.css">
+    <link rel="stylesheet" href="css/store.css">
+    <link rel="stylesheet" href="css/modals.css">
+    <link rel="stylesheet" href="css/hud.css">
+    <link rel="stylesheet" href="css/mobile.css">
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
 
+    <!-- =================== MAIN MENU =================== -->
     <div id="main-menu">
         <nav class="top-nav">
             <button class="tab-btn active" data-target="lobby">Lobby</button>
@@ -21,6 +28,7 @@
             <button class="tab-btn" data-target="store">Main Store</button>
         </nav>
 
+        <!-- Lobby tab: class select + solo PLAY -->
         <div id="lobby" class="tab-content active">
             <div class="lobby-content">
                 <div class="lobby-center">
@@ -33,22 +41,23 @@
                     <button id="play-btn">PLAY</button>
                 </div>
             </div>
-            <div id="class-info" class="hidden fade-out"></div>
         </div>
 
+        <!-- Multiplayer tab: lobby code, join, player slots -->
         <div id="multiplayer" class="tab-content">
             <div class="multiplayer-container">
                 <div class="lobby-header">
                     <h2 class="lobby-title">MULTIPLAYER LOBBY</h2>
                     <div class="lobby-header-controls">
                         <div class="control-box"><div class="code-label">CODE: <span id="lobby-code-display">-----</span></div><button id="copy-code-btn" class="control-btn dark-btn">COPY</button></div>
-                        <div class="control-box"><input type="text" id="join-code-input" aria-label="Lobby Code" placeholder="ENTER CODE" maxlength="5"><button id="join-lobby-btn" class="control-btn yellow-btn">JOIN</button></div>
+                        <div class="control-box"><input type="text" id="join-code-input" aria-label="Lobby Code" placeholder="ENTER CODE" maxlength="5" autocomplete="off"><button id="join-lobby-btn" class="control-btn yellow-btn">JOIN</button></div>
                     </div>
                 </div>
                 <div id="player-slots-container" class="player-slots"></div>
             </div>
         </div>
-        
+
+        <!-- Stats tab -->
         <div id="stats" class="tab-content">
             <div class="store-container">
                 <div class="store-header"><h2>CAREER STATS</h2></div>
@@ -59,22 +68,16 @@
                     <div class="stat-box"><div>TOTAL POINTS</div><div id="stat-points" class="stat-val">0</div></div>
                     <div class="stat-box"><div>TIME ALIVE</div><div id="stat-time" class="stat-val">0m 0s</div></div>
                 </div>
-                
-                <div class="store-header" style="margin-top: 20px;"><h2>MATCH HISTORY</h2></div>
-                <div class="match-history-header">
-                    <div>RANK</div><div>CLASS</div><div>KILLS</div><div>POINTS</div><div>TIME ALIVE</div>
-                </div>
-                <div id="match-history-list" class="match-history-list">
-                    <p class="empty-history">Play a match to see your history!</p>
-                </div>
+                <div class="store-header section-gap"><h2>MATCH HISTORY</h2></div>
+                <div id="match-history-list" class="match-history-list"></div>
             </div>
         </div>
-        
+
+        <!-- Locker tab -->
         <div id="locker" class="tab-content">
             <div class="store-container locker-container">
                 <div class="store-header"><h2>YOUR LOCKER</h2></div>
                 <p class="store-desc locker-desc">Equip your claimed cosmetics to use them in the arena.</p>
-                
                 <div class="locker-layout">
                     <div class="locker-left">
                         <div id="locker-slots-view" class="locker-slots-grid"></div>
@@ -92,7 +95,8 @@
                 </div>
             </div>
         </div>
-        
+
+        <!-- Season store tab -->
         <div id="season" class="tab-content">
             <div class="store-container">
                 <div class="store-header"><h2>SEASON 1: GENESIS</h2></div>
@@ -102,6 +106,7 @@
             </div>
         </div>
 
+        <!-- Hourly store tab -->
         <div id="store" class="tab-content">
             <div class="store-container">
                 <div class="store-header">
@@ -114,21 +119,17 @@
         </div>
 
         <div class="menu-footer">
-            <div class="footer-left-container" style="position: relative;">
-                
-                <div id="br-team-selector" class="gamemode-selector hidden" style="margin-bottom: 10px;">
+            <div class="footer-left-container">
+                <div id="br-team-selector" class="gamemode-selector hidden">
                     <button class="mode-select-btn active" data-teamsize="duos">DUOS</button>
                     <button class="mode-select-btn" data-teamsize="trios">TRIOS</button>
                     <button class="mode-select-btn" data-teamsize="squads">SQUADS</button>
                 </div>
-
-                <button id="gamemodes-main-btn" class="footer-btn dark-btn-outline hidden" style="margin-bottom: 10px; width: auto; padding: 0 20px; height: 50px; font-size: 1.1rem;">GAMEMODE: BATTLE ROYALE</button>
-
-                <div id="gamemodes-menu" class="hidden" style="position: absolute; bottom: 100%; left: 0; background: rgba(0,0,0,0.9); border: 2px solid #555; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 5px; z-index: 200; margin-bottom: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);">
-                    <button class="menu-mode-btn active" data-mainmode="br" style="padding: 10px 20px; font-weight: bold; background: transparent; color: white; border: none; text-align: left; cursor: pointer;">BATTLE ROYALE</button>
-                    <button class="menu-mode-btn" data-mainmode="1v1" style="padding: 10px 20px; font-weight: bold; background: transparent; color: gray; border: none; text-align: left; cursor: pointer;">1v1 DUEL</button>
+                <button id="gamemodes-main-btn" class="footer-btn dark-btn-outline hidden">GAMEMODE: BATTLE ROYALE</button>
+                <div id="gamemodes-menu" class="hidden">
+                    <button class="menu-mode-btn active" data-mainmode="br">BATTLE ROYALE</button>
+                    <button class="menu-mode-btn" data-mainmode="1v1">1v1 DUEL</button>
                 </div>
-                
                 <div class="player-level-ui">
                     <div>Season Level: <span id="menu-level">1</span></div>
                     <div class="menu-xp-bar-container"><div id="menu-xp-bar"></div></div>
@@ -147,6 +148,12 @@
         </div>
     </div>
 
+    <!-- Menu messages ("PLEASE SELECT A CLASS FIRST!", class descriptions, lobby errors) -->
+    <div id="menu-toast" class="hidden fade-out"></div>
+    <!-- Lobby invites from friends while in the menus -->
+    <div id="menu-invite-queue"></div>
+
+    <!-- =================== OVERLAYS & MODALS =================== -->
     <div id="item-preview-screen" class="hidden">
         <div class="preview-text-container">
             <h2 id="preview-screen-title">PREVIEW</h2>
@@ -158,139 +165,132 @@
         <button id="close-preview-btn" class="footer-btn dark-btn-outline">BACK TO SHOP</button>
     </div>
 
-    <div id="mastery-modal" class="hidden">
+    <div id="mastery-modal" class="modal hidden">
         <div class="settings-content wide-settings">
             <h2 id="mastery-class-title">CLASS MASTERY</h2>
-            <p class="store-desc text-center" style="margin-bottom:15px;">Earn 1000 kills to unlock the ultimate Golden Mastery Skin for this class.</p>
-            
-            <div class="lifetime-stats-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 30px;">
+            <p class="store-desc text-center modal-intro">Earn 1000 kills to unlock the ultimate Golden Mastery Skin for this class.</p>
+            <div class="lifetime-stats-grid two-col mastery-stats">
                 <div class="stat-box"><div>CLASS KILLS</div><div id="mastery-kills" class="stat-val">0</div></div>
                 <div class="stat-box"><div>MATCHES PLAYED</div><div id="mastery-matches" class="stat-val">0</div></div>
             </div>
-
-            <div class="mastery-reward-box" style="text-align: center; background: rgba(0,0,0,0.4); border: 2px solid #555; padding: 20px; border-radius: 8px;">
-                <h3 style="color: #ffe600; letter-spacing: 2px; margin-bottom: 10px;">REWARD: GOLDEN SKIN</h3>
-                <div class="season-progress"><div id="mastery-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #ffcc00, #ffe600); transition: width 0.5s ease-out;"></div></div>
-                <p id="mastery-req-text" class="store-desc" style="margin-bottom: 15px;">Requires 1000 Class Kills</p>
-                <button id="mastery-equip-btn" class="footer-btn dark-btn-outline" style="width: 100%; height: 45px; font-size: 1rem;" disabled>LOCKED</button>
+            <div class="mastery-reward-box">
+                <h3>REWARD: GOLDEN SKIN</h3>
+                <div class="season-progress"><div id="mastery-progress-bar"></div></div>
+                <p id="mastery-req-text" class="store-desc">Requires 1000 Class Kills</p>
+                <button id="mastery-equip-btn" class="footer-btn dark-btn-outline modal-wide-btn" disabled>LOCKED</button>
             </div>
-
-            <button id="close-mastery-btn" class="footer-btn dark-btn-outline" style="width: 100%; height:45px; margin-top: 15px; font-size:1rem;">CLOSE</button>
+            <button id="close-mastery-btn" class="footer-btn dark-btn-outline modal-wide-btn modal-close-btn">CLOSE</button>
         </div>
     </div>
 
-    <div id="account-modal" class="hidden">
+    <div id="account-modal" class="modal hidden">
         <div class="settings-content wide-settings">
-            
             <div id="account-logged-out">
                 <h2>ACCOUNT LOGIN</h2>
-                <p class="store-desc text-center" style="margin-bottom:15px; font-size:0.85rem;">Log in or Register to save your season level, history, and cosmetics permanently.</p>
-                <div class="setting-row"><input type="text" id="acc-user" class="acc-input" placeholder="Username" autocomplete="off"></div>
+                <p class="store-desc text-center modal-intro small">Log in or Register to save your season level, history, and cosmetics permanently.</p>
+                <div class="setting-row"><input type="text" id="acc-user" class="acc-input" placeholder="Username" autocomplete="username" maxlength="16"></div>
                 <div class="setting-row">
                     <div class="password-wrapper">
-                        <input type="password" id="acc-pass" class="acc-input" placeholder="Password">
+                        <input type="password" id="acc-pass" class="acc-input" placeholder="Password" autocomplete="current-password">
                         <button id="toggle-pass-btn" type="button" title="Show Password">👁️</button>
                     </div>
                 </div>
-                <p id="acc-error" style="color:#ff4444; font-size:0.9rem; text-align:center; height:20px; margin-bottom:10px; font-weight:bold;"></p>
-                <div style="display:flex; gap:10px; margin-top:10px;">
-                    <button id="acc-login-btn" class="footer-btn yellow-btn-solid" style="flex:1; height:45px; font-size:1rem;">LOGIN</button>
-                    <button id="acc-register-btn" class="footer-btn dark-btn-outline" style="flex:1; height:45px; font-size:1rem;">REGISTER</button>
+                <p id="acc-error" class="acc-message"></p>
+                <div class="acc-buttons">
+                    <button id="acc-login-btn" class="footer-btn yellow-btn-solid">LOGIN</button>
+                    <button id="acc-register-btn" class="footer-btn dark-btn-outline">REGISTER</button>
                 </div>
             </div>
 
             <div id="account-logged-in" class="hidden">
-                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #333; padding-bottom:10px; margin-bottom:20px;">
-                    <h2 style="margin:0; color:var(--accent);">MY PROFILE: <span id="acc-display-name">User</span></h2>
-                    <button id="acc-logout-btn" class="footer-btn dark-btn-outline" style="width:120px; height:35px; font-size:0.8rem; border-color:#ff4444; color:#ff4444;">LOG OUT</button>
+                <div class="profile-header">
+                    <h2>MY PROFILE: <span id="acc-display-name">User</span></h2>
+                    <button id="acc-logout-btn" class="footer-btn dark-btn-outline">LOG OUT</button>
                 </div>
-
                 <div class="friend-search-bar">
-                    <input type="text" id="friend-search-input" class="acc-input" placeholder="Search username to add friend..." style="flex:1; text-align:left; padding-left:15px;">
-                    <button id="add-friend-btn" class="footer-btn yellow-btn-solid" style="width:80px; height:45px; font-size:0.9rem;">ADD</button>
+                    <input type="text" id="friend-search-input" class="acc-input" placeholder="Search username to add friend..." autocomplete="off" maxlength="16">
+                    <button id="add-friend-btn" class="footer-btn yellow-btn-solid">ADD</button>
                 </div>
-                <p id="friend-search-msg" style="color:var(--accent); font-size:0.8rem; height:15px; margin-top:5px; text-align:center;"></p>
-
+                <p id="friend-search-msg"></p>
                 <div id="friend-requests-container" class="hidden">
-                    <h3 class="controls-title" style="margin-top:10px; font-size:0.9rem; text-align:left;">PENDING REQUESTS</h3>
-                    <div id="friend-requests-list" style="margin-bottom:15px; display:flex; flex-direction:column; gap:5px;"></div>
+                    <h3 class="controls-title list-title">PENDING REQUESTS</h3>
+                    <div id="friend-requests-list" class="friend-list"></div>
                 </div>
-
-                <h3 class="controls-title" style="font-size:0.9rem; text-align:left; margin-top:15px;">MY FRIENDS</h3>
-                <div id="friends-list" style="display:flex; flex-direction:column; gap:5px; max-height:250px; overflow-y:auto; padding-right:5px;">
-                    <p style="color:gray; font-style:italic; font-size:0.9rem;">No friends yet. Add someone above!</p>
-                </div>
+                <h3 class="controls-title list-title">MY FRIENDS</h3>
+                <div id="friends-list" class="friend-list scrolling"></div>
             </div>
 
             <div id="friend-profile-view" class="hidden">
-                <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px; border-bottom:2px solid #333; padding-bottom:15px;">
-                    <button id="back-to-friends-btn" class="footer-btn dark-btn-outline" style="width:80px; height:40px; font-size:0.9rem;">◀ BACK</button>
-                    <h2 id="fp-username" style="margin:0; flex:1; text-align:right; color:var(--accent);">Username</h2>
+                <div class="profile-header">
+                    <button id="back-to-friends-btn" class="footer-btn dark-btn-outline">◀ BACK</button>
+                    <h2 id="fp-username">Username</h2>
                 </div>
-                <div class="lifetime-stats-grid" style="grid-template-columns: 1fr 1fr;">
+                <div class="lifetime-stats-grid two-col">
                     <div class="stat-box"><div>ACCOUNT LEVEL</div><div id="fp-level" class="stat-val">1</div></div>
                     <div class="stat-box"><div>TOTAL KILLS</div><div id="fp-kills" class="stat-val">0</div></div>
                     <div class="stat-box"><div>MATCHES PLAYED</div><div id="fp-matches" class="stat-val">0</div></div>
                     <div class="stat-box"><div>TOTAL POINTS</div><div id="fp-points" class="stat-val">0</div></div>
                 </div>
-                <button id="invite-friend-btn" class="footer-btn yellow-btn-solid" style="width:100%; height:45px; margin-top:20px; font-size:1.1rem;">INVITE TO MULTIPLAYER</button>
+                <button id="invite-friend-btn" class="footer-btn yellow-btn-solid modal-wide-btn invite-btn">INVITE TO MULTIPLAYER</button>
             </div>
 
-            <button id="close-account-btn" class="footer-btn dark-btn-outline" style="width: 100%; height:45px; margin-top: 15px; font-size:1rem;">CLOSE MENU</button>
+            <p id="acc-unavailable" class="acc-message hidden">Accounts are unavailable right now. You can still play as a guest.</p>
+            <button id="close-account-btn" class="footer-btn dark-btn-outline modal-wide-btn modal-close-btn">CLOSE MENU</button>
         </div>
     </div>
 
-    <div id="settings-modal" class="hidden">
+    <div id="settings-modal" class="modal hidden">
         <div class="settings-content wide-settings">
             <h2>SETTINGS</h2>
-            
             <div class="settings-layout">
                 <div class="settings-col">
                     <div class="setting-row"><label for="set-volume">Master Volume</label><input type="range" id="set-volume" min="0" max="100" value="100" class="slider"></div>
-                    <div class="setting-row"><label for="set-hq">High Quality Graphics</label><input type="checkbox" id="set-hq" checked></div>
-                    <div class="setting-row"><label for="set-particles">Particle Effects</label><input type="checkbox" id="set-particles" checked></div>
-                    <div class="setting-row"><label for="set-names">Show Player Names</label><input type="checkbox" id="set-names" checked></div>
-                    <div class="setting-row"><label for="set-leaderboard">Show Leaderboard</label><input type="checkbox" id="set-leaderboard" checked></div>
-                    <div class="setting-row"><label for="set-badges">Show Upgrade Badges</label><input type="checkbox" id="set-badges" checked></div>
-                    <div class="setting-row"><label for="set-notifs">Show Notifications</label><input type="checkbox" id="set-notifs" checked></div>
-                    <div class="setting-row"><label for="set-minimap">Show Minimap</label><input type="checkbox" id="set-minimap" checked></div>
-                    <div class="setting-row"><label for="set-fps">Show FPS Counter</label><input type="checkbox" id="set-fps"></div>
+                    <div class="setting-row"><label for="set-hq">High Quality Graphics</label><input type="checkbox" id="set-hq" data-setting="highQuality"></div>
+                    <div class="setting-row"><label for="set-particles">Particle Effects</label><input type="checkbox" id="set-particles" data-setting="particles"></div>
+                    <div class="setting-row"><label for="set-names">Show Player Names</label><input type="checkbox" id="set-names" data-setting="showNames"></div>
+                    <div class="setting-row"><label for="set-leaderboard">Show Leaderboard</label><input type="checkbox" id="set-leaderboard" data-setting="showLeaderboard"></div>
+                    <div class="setting-row"><label for="set-badges">Show Upgrade Badges</label><input type="checkbox" id="set-badges" data-setting="showBadges"></div>
+                    <div class="setting-row"><label for="set-notifs">Show Notifications</label><input type="checkbox" id="set-notifs" data-setting="showNotifs"></div>
+                    <div class="setting-row"><label for="set-minimap">Show Minimap</label><input type="checkbox" id="set-minimap" data-setting="showMinimap"></div>
+                    <div class="setting-row"><label for="set-fps">Show FPS Counter</label><input type="checkbox" id="set-fps" data-setting="showFps"></div>
                 </div>
-
                 <div class="settings-col mobile-controls-col">
-                    <h3 class="controls-title" style="margin-top: 0;">CONTROLS</h3>
+                    <h3 class="controls-title">CONTROLS</h3>
                     <div class="setting-row"><label>Move Up</label><button class="keybind-btn" data-action="up">W</button></div>
                     <div class="setting-row"><label>Move Down</label><button class="keybind-btn" data-action="down">S</button></div>
                     <div class="setting-row"><label>Move Left</label><button class="keybind-btn" data-action="left">A</button></div>
                     <div class="setting-row"><label>Move Right</label><button class="keybind-btn" data-action="right">D</button></div>
                     <div class="setting-row"><label>Dash</label><button class="keybind-btn" data-action="dash">SPACE</button></div>
                     <div class="setting-row"><label>Use Ability</label><button class="keybind-btn ability-bind" data-action="ability">E</button></div>
+                    <button id="reset-keybinds-btn" class="keybind-reset">RESET CONTROLS</button>
                 </div>
             </div>
-
-            <button id="close-settings-btn" class="footer-btn yellow-btn-solid" style="width:100%; height:45px; font-size:1rem; margin-top:20px;">APPLY & CLOSE</button>
+            <button id="close-settings-btn" class="footer-btn yellow-btn-solid modal-wide-btn">APPLY & CLOSE</button>
         </div>
     </div>
 
-    <div id="match-countdown-overlay" class="hidden" style="position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0,0,0,0.8); z-index: 9998; display: flex; flex-direction: column; justify-content: center; align-items: center; pointer-events: none;">
-        <div style="font-size: 2rem; color: white; letter-spacing: 5px; text-transform: uppercase; margin-bottom: 20px;">MATCH STARTING IN</div>
-        <div id="countdown-text" style="font-size: 8rem; font-weight: bold; color: var(--accent); text-shadow: 0 0 30px var(--accent);">3</div>
+    <div id="match-countdown-overlay" class="hidden">
+        <div class="countdown-label">MATCH STARTING IN</div>
+        <div id="countdown-text">3</div>
     </div>
 
+    <!-- =================== IN-MATCH HUD =================== -->
     <div id="game-ui" class="hidden">
         <div class="hud">
-            
-            <div id="spectator-hud" class="hidden" style="position: absolute; top: 80px; left: 50%; transform: translateX(-50%); font-size: 1.5rem; font-weight: bold; color: white; text-shadow: 1px 1px 3px black; background: rgba(0,0,0,0.6); padding: 10px 20px; border-radius: 8px; border: 2px solid #555; pointer-events: none;">
+            <div id="spectator-hud" class="hidden">
                 SPECTATING: <span id="spectating-name" class="cyan-text">TEAMMATE</span>
+                <div class="spectator-hint">ESC TWICE TO LEAVE</div>
             </div>
+            <div id="match-toast" class="hidden"></div>
 
             <div id="fps-display" class="hidden">60 FPS</div>
             <div id="upgrade-badges" class="upgrade-badges-container"></div>
-            
+
             <div class="xp-bar-container">
                 <div id="xp-bar"></div>
                 <span id="level-display">0 PTS</span>
             </div>
+            <div id="safezone-indicator" class="hidden">SAFE ZONE · WEAPONS OFFLINE</div>
 
             <div id="right-hud-column" class="right-hud-column">
                 <div id="leaderboard-container" class="leaderboard">
@@ -323,11 +323,6 @@
                     <div class="notif-text">BAR FILLED!</div>
                     <div class="notif-level">UPGRADE READY</div>
                 </div>
-                <div id="invite-template" class="notif-box notif-upgrade hidden" style="border-left-color:#ff00ff; background:linear-gradient(90deg, rgba(255,0,255,0.9), rgba(150,0,150,0.8)); flex-direction:column; align-items:flex-start;">
-                    <div class="notif-text" style="color:white; text-shadow:none;">LOBBY INVITE</div>
-                    <div class="notif-level invite-sender-name" style="color:white; text-shadow:none; font-size:1rem;">From: User</div>
-                    <button class="accept-invite-btn footer-btn yellow-btn-solid" style="height:30px; font-size:0.8rem; margin-top:8px; padding:0 15px; width:100%;">JOIN LOBBY</button>
-                </div>
             </div>
         </div>
 
@@ -352,18 +347,28 @@
                 <div>Kills: <span id="go-kills">0</span></div>
                 <div>Time Alive: <span id="go-time">0s</span></div>
             </div>
-
             <div id="go-xp-container" class="xp-gained">Season Level XP Earned: <span id="go-xp" class="accent-text">+0</span></div>
             <button id="return-lobby-btn">Return to Menu</button>
         </div>
     </div>
 
+    <!-- Template cloned for each lobby invite notification -->
+    <template id="invite-template">
+        <div class="notif-box notif-invite">
+            <div class="notif-text">LOBBY INVITE</div>
+            <div class="notif-level invite-sender-name">From: User</div>
+            <button class="accept-invite-btn footer-btn yellow-btn-solid">JOIN LOBBY</button>
+        </div>
+    </template>
+
+    <!-- Developer console: only works when the game runs on localhost -->
     <div id="dev-console" class="hidden">
         <div id="dev-log"><div class="dev-startup">Developer Console Started. Press ` or / to close. Type /help for commands.</div></div>
         <input type="text" id="dev-input" aria-label="Developer Console" placeholder="Enter command (e.g., /level 50)" autocomplete="off">
     </div>
 
     <div id="black-fade-overlay"></div>
+
     <div id="mobile-controls" class="hidden">
         <div id="joystick-left" class="joystick-zone"><div class="joystick-base" id="base-left"><div class="joystick-stick" id="stick-left"></div></div></div>
         <button id="mobile-dash-btn">DASH</button>

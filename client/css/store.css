@@ -1,0 +1,103 @@
+/* Stats, locker, season store, hourly store and the full-screen item preview. */
+
+/* ==========================================
+   STORE, SEASON & STATS
+========================================== */
+.store-container { width: 90%; max-width: 1000px; display: flex; flex-direction: column; align-items: center; }
+.store-header { width: 100%; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 10px; }
+.store-timer { font-size: 1.5rem; color: var(--accent); font-weight: bold; text-shadow: 0 0 10px rgba(255,230,0,0.5); }
+.store-desc { color: #aaa; font-style: italic; margin-bottom: 20px; text-align: center; }
+.season-progress { width: 100%; height: 20px; background: #333; border-radius: 10px; overflow: hidden; margin-bottom: 30px; border: 2px solid #555; box-shadow: inset 0 0 10px black; }
+#season-progress-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #ffcc00, var(--accent)); transition: width 0.5s ease-out; }
+.store-grid { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+
+.store-item { background: rgba(0,0,0,0.6); border: 2px solid #444; border-radius: 10px; padding: 20px; width: 220px; text-align: center; display: flex; flex-direction: column; gap: 10px; position: relative; transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s; }
+.store-item.unlocked { border-color: var(--rarity-color); box-shadow: 0 0 20px var(--rarity-color); }
+.store-item.locked { opacity: 0.7; filter: grayscale(0.8); }
+
+.item-icon { width: 80px; height: 80px; background: #222; margin: 0 auto; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; border: 1px solid #444; transition: transform 0.2s; cursor: pointer; pointer-events: auto; }
+.item-icon:hover { transform: scale(1.1); box-shadow: 0 0 10px rgba(255,255,255,0.3); }
+.item-name { font-weight: bold; font-size: 1.1rem; color: white; }
+.item-req { font-size: 0.9rem; font-weight: bold; }
+.item-progress-bg { width: 100%; height: 15px; background: #111; border-radius: 8px; overflow: hidden; margin-top: auto; border: 1px solid #333; }
+.item-progress-fill { height: 100%; width: 0%; transition: width 0.3s; }
+
+.btn-equip { padding: 10px; background: transparent; border: 2px solid var(--rarity-color); color: var(--rarity-color); border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 5px; transition: all 0.2s; pointer-events: auto; }
+.btn-equip.equipped { background: var(--rarity-color); color: #000; box-shadow: 0 0 15px var(--rarity-color); }
+.btn-claim { padding: 10px; background: transparent; border: 2px solid var(--rarity-color); border-radius: 5px; cursor: pointer; margin-top: 5px; position: relative; overflow: hidden; pointer-events: auto; }
+.btn-claim span { position: relative; z-index: 2; font-weight: bold; color: var(--rarity-color); text-shadow: 1px 1px 2px black; pointer-events: none; transition: color 0.2s; }
+.btn-claim .fill { position: absolute; left: 0; top: 0; height: 100%; width: 0%; background: var(--rarity-color); transition: width 0.1s linear; z-index: 0; opacity: 0.8; pointer-events: none; }
+.btn-claim.holding .fill { width: 100%; transition: width 1s linear; }
+.btn-claim.holding span { color: #000; text-shadow: none; }
+
+@keyframes itemShake { 0% { transform: rotate(0deg); } 25% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } 75% { transform: rotate(-1.5deg); } 100% { transform: rotate(0deg); } }
+.store-item.shaking { animation: itemShake 0.2s infinite; border-color: white !important; }
+@keyframes itemPop { 0% { transform: scale(1); } 50% { transform: scale(1.05); box-shadow: 0 0 15px white; border-color: white; } 100% { transform: scale(1); } }
+.store-item.claimed-pop { animation: itemPop 0.4s ease-out; }
+
+/* ==========================================
+   STATS HISTORY
+========================================== */
+.lifetime-stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; width: 100%; margin-bottom: 20px; }
+.stat-box { background: rgba(0,0,0,0.6); border: 2px solid #444; border-radius: 8px; padding: 20px; text-align: center; }
+.stat-box div:first-child { font-size: 0.85rem; color: gray; font-weight: bold; letter-spacing: 1px; }
+.stat-val { font-size: 2rem; color: white; font-weight: bold; margin-top: 10px; }
+
+.match-history-list { width: 100%; max-height: 400px; overflow-y: scroll; display: flex; flex-direction: column; gap: 10px; padding-right: 5px; overflow-x: hidden; }
+.empty-history { color: #aaa; text-align: center; padding: 20px; grid-column: span 5; }
+.match-card { background: rgba(20,20,25,0.9); border-left: 6px solid var(--accent); padding: 10px 15px; border-radius: 6px; border-top: 1px solid #333; border-right: 1px solid #333; border-bottom: 1px solid #333; cursor: pointer; transition: transform 0.1s, background 0.2s; }
+.match-card:hover { background: rgba(30,30,40,0.9); }
+.match-card-main { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; align-items: center; text-align: center; }
+.match-detail-label { display: block; font-size: 0.75rem; color: gray; font-weight: bold; letter-spacing: 1px; margin-bottom: 4px; text-transform: uppercase; }
+.match-detail-val { display: block; font-size: 1.3rem; font-weight: bold; color: white; }
+.match-rank { font-size: 1.5rem; font-weight: bold; display: flex; align-items: baseline; justify-content: center; gap: 4px; }
+.match-card.expanded .match-upgrades { display: flex !important; }
+
+/* ==========================================
+   LOCKER & FULLSCREEN PREVIEW OVERLAY
+========================================== */
+.locker-layout { display: flex; width: 100%; gap: 50px; align-items: flex-start; justify-content: center; padding-top: 10px; }
+.locker-left { flex: 1; max-width: 600px; display: flex; flex-direction: column; min-height: 400px; }
+.locker-desc { text-align: left; width: 100%; }
+
+.locker-slots-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; width: 100%; margin: 0 auto; }
+.locker-slot { background: rgba(20,20,25,0.9); border: 2px solid #444; border-left: 6px solid var(--slot-color); border-radius: 8px; padding: 20px; cursor: pointer; transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; align-items: center; text-align: center; pointer-events: auto; }
+.locker-slot:hover { transform: scale(1.05); border-color: var(--slot-color); box-shadow: 0 0 15px rgba(255,255,255,0.1); }
+.slot-header { font-size: 1rem; color: gray; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; width: 100%; text-align: left; border-bottom: 1px solid #333; padding-bottom: 5px; }
+.slot-icon { font-size: 3.5rem; margin: 15px 0; }
+.slot-name { font-size: 1.3rem; font-weight: bold; color: white; }
+
+.locker-items-header { display: flex; align-items: center; gap: 20px; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 15px; }
+#locker-back-btn { background: #333; color: white; border: none; padding: 10px 20px; font-weight: bold; font-size: 1.1rem; border-radius: 6px; cursor: pointer; transition: background 0.2s; pointer-events: auto; }
+#locker-back-btn:hover { background: var(--accent); color: black; }
+#locker-category-title { color: var(--accent); font-size: 1.5rem; letter-spacing: 2px; text-transform: uppercase; }
+
+.locker-preview-box { position: sticky; top: 140px; margin-top: 50px; width: 350px; height: 350px; background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; pointer-events: none; }
+.locker-preview-box canvas { display: block; width: 300px; height: 300px; }
+
+#locker-items-view { width: 100%; display: flex; flex-direction: column; }
+#locker-item-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; padding: 10px; padding-bottom: 40px; align-content: start; }
+#locker-item-grid .store-item { width: 100%; padding: 15px; }
+
+#item-preview-screen { position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 400; pointer-events: auto; }
+.preview-text-container { text-align: center; margin-bottom: 20px; pointer-events: none; }
+#preview-screen-title { color: var(--accent); margin: 0 0 5px 0; letter-spacing: 2px; text-transform: uppercase; font-size: 2.5rem; text-shadow: 0 0 15px rgba(255,230,0,0.4); }
+#preview-screen-category { color: #aaa; margin: 0; letter-spacing: 4px; font-weight: bold; text-transform: uppercase; font-size: 1.2rem; }
+
+.fullscreen-preview-box { width: 350px; height: 350px; position: relative; margin-bottom: 40px; background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%); border-radius: 50%; display: flex; justify-content: center; align-items: center; pointer-events: none; }
+.fullscreen-preview-box canvas { display: block; width: 350px; height: 350px; }
+#close-preview-btn { width: 250px; position: relative; z-index: 1000; pointer-events: auto; cursor: pointer; }
+
+.section-gap { margin-top: 20px; }
+
+/* Item cards (season store, hourly store, locker) */
+.item-category { font-size: 0.8rem; color: var(--rarity-color); font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: -5px; text-shadow: 0 0 5px color-mix(in srgb, var(--rarity-color) 25%, transparent); }
+.item-req { color: var(--rarity-color); }
+.item-progress-fill { background: var(--rarity-color); box-shadow: 0 0 10px var(--rarity-color); }
+.item-icon.not-previewable { cursor: default; }
+
+/* Match history cards */
+.empty-history { grid-column: auto; }
+.match-upgrades { grid-column: span 5; display: none; flex-wrap: wrap; justify-content: center; gap: 5px; padding-top: 15px; border-top: 1px solid #333; margin-top: 5px; }
+.match-upgrades .no-upgrades { color: #666; font-size: 0.8rem; font-style: italic; }
+.match-detail-val.class-name { color: #bbb; }

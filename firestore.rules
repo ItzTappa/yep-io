@@ -1,0 +1,88 @@
+rules_version = '2';
+
+// yep.io Firestore security rules.
+// Publish: Firebase console > Firestore Database > Rules > paste this file > Publish.
+//
+// What they allow:
+//   - Signed-in players can read player profiles (needed for friend search and friend profiles).
+//   - You can write your own profile. Your stored username must stay your login name.
+//   - On someone else's profile you can only: send them a friend request, accept the request
+//     they sent you, or (if you're friends) add one lobby invite from yourself.
+//   - Everything else is denied, including the old "lobbies" collection (lobbies now live on
+//     the game server, so guests never touch Firestore).
+//
+// Note: progress (XP, level, unlocks) is still calculated in the browser, so a determined
+// player could edit their *own* numbers. Stopping that would need server-side validation.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function myUsername() {
+      return request.auth.token.email.split('@')[0];
+    }
+
+    function changedKeys() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    function listBefore(field) {
+      return resource.data.get(field, []).toSet();
+    }
+
+    function listAfter(field) {
+      return request.resource.data.get(field, []).toSet();
+    }
+
+    // The list only gained your uid (or did not change).
+    function onlyAddsMe(field) {
+      return listAfter(field).difference(listBefore(field)).hasOnly([request.auth.uid])
+          && listBefore(field).difference(listAfter(field)).size() == 0;
+    }
+
+    // The list only lost your uid (or did not change).
+    function onlyRemovesMe(field) {
+      return listBefore(field).difference(listAfter(field)).hasOnly([request.auth.uid])
+          && listAfter(field).difference(listBefore(field)).size() == 0;
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+                    && request.auth.uid == uid
+                    && request.resource.data.username == myUsername();
+
+      // Your own profile.
+      allow update: if signedIn()
+                    && request.auth.uid == uid
+                    && request.resource.data.get('username', myUsername()) == myUsername();
+
+      // Someone else's profile: send them a friend request.
+      allow update: if signedIn()
+                    && request.auth.uid != uid
+                    && changedKeys().hasOnly(['requestsIn'])
+                    && onlyAddsMe('requestsIn');
+
+      // Someone else's profile: accept the friend request they sent you.
+      allow update: if signedIn()
+                    && request.auth.uid != uid
+                    && changedKeys().hasOnly(['friends', 'requestsOut'])
+                    && onlyAddsMe('friends')
+                    && onlyRemovesMe('requestsOut')
+                    && request.auth.uid in resource.data.get('requestsOut', []);
+
+      // Someone else's profile: invite a friend to your lobby (one invite, from you).
+      allow update: if signedIn()
+                    && request.auth.uid != uid
+                    && changedKeys().hasOnly(['invites'])
+                    && request.auth.uid in resource.data.get('friends', [])
+                    && request.resource.data.invites.size() == resource.data.get('invites', []).size() + 1
+                    && request.resource.data.invites[request.resource.data.invites.size() - 1].fromUid == request.auth.uid;
+
+      allow delete: if false;
+    }
+  }
+}
