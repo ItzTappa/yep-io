@@ -48,5 +48,8 @@ export const ACCOUNT = {
     inviteLifetimeMs: 60000
 };
 
-// The developer console (press / or `) only exists when running the game on your own machine.
+// Accounts (lowercase usernames) allowed to open the admin console (press / or `).
+export const ADMIN_USERNAMES = ['chase'];
+
+// Running on your own machine: exposes the engine as window.game for the browser console.
 export const DEV_TOOLS_ENABLED = ['localhost', '127.0.0.1'].includes(location.hostname);

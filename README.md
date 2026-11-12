@@ -11,8 +11,10 @@ npm install
 npm start          # or: npm run dev   (restarts when server files change)
 ```
 
-Then open http://localhost:3000. On localhost the **developer console** is enabled: press `/` or `` ` ``
-in the game and type `/help`. It is switched off automatically on the live site.
+Then open http://localhost:3000.
+
+**Admin console:** sign in as an admin account (`ADMIN_USERNAMES` in `client/js/config.js`, currently
+`chase`), press `/` or `` ` `` and type `/help`. It works on the live site too; guests and other accounts can't open it.
 
 ## Deploy (Render)
 

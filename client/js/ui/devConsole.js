@@ -1,17 +1,18 @@
-// Developer console (press / or `). Only enabled when the game runs on localhost, so players on
-// the live site can't use it. Type /help for the command list.
+// Admin console (press / or `). Only opens while signed in to an account listed in
+// ADMIN_USERNAMES (config.js). Type /help for the command list.
 import { $, setVisible } from '../core/dom.js';
-import { DEV_TOOLS_ENABLED } from '../config.js';
+import { ADMIN_USERNAMES } from '../config.js';
+import { state } from '../core/state.js';
+import { on } from '../core/events.js';
 import { UPGRADE_POOL, isAbility } from '../data/upgrades.js';
 import { devSetLevel, devUnlockAll, devSetHourly } from '../services/profile.js';
 import { STORM } from '../config.js';
 import { LuckySlotMachine } from '../entities/pickups.js';
 
-export const devConsoleEnabled = DEV_TOOLS_ENABLED;
+export const isAdmin = () => ADMIN_USERNAMES.includes(state.account.username);
 export const isDevConsoleOpen = () => !$('dev-console').classList.contains('hidden');
 
 export function initDevConsole(engine) {
-    if (!DEV_TOOLS_ENABLED) return;
     const consoleEl = $('dev-console');
     const input = $('dev-input');
     const log = (msg, isError = false) => {
@@ -24,7 +25,7 @@ export function initDevConsole(engine) {
 
     document.addEventListener('keydown', (e) => {
         const typing = document.activeElement && document.activeElement.tagName === 'INPUT';
-        if ((e.key === '/' || e.key === '`') && !typing) {
+        if ((e.key === '/' || e.key === '`') && !typing && isAdmin()) {
             e.preventDefault();
             setVisible(consoleEl, true);
             input.focus();
@@ -40,6 +41,7 @@ export function initDevConsole(engine) {
         const raw = input.value.trim();
         if (!raw) return;
         input.value = '';
+        if (!isAdmin()) return closeDevConsole();
         log(raw);
         try {
             run(raw, engine, log);
@@ -47,6 +49,9 @@ export function initDevConsole(engine) {
             log(`[ERROR] ${err.message}`, true);
         }
     });
+
+    // Signing out (or into a non-admin account) closes it.
+    on('account:changed', () => { if (!isAdmin()) closeDevConsole(); });
 }
 
 export function closeDevConsole() {
