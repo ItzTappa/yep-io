@@ -134,6 +134,7 @@ export class GameEngine {
         this.forfeitArmedUntil = 0;
         this.leaderboardTick = 0;
         this.matchQuests = [];          // quests finished this match (listed on the game over screen)
+        this.minimapGhosts = [];        // where enemies just died: their minimap dots fade out
         this.timeScale = 1;             // admin slow motion
         this.zoomTarget = 1;            // camera zoom: mouse wheel / + - in a match (and admin /zoom)
         this.adminPacifist = false;     // admin: bots ignore you
@@ -474,6 +475,10 @@ export class GameEngine {
         }
         this.reportKill(victim, killer);
         this.siphonHeal(killer);
+        if (!isLocal && !victim.isTeammate && !this.isDemo) {
+            this.minimapGhosts.push({ x: victim.x, y: victim.y, at: performance.now() });
+            if (this.minimapGhosts.length > 60) this.minimapGhosts.shift();
+        }
         this.dropLoot(victim, killer);
 
         if (isLocal) {
