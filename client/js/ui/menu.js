@@ -11,6 +11,7 @@ import { showToast, showError, hideToast } from './toast.js';
 import { openMasteryModal } from './masteryModal.js';
 
 let currentTab = 'lobby';
+const FOOTER_TABS = ['lobby', 'multiplayer', 'season', 'store'];
 
 export const activeTab = () => currentTab;
 export const isMenuOpen = () => !$('main-menu').classList.contains('hidden');
@@ -78,12 +79,11 @@ export function switchTab(target) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.target === target));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === target));
 
-    setVisible(document.querySelector('.menu-footer'), target !== 'locker');
+    // Season level, profile and settings only on the play and shop tabs.
+    setVisible(document.querySelector('.menu-footer'), FOOTER_TABS.includes(target));
     const multiplayer = target === 'multiplayer';
-    setVisible($('gamemodes-main-btn'), multiplayer);
+    setVisible($('mode-picker'), multiplayer);
     setVisible($('footer-center-lobby-controls'), multiplayer);
-    setVisible($('br-team-selector'), multiplayer && state.lobby?.mainMode !== '1v1');
-    if (!multiplayer) setVisible($('gamemodes-menu'), false);
 
     emit('tab:changed', target);
     return true;

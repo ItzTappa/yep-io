@@ -5,6 +5,11 @@
     --accent: #ffe600;
     --text-main: #ffffff;
     --panel-bg: rgba(255, 255, 255, 0.1);
+
+    /* Spacing: every stack of text/buttons uses these gaps, set once on its container. */
+    --space-pair: 8px;      /* a label and the thing it labels (e.g. a list title and its list) */
+    --space: 16px;          /* items in a popup or card */
+    --space-page: 20px;     /* sections of a menu page */
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }

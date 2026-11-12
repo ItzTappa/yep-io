@@ -1,5 +1,6 @@
 // The Quests tab: daily and weekly quests, the weekly Bonus Goals track, and each class's
-// mastery progress. Pick a category on the left; click a reward to see it in the preview.
+// mastery progress. Pick a category on the left; click a quest or a Bonus Goal to see its reward
+// in the preview on the right (empty until you pick something).
 import { $, escapeHtml, setVisible } from '../core/dom.js';
 import { state } from '../core/state.js';
 import { on } from '../core/events.js';
@@ -21,22 +22,27 @@ const CATEGORIES = [
 ];
 
 let category = 'daily';
-let selected = null;   // the reward in the preview: { type: 'item', itemId } or { type: 'xp', xp }
+let selectedKey = null;   // what's in the preview: 'q:<quest id>', 'b:<goal index>' or 'm:<class>'
+let entries = new Map();  // key -> { reward, kind, title, ... } for the page on screen
 
 export function initQuests() {
     $('quests').addEventListener('click', (e) => {
         const target = e.target instanceof Element ? e.target : null;
         const cat = target?.closest('.quest-cat');
-        const reward = target?.closest('[data-reward-item]');
+        const pick = target?.closest('[data-select]');
         if (cat) {
             category = cat.dataset.category;
-            selected = null;
-            renderQuests();
-        } else if (reward) {
-            selected = { type: 'item', itemId: reward.dataset.rewardItem };
+            selectedKey = null;
             renderQuests();
         } else if (target?.closest('#quest-preview-btn')) {
             previewAction();
+        } else if (target?.closest('#quest-preview-close')) {
+            selectedKey = null;
+            renderQuests();
+        } else if (pick) {
+            // Click again to clear the preview.
+            selectedKey = selectedKey === pick.dataset.select ? null : pick.dataset.select;
+            renderQuests();
         }
     });
     on('profile:changed', () => { if (activeTab() === 'quests') renderQuests(); });
@@ -66,8 +72,7 @@ function xpChip(xp, extraClass = '') {
 function itemChip(itemId, extraClass = '') {
     const item = getItem(itemId);
     if (!item) return '';
-    const isSelected = selected?.type === 'item' && selected.itemId === itemId;
-    return `<button class="reward-chip item ${extraClass} ${isSelected ? 'selected' : ''}" data-reward-item="${item.id}" style="--rarity-color: ${itemColor(item)};" title="${escapeHtml(item.name)}">${itemIconHtml(item)}</button>`;
+    return `<div class="reward-chip item ${extraClass}" style="--rarity-color: ${itemColor(item)};" title="${escapeHtml(item.name)}">${itemIconHtml(item)}</div>`;
 }
 
 const rewardChip = (reward, extraClass) => (reward.type === 'item' ? itemChip(reward.itemId, extraClass) : xpChip(reward.xp, extraClass));
@@ -85,6 +90,7 @@ function renderQuests() {
     const daily = dailyQuests();
     const weekly = weeklyQuests();
     const bonus = bonusGoals();
+    entries = new Map();
     renderSidebar(daily, weekly);
 
     const cat = CATEGORIES.find(c => c.id === category) || CATEGORIES[0];
@@ -127,12 +133,16 @@ function renderHeader(kicker, title, desc) {
     $('quest-desc').textContent = desc;
 }
 
-function questRow({ title, progress, target, done, reward, stat }) {
+const progressText = (progress, target, stat) => (stat === 'time'
+    ? `${Math.floor(progress / 60)} / ${target / 60} MIN`
+    : `${progress.toLocaleString('en-US')} / ${target.toLocaleString('en-US')}`);
+
+function questRow(key, { title, progress, target, done, reward, stat }) {
     const pct = Math.min(100, (progress / target) * 100);
-    const n = (v) => v.toLocaleString('en-US');
-    const count = stat === 'time' ? `${Math.floor(progress / 60)} / ${target / 60} MIN` : `${n(progress)} / ${n(target)}`;
+    const count = progressText(progress, target, stat);
+    entries.set(key, { kind: key.startsWith('m:') ? 'mastery' : 'quest', reward, title, done, count });
     return `
-        <div class="quest-row ${done ? 'done' : ''}">
+        <div class="quest-row ${done ? 'done' : ''} ${selectedKey === key ? 'selected' : ''}" data-select="${key}">
             <div class="quest-row-main">
                 <div class="quest-name">${escapeHtml(title)}</div>
                 <div class="quest-progress">
@@ -153,10 +163,6 @@ function renderQuestPage(list, bonus) {
         daily ? 'Finished quests give XP right away and count toward this week\'s Bonus Goals.'
               : 'Bigger quests that last all week. They count toward the Bonus Goals too.'
     );
-    // Keep the reward you clicked if it's on this page, otherwise show the next item reward.
-    const onPage = bonus.goals.some(g => g.reward.type === 'item' && g.reward.itemId === selected?.itemId);
-    if (!onPage) selected = defaultBonusReward(bonus);
-
     const prevAt = (i) => (i === 0 ? 0 : bonus.goals[i - 1].at);
     $('quest-bonus').innerHTML = `
         <div class="bonus-card">
@@ -170,9 +176,11 @@ function renderQuestPage(list, bonus) {
             <div class="bonus-goals" style="--goals: ${bonus.goals.length};">
                 ${bonus.goals.map((goal, i) => {
                     const fill = Math.max(0, Math.min(1, (bonus.count - prevAt(i)) / (goal.at - prevAt(i))));
+                    const key = `b:${i}`;
+                    entries.set(key, { kind: 'bonus', reward: goal.reward, at: goal.at, reached: goal.reached });
                     return `
-                        <div class="bonus-goal ${goal.reached ? 'reached' : ''}">
-                            <div class="bonus-tile">${rewardChip(goal.reward, 'big')}${goal.reached ? '<span class="tile-check">✔</span>' : ''}</div>
+                        <div class="bonus-goal ${goal.reached ? 'reached' : ''} ${selectedKey === key ? 'selected' : ''}">
+                            <div class="bonus-tile" data-select="${key}">${rewardChip(goal.reward, 'big')}${goal.reached ? '<span class="tile-check">✔</span>' : ''}</div>
                             <div class="bonus-track">
                                 <div class="bonus-seg"><div class="bonus-seg-fill" style="width: ${fill * 100}%;"></div></div>
                                 <div class="bonus-num">${goal.at}</div>
@@ -182,16 +190,9 @@ function renderQuestPage(list, bonus) {
             </div>
         </div>`;
 
-    $('quest-list').innerHTML = list.map(q => questRow({
+    $('quest-list').innerHTML = list.map(q => questRow(`q:${q.id}`, {
         title: q.title, progress: q.progress, target: q.target, done: q.done, stat: q.stat, reward: { type: 'xp', xp: q.xp }
     })).join('');
-}
-
-// The first item reward you haven't reached yet (or the last one).
-function defaultBonusReward(bonus) {
-    const items = bonus.goals.filter(g => g.reward.type === 'item');
-    const next = items.find(g => !g.reached) || items[items.length - 1];
-    return next ? next.reward : bonus.goals[bonus.goals.length - 1].reward;
 }
 
 function renderMastery(classType) {
@@ -199,13 +200,12 @@ function renderMastery(classType) {
     const m = masteryInfo(classType);
     renderHeader('CLASS MASTERY', `${name.toUpperCase()} MASTERY`,
         `Get ${MASTERY_KILLS} kills with the ${name} to master it and unlock the Golden ${name} skin.`);
-    selected = { type: 'item', itemId: m.skinId };
     $('quest-bonus').innerHTML = `
         <div class="mastery-strip">
             <div class="mastery-stat"><span>KILLS AS ${name.toUpperCase()}</span><b>${m.kills}</b></div>
             <div class="mastery-stat"><span>MATCHES AS ${name.toUpperCase()}</span><b>${m.matches}</b></div>
         </div>`;
-    $('quest-list').innerHTML = questRow({
+    $('quest-list').innerHTML = questRow(`m:${classType}`, {
         title: `Get ${MASTERY_KILLS} kills as a ${name}`,
         progress: Math.min(m.kills, MASTERY_KILLS), target: MASTERY_KILLS, done: m.unlocked,
         reward: { type: 'item', itemId: m.skinId }
@@ -225,22 +225,32 @@ function renderTimer() {
 // ---------- preview panel ----------
 
 function renderPreview() {
+    const entry = entries.get(selectedKey) || null;
+    if (!entry) selectedKey = null;
+    const panel = $('quest-preview');
+    setVisible(panel, !!entry);
+    if (!entry) {
+        setQuestPreview(null);
+        return;
+    }
     const btn = $('quest-preview-btn');
     const status = $('quest-preview-status');
-    const item = selected?.type === 'item' ? getItem(selected.itemId) : null;
-    const color = item ? itemColor(item) : 'var(--accent)';
-    $('quest-preview').style.setProperty('--rarity-color', color);
+    const reward = entry.reward;
+    const item = reward.type === 'item' ? getItem(reward.itemId) : null;
+    panel.style.setProperty('--rarity-color', item ? itemColor(item) : 'var(--accent)');
 
-    setQuestPreview(item && item.category !== 'Banner' ? item.id : null);
-    setVisible($('questPreviewCanvas'), !!item && item.category !== 'Banner');
+    const showShip = !!item && item.category !== 'Banner';
+    setQuestPreview(showShip ? item.id : null);
+    setVisible($('questPreviewCanvas'), showShip);
     const emoji = $('quest-preview-emoji');
-    setVisible(emoji, !item || item.category === 'Banner');
+    setVisible(emoji, !showShip);
     emoji.innerHTML = item ? escapeHtml(item.icon) : '<span class="xp-mark big">XP</span>';
 
     if (!item) {
-        $('quest-preview-rarity').textContent = 'REWARD';
-        $('quest-preview-name').textContent = selected ? `+${xpText(selected.xp)}` : '';
-        status.textContent = '';
+        $('quest-preview-rarity').textContent = entry.kind === 'bonus' ? 'BONUS GOAL REWARD' : 'QUEST REWARD';
+        $('quest-preview-name').textContent = `+${xpText(reward.xp)}`;
+        if (entry.kind === 'bonus') status.textContent = entry.reached ? '✔ Reached' : `Finish ${entry.at} quests this week`;
+        else status.textContent = entry.done ? `✔ ${entry.title}` : `${entry.title} · ${entry.count}`;
         setVisible(btn, false);
         return;
     }
@@ -262,22 +272,20 @@ function renderPreview() {
         } else {
             btn.textContent = !owned ? 'CLAIM & EQUIP' : equipped && state.selectedClass === item.masteryClass ? '✓ EQUIPPED' : 'EQUIP';
         }
+    } else if (owned) {
+        status.textContent = 'Bonus Goal reward';
+        btn.textContent = equipped ? '✓ EQUIPPED' : 'EQUIP';
     } else {
-        const goal = bonusGoals().goals.find(g => g.reward.type === 'item' && g.reward.itemId === item.id);
-        if (owned) {
-            status.textContent = goal ? 'Bonus Goal reward' : '';
-            btn.textContent = equipped ? '✓ EQUIPPED' : 'EQUIP';
-        } else {
-            status.textContent = goal ? `Finish ${goal.at} quests this week` : '';
-            btn.textContent = 'LOCKED';
-            btn.disabled = true;
-        }
+        status.textContent = `Finish ${entry.at} quests this week`;
+        btn.textContent = 'LOCKED';
+        btn.disabled = true;
     }
     setVisible(btn, true);
 }
 
 function previewAction() {
-    const item = selected?.type === 'item' ? getItem(selected.itemId) : null;
+    const reward = entries.get(selectedKey)?.reward;
+    const item = reward?.type === 'item' ? getItem(reward.itemId) : null;
     if (!item) return;
     if (item.masteryClass) {
         if (!masteryInfo(item.masteryClass).unlocked) return;

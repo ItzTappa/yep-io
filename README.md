@@ -13,10 +13,10 @@ npm start          # or: npm run dev   (restarts when server files change)
 
 Then open http://localhost:3000.
 
-**Admin console:** sign in as an admin account (`ADMIN_USERNAMES` in `client/js/config.js`, currently
-`chase`), press `/` or `` ` `` and type `/help`. It works on the live site too; guests and other accounts can't open it.
-Handy for testing: `/questsdone` finishes today's and this week's quests, `/questsreset` starts them
-over, `/tutorial` plays the tutorial again in your next solo match.
+**Admin tools:** sign in as an admin account (`ADMIN_USERNAMES` in `client/js/config.js`, currently
+`chase`). Press `/` once for the console (type `/help`), or `/` twice quickly for the admin menu: buttons
+for all 70 commands with tabs (Player, Match, Fun, Progress) and a search box. Works on the live site
+too; guests and other accounts can't open either. Commands are listed in `client/js/admin/commands.js`.
 
 ## Deploy (Render)
 
@@ -45,7 +45,7 @@ server/
 
 client/
   index.html           All screens (menu tabs, popups, in-match HUD)
-  css/                 base, menu, lobby, store (stats/locker/shops), quests, modals, hud, mobile
+  css/                 base, menu, lobby, store (stats/locker/shops), quests, modals, hud, admin, mobile
   assets/sounds/       Sound effects
   js/
     main.js            Entry point: wires everything together, switches menu <-> match
@@ -90,6 +90,10 @@ client/
       hud/               Points bar, leaderboard, badges, notifications, kill feed, upgrade cards,
                          tutorial box, game over
 
+    admin/             Admin tools (signed-in admins only)
+      commands.js        Every admin command (name, tab, input, what it does)
+      effects.js         Ongoing command effects: black hole, meteors, rainbow, slow motion...
+
     services/          Talking to the outside world
       network.js         socket.io client (lobbies + match messages)
       firebase.js        Loads Firebase
@@ -105,7 +109,8 @@ client/
       quests.js          Quests tab (daily, weekly, Bonus Goals, class mastery)
       locker.js, stores.js, stats.js, previews.js
       accountModal.js, invites.js, settingsModal.js, masteryModal.js
-      slotMachineUI.js, devConsole.js, toast.js
+      devConsole.js      Admin console (/) and the double-/ shortcut; adminMenu.js is the menu
+      slotMachineUI.js, toast.js
 
 firestore.rules        Firestore security rules (publish in the Firebase console)
 ```

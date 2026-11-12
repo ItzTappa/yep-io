@@ -8,8 +8,8 @@ import { BALANCE } from '../../data/balance.js';
 
 export function updateBots(engine) {
     const referencePoints = engine.player && !engine.isDemo ? engine.player.points : 100;
-    // During the first steps of the tutorial bots don't go after you.
-    const hostile = engine.tutorial?.calm ? (a, b) => b !== engine.player && isEnemy(a, b) : isEnemy;
+    // During the first tutorial steps (or admin "pacifist") bots don't go after you.
+    const hostile = engine.botsIgnorePlayer ? (a, b) => b !== engine.player && isEnemy(a, b) : isEnemy;
 
     for (const bot of [...engine.bots]) {
         if (bot.isDead) continue;

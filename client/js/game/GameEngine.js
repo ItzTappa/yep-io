@@ -54,6 +54,7 @@ export class GameEngine {
         this.hooks = hooks;
         this.damageNumbers = new DamageNumbers();
         this.tutorial = null;
+        this.admin = null;              // admin command effects (set by the admin console, see admin/effects.js)
 
         this.mode = 'demo';
         this.resetWorld(WORLD.demo);
@@ -96,6 +97,11 @@ export class GameEngine {
         return this.mode === 'br' || this.mode === 'duel';
     }
 
+    // Bots leave you alone during the first tutorial steps (or with the admin "pacifist" command).
+    get botsIgnorePlayer() {
+        return !!this.tutorial?.calm || this.adminPacifist;
+    }
+
     // ==========================================
     // MATCH SETUP
     // ==========================================
@@ -125,6 +131,10 @@ export class GameEngine {
         this.forfeitArmedUntil = 0;
         this.leaderboardTick = 0;
         this.matchQuests = [];          // quests finished this match (listed on the game over screen)
+        this.timeScale = 1;             // admin slow motion
+        this.zoomTarget = 1;            // admin camera zoom
+        this.adminPacifist = false;     // admin: bots ignore you
+        this.admin?.clear();
         this.damageNumbers.clear();
         this.tutorial?.end();
         this.tutorial = null;
@@ -383,6 +393,7 @@ export class GameEngine {
     // Returns false if the target was immune.
     damage(target, amount, attacker, { armor = true, hitSound = 0, shake = 0, particles = null } = {}) {
         if (!target || target.isDead || amount <= 0) return false;
+        if (target.adminGod) return false; // admin god mode
         if (isImmune(target)) {
             this.spawnParticles(target.x, target.y, '#0096ff', 3);
             if (hitSound) this.playSoundAt('take_damage', target.x, target.y, { volume: 0.1 });
@@ -394,7 +405,10 @@ export class GameEngine {
         // Hit feedback: white flash on the ship, your damage as a number, a red edge when you're hit.
         target.hitFlashAt = performance.now();
         if (attacker === this.player && target !== this.player) {
-            if (settings.damageNumbers) this.damageNumbers.add(target, final, { big: final >= this.player.baseDamage * 2.2 });
+            if (settings.damageNumbers) {
+                this.damageNumbers.add(target, final, { big: final >= this.player.baseDamage * 2.2 });
+                this.damageNumbers.marker(particles ? particles.x : target.x, particles ? particles.y : target.y);
+            }
             this.stat('damage', final);
         }
         if (target === this.player && !this.isDemo) hud.flashHit(final / target.maxHealth);
@@ -442,6 +456,8 @@ export class GameEngine {
             this.player.kills++;
             this.addXP(killXp(this.player.points, victim.points || 0));
             hud.showKillBanner(victim.name || 'ENEMY');
+            sounds.play('kill_confirm', { category: 'alert' });
+            if (settings.damageNumbers) this.damageNumbers.marker(victim.x, victim.y, true);
             this.stat('kills');
         }
         this.reportKill(victim, killer);
@@ -463,12 +479,13 @@ export class GameEngine {
         this.checkMatchOutcome(killer);
     }
 
-    // Kill feed: kills by or of you and other real players (bot-on-bot kills would flood it).
+    // Kill feed: every kill by or of a real player, plus bot kills close enough to see.
     reportKill(victim, killer) {
         const p = this.player;
         if (this.isDemo || !p || killer?.isForfeit) return;
-        const shown = (s) => !!s && (s === p || s.isRemotePlayer);
-        if (!shown(victim) && !shown(killer)) return;
+        const isPerson = (s) => !!s && (s === p || s.isRemotePlayer);
+        const nearby = distance(this.camera.x, this.camera.y, victim.x, victim.y) < 1400;
+        if (!isPerson(victim) && !isPerson(killer) && !nearby) return;
         const tone = (s) => (s === p ? 'you' : s.isStorm ? 'storm' : s.isTeammate ? 'mate' : 'enemy');
         const label = (s) => (s === p ? 'YOU' : s.name || 'PLAYER');
         const hasKiller = killer && killer !== victim;
@@ -700,7 +717,7 @@ export class GameEngine {
 
     // Fixed 60 Hz simulation: the game runs at the same speed on 30, 60 and 144 Hz screens.
     tick(time) {
-        let dt = time - this.lastTime;
+        let dt = (time - this.lastTime) * this.timeScale;
         this.lastTime = time;
         if (dt > 250) dt = 250;
         this.accumulator += dt;
@@ -773,6 +790,7 @@ export class GameEngine {
             this.checkMatchOutcome(null);
         }
         this.net?.tick(this.frame);
+        this.admin?.update(this);
         this.updateCamera();
     }
 
@@ -827,7 +845,7 @@ export class GameEngine {
             }
         } else if (p) {
             target = p;
-            cam.zoom += (1 - cam.zoom) * 0.1;
+            cam.zoom += (this.zoomTarget - cam.zoom) * 0.1;
         }
 
         cam.x += (target.x - cam.x) * glide;

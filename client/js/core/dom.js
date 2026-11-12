@@ -15,21 +15,24 @@ export function setText(id, text) {
 }
 
 // Slide-in notification boxes (.notif-box): show now, hide after `ms`. Returns a hide function.
+// Showing a box again cancels its earlier timers (otherwise the old "finish hiding" timer would
+// switch the new message off a moment after it appeared).
 export function slideIn(box, ms, { removeWhenDone = false } = {}) {
+    clearTimeout(box.slideHideTimer);
+    clearTimeout(box.slideRemoveTimer);
     box.classList.remove('hidden', 'show');
     box.classList.add('active');
     requestAnimationFrame(() => requestAnimationFrame(() => box.classList.add('show')));
 
-    let timer = null;
     const hide = () => {
-        clearTimeout(timer);
+        clearTimeout(box.slideHideTimer);
         box.classList.remove('show');
-        setTimeout(() => {
+        box.slideRemoveTimer = setTimeout(() => {
             box.classList.remove('active');
             if (removeWhenDone) box.remove();
         }, 400);
     };
-    if (ms) timer = setTimeout(hide, ms);
+    if (ms) box.slideHideTimer = setTimeout(hide, ms);
     box.hideNotif = hide;
     return hide;
 }

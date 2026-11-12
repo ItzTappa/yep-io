@@ -20,6 +20,7 @@ const SOUND_FILES = {
     // Combat & movement
     dash: 'dash.mp3',
     hit_marker: 'hit_marker.mp3',
+    kill_confirm: { file: 'hit_marker.mp3', rate: 1.6 },
     take_damage: { file: 'hit_marker.mp3', rate: 0.6 },
     xp_pickup: 'xp_pickup.mp3',
     enemy_death: 'enemy_death.mp3',

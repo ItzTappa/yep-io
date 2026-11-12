@@ -16,7 +16,8 @@
 /* MOBILE RESPONSIVE QUERIES */
 @media (max-width: 768px) {
     h1 { font-size: 3rem; }
-    .class-selection { flex-direction: column; align-items: center; margin-bottom: 5px; }
+    .lobby-center { gap: var(--space-page); }
+    .class-selection { flex-direction: column; align-items: center; }
     #menu-toast { font-size: 0.9rem; }
     #menu-invite-queue { bottom: 110px; left: 10px; transform: scale(0.85); transform-origin: bottom left; }
     #match-toast { font-size: 0.8rem; top: 90px; }
@@ -50,9 +51,10 @@
     .card-desc { font-size: 0.65rem; line-height: 1.2; padding: 0 5px; }
     .card-key { display: none; }
 
-    #game-over-screen h2 { font-size: 2.2rem; margin-bottom: 5px; }
-    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 1rem; padding: 15px 20px; margin-bottom: 15px; }
-    .xp-gained { font-size: 1.2rem; margin-bottom: 20px; padding: 8px 20px; }
+    #game-over-screen { gap: var(--space); }
+    #game-over-screen h2 { font-size: 2.2rem; }
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 1rem; padding: 15px 20px; }
+    .xp-gained { font-size: 1.2rem; padding: 8px 20px; }
     #return-lobby-btn { font-size: 1rem; padding: 10px 20px; }
     .lobby-header h2 { font-size: 1.8rem !important; margin-bottom: 20px !important; }
     .lobby-header-controls { flex-direction: column; gap: 10px; height: auto; width: 100%; max-width: 320px; margin: 0 auto; }
@@ -61,11 +63,23 @@
     .code-label span { font-size: 1.1rem; letter-spacing: 2px; margin-left: 5px; }
     #join-code-input { font-size: 1rem; padding: 10px; }
     .control-btn { padding: 0 15px; font-size: 0.9rem; flex-shrink: 0; }
-    .player-slots { flex-direction: column; gap: 30px; margin-bottom: 30px; align-items: center; }
-    .player-slot { width: 200px; margin-bottom: 10px; }
-    .lobby-preview-canvas { width: 100px; height: 100px; }
+    .player-slots { flex-direction: column; gap: var(--space); align-items: center; }
+    .player-slot { width: 200px; }
+    .player-slot .name { margin-top: var(--space-pair); }
+    .lobby-preview-canvas { width: 90px; height: 90px; }
     .player-slot.empty .lobby-preview-canvas { font-size: 3rem !important; }
     .footer-btn { width: 200px; height: 50px; font-size: 1.1rem; }
+    /* LEAVE / READY get their own row above the season level box instead of covering it */
+    .menu-footer { flex-wrap: wrap; gap: var(--space); padding: 12px; }
+    .player-level-ui { min-width: 0; padding: 12px 18px; font-size: 1.05rem; }
+    /* the round profile / settings buttons stay in the bottom-right corner, next to the level box */
+    .menu-footer-buttons { position: absolute; right: 12px; bottom: 12px; gap: 10px; }
+    #account-btn, #settings-btn { width: 52px; height: 52px; font-size: 1.5rem; }
+    /* messages sit above the footer instead of on top of it */
+    #menu-toast { bottom: 110px; padding: 0 12px; }
+    #menu-toast.raised { bottom: 300px; }
+    .footer-center-container { position: static; transform: none; order: -1; width: 100%; justify-content: center; gap: 12px; }
+    .footer-center-container .footer-btn { flex: 1; width: auto; max-width: 220px; }
     .locker-layout { flex-direction: column-reverse; align-items: center; gap: 20px; }
     .locker-preview-box { position: sticky; top: 70px; margin-top: 0; z-index: 50; width: 150px; height: 150px; margin: 0 auto; background: var(--bg-color); border-radius: 50%; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
     .locker-preview-box canvas { width: 150px; height: 150px; }
@@ -90,14 +104,15 @@
     .match-detail-val { font-size: 1.1rem; }
     .match-rank { font-size: 1.6rem; }
 
-    .settings-layout { flex-direction: column; gap: 10px; }
+    .settings-layout { flex-direction: column; gap: var(--space); }
     .settings-col:first-child { border-right: none; padding-right: 0; }
     .settings-content.wide-settings { overflow-y: auto; max-height: 90vh; width: 90%; }
-    .mobile-controls-col h3.controls-title { margin-top: 15px !important; border-top: 2px solid #444; padding-top: 15px; }
+    .mobile-controls-col { border-top: 2px solid #444; padding-top: var(--space); }
 
     #preview-screen-title { font-size: 2rem; }
-    #preview-screen-category { font-size: 1rem; margin-bottom: 15px; }
-    .fullscreen-preview-box { width: 250px; height: 250px; margin-bottom: 20px; }
+    #item-preview-screen { gap: var(--space); }
+    #preview-screen-category { font-size: 1rem; }
+    .fullscreen-preview-box { width: 250px; height: 250px; }
     .fullscreen-preview-box canvas { width: 250px; height: 250px; }
 
     /* HUD Slot Machine Mobile */
@@ -121,6 +136,6 @@
     .tut-title { font-size: 1rem; }
     .tut-text { font-size: 0.75rem; line-height: 1.4; }
     .tut-step { font-size: 0.6rem; }
-    .go-quests { min-width: 0; width: 92vw; margin: -10px 0 18px; }
+    .go-quests { min-width: 0; width: 92vw; }
     .go-quest { font-size: 0.8rem; padding: 6px 10px; }
 }

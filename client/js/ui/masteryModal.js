@@ -4,6 +4,7 @@ import { $, setVisible } from '../core/dom.js';
 import { state } from '../core/state.js';
 import { sounds } from '../core/sound.js';
 import { MASTERY_KILLS } from '../data/items.js';
+import { CLASS_INFO } from '../data/classes.js';
 import { claimAndEquipMastery } from '../services/profile.js';
 
 let masteryClass = null;
@@ -23,7 +24,7 @@ export function openMasteryModal(classType) {
     const stats = state.profile.classStats[classType] || { kills: 0, matches: 0 };
     const unlocked = stats.kills >= MASTERY_KILLS;
 
-    $('mastery-class-title').textContent = `${classType.toUpperCase()} MASTERY`;
+    $('mastery-class-title').textContent = `${CLASS_INFO[classType].name.toUpperCase()} MASTERY`;
     $('mastery-kills').textContent = stats.kills;
     $('mastery-matches').textContent = stats.matches;
     $('mastery-progress-bar').style.width = `${Math.min(100, (stats.kills / MASTERY_KILLS) * 100)}%`;

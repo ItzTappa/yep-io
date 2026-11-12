@@ -64,14 +64,19 @@ function startMultiplayerMatch(match) {
 }
 
 function returnToMenu() {
+    // Back to where the match started from: the multiplayer lobby, or the main lobby for solo
+    // (you can be sitting in a multiplayer lobby while playing solo).
+    const fromLobby = engine.isMultiplayer && !!state.lobby;
     state.inMatch = false;
     hideSlotMachine();
     engine.startDemo();
     setVisible($('main-menu'), true);
     setInGame(false);
-    if (state.lobby) {
+    if (fromLobby) {
         network.returnedToLobby();
         switchTab('multiplayer');
+    } else {
+        switchTab('lobby');
     }
     emit('profile:changed');
 }
@@ -88,7 +93,6 @@ document.addEventListener('keydown', (e) => {
     if (!$('mastery-modal').classList.contains('hidden')) return closeMasteryModal();
     if (!$('account-modal').classList.contains('hidden')) return closeAccountModal();
     if (isSettingsOpen()) return applyAndClose();
-    if (!$('gamemodes-menu').classList.contains('hidden')) return setVisible($('gamemodes-menu'), false);
     if (state.inMatch) engine.requestForfeit();
 });
 

@@ -1,0 +1,50 @@
+/* Admin menu (press / twice). The console itself is styled in base.css. */
+#admin-menu { position: fixed; inset: 0; z-index: 1100; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.admin-panel {
+    pointer-events: auto; width: min(1000px, 94vw); height: min(720px, 86dvh);
+    display: flex; flex-direction: column; gap: 16px; padding: 20px;
+    background: rgba(14, 14, 18, 0.97); border: 2px solid #00ffcc; border-radius: 12px;
+    box-shadow: 0 0 40px rgba(0, 255, 204, 0.15), 0 20px 50px rgba(0, 0, 0, 0.6);
+}
+.admin-head { display: flex; align-items: center; gap: 16px; }
+.admin-head h2 { color: #00ffcc; font-size: 1.3rem; letter-spacing: 2px; white-space: nowrap; }
+#admin-search { flex: 1; min-width: 0; padding: 10px 14px; background: #0b0b0e; border: 2px solid #333; border-radius: 8px; color: white; font-size: 1rem; outline: none; }
+#admin-search:focus { border-color: #00ffcc; }
+.admin-close { width: 40px; height: 40px; flex-shrink: 0; background: #222; border: 1px solid #444; border-radius: 8px; color: #ccc; font-size: 1rem; cursor: pointer; }
+.admin-close:hover { color: white; border-color: #888; }
+
+.admin-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.admin-tab { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: #1a1a1f; border: 2px solid #333; border-radius: 8px; color: #aaa; font-weight: bold; font-size: 0.8rem; letter-spacing: 1px; cursor: pointer; }
+.admin-tab span { color: #666; font-size: 0.7rem; }
+.admin-tab:hover { color: white; border-color: #555; }
+.admin-tab.active { color: #000; background: #00ffcc; border-color: #00ffcc; }
+.admin-tab.active span { color: rgba(0, 0, 0, 0.55); }
+
+.admin-grid { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; align-content: start; padding-right: 4px; }
+.admin-cmd { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: #17171c; border: 2px solid #2c2c33; border-radius: 10px; transition: border-color 0.15s, opacity 0.15s; }
+.admin-cmd:hover { border-color: #444; }
+.admin-cmd.on { border-color: #00ffcc; background: #10201d; }
+.admin-cmd.blocked { opacity: 0.5; }
+.admin-cmd-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.admin-cmd-name { font-family: 'Courier New', Courier, monospace; font-weight: bold; color: white; font-size: 1rem; }
+.admin-tag { font-size: 0.6rem; font-weight: bold; letter-spacing: 1px; color: #9ca3af; border: 1px solid #3a3a42; border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
+.admin-cmd-desc { flex: 1; color: #aaa; font-size: 0.8rem; line-height: 1.35; }
+.admin-cmd-run { display: flex; gap: 8px; }
+.admin-arg { flex: 1; min-width: 0; padding: 6px 8px; background: #0b0b0e; border: 1px solid #333; border-radius: 6px; color: white; font-size: 0.85rem; outline: none; }
+.admin-arg:focus { border-color: #00ffcc; }
+.admin-run { flex-shrink: 0; min-width: 64px; margin-left: auto; padding: 6px 12px; background: #00ffcc; border: none; border-radius: 6px; color: #000; font-weight: 900; font-size: 0.75rem; letter-spacing: 1px; cursor: pointer; }
+.admin-run:hover { filter: brightness(1.1); }
+.admin-cmd.toggle .admin-run { background: #2a2a31; color: #bbb; }
+.admin-cmd.toggle.on .admin-run { background: #00ffcc; color: #000; }
+.admin-empty { grid-column: 1 / -1; color: #777; text-align: center; padding: 40px 0; }
+
+.admin-status { color: #888; font-size: 0.85rem; font-weight: bold; min-height: 1.2em; }
+.admin-status.ok { color: #00ffcc; }
+.admin-status.error { color: #ff5c5c; }
+
+@media (max-width: 768px) {
+    .admin-panel { padding: 14px; gap: 12px; }
+    .admin-head { gap: 10px; }
+    .admin-head h2 { font-size: 1rem; }
+    .admin-grid { grid-template-columns: 1fr; }
+}

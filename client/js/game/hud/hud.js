@@ -72,7 +72,7 @@ export function showQuestComplete(reward) {
 
 // ---------- fights ----------
 
-// One line in the kill feed. tone: 'you' | 'mate' | 'enemy' | 'storm'
+// One line in the kill feed: "X eliminated Y". tone: 'you' | 'mate' | 'enemy' | 'storm'
 export function addKillFeed({ killer, killerTone, victim, victimTone }) {
     const feed = $('kill-feed');
     const row = document.createElement('div');
@@ -83,13 +83,16 @@ export function addKillFeed({ killer, killerTone, victim, victimTone }) {
         span.textContent = text;
         return span;
     };
-    const icon = document.createElement('span');
-    icon.className = 'kf-icon';
-    icon.textContent = '✖';
-    if (killer) row.append(name(killer, killerTone), icon, name(victim, victimTone));
-    else row.append(name(victim, victimTone), name('WAS ELIMINATED', 'note'));
+    const verb = (text) => {
+        const span = document.createElement('span');
+        span.className = 'kf-verb';
+        span.textContent = text;
+        return span;
+    };
+    if (killer) row.append(name(killer, killerTone), verb('eliminated'), name(victim, victimTone));
+    else row.append(name(victim, victimTone), verb('was eliminated'));
     feed.prepend(row);
-    while (feed.children.length > 4) feed.lastElementChild.remove();
+    while (feed.children.length > 5) feed.lastElementChild.remove();
     setTimeout(() => row.classList.add('fade'), 5000);
     setTimeout(() => row.remove(), 5600);
 }

@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="css/quests.css">
     <link rel="stylesheet" href="css/modals.css">
     <link rel="stylesheet" href="css/hud.css">
+    <link rel="stylesheet" href="css/admin.css">
     <link rel="stylesheet" href="css/mobile.css">
 </head>
 <body>
@@ -75,7 +76,8 @@
                     <div id="quest-bonus"></div>
                     <div id="quest-list" class="quest-list"></div>
                 </section>
-                <aside id="quest-preview" class="quest-preview">
+                <aside id="quest-preview" class="quest-preview hidden">
+                    <button id="quest-preview-close" class="quest-preview-close" aria-label="Close preview">✕</button>
                     <div class="quest-preview-stage">
                         <canvas id="questPreviewCanvas" width="260" height="260"></canvas>
                         <div id="quest-preview-emoji" class="quest-preview-emoji hidden"></div>
@@ -101,7 +103,7 @@
                     <div class="stat-box"><div>TOTAL POINTS</div><div id="stat-points" class="stat-val">0</div></div>
                     <div class="stat-box"><div>TIME ALIVE</div><div id="stat-time" class="stat-val">0m 0s</div></div>
                 </div>
-                <div class="store-header section-gap"><h2>MATCH HISTORY</h2></div>
+                <div class="store-header"><h2>MATCH HISTORY</h2></div>
                 <div id="match-history-list" class="match-history-list"></div>
             </div>
         </div>
@@ -153,15 +155,17 @@
 
         <div class="menu-footer">
             <div class="footer-left-container">
-                <div id="br-team-selector" class="gamemode-selector hidden">
-                    <button class="mode-select-btn active" data-teamsize="duos">DUOS</button>
-                    <button class="mode-select-btn" data-teamsize="trios">TRIOS</button>
-                    <button class="mode-select-btn" data-teamsize="squads">SQUADS</button>
-                </div>
-                <button id="gamemodes-main-btn" class="footer-btn dark-btn-outline hidden">GAMEMODE: BATTLE ROYALE</button>
-                <div id="gamemodes-menu" class="hidden">
-                    <button class="menu-mode-btn active" data-mainmode="br">BATTLE ROYALE</button>
-                    <button class="menu-mode-btn" data-mainmode="1v1">1v1 DUEL</button>
+                <!-- Multiplayer only: game mode on top, team size underneath, one block -->
+                <div id="mode-picker" class="mode-picker hidden">
+                    <div class="gamemode-selector">
+                        <button class="mode-select-btn active" data-mainmode="br">BATTLE ROYALE</button>
+                        <button class="mode-select-btn" data-mainmode="1v1">1v1 DUEL</button>
+                    </div>
+                    <div id="br-team-selector" class="gamemode-selector">
+                        <button class="mode-select-btn active" data-teamsize="duos">DUOS</button>
+                        <button class="mode-select-btn" data-teamsize="trios">TRIOS</button>
+                        <button class="mode-select-btn" data-teamsize="squads">SQUADS</button>
+                    </div>
                 </div>
                 <div class="player-level-ui">
                     <div>Season Level: <span id="menu-level">1</span></div>
@@ -286,7 +290,7 @@
                     <div class="setting-row"><label for="set-notifs">Show Notifications</label><input type="checkbox" id="set-notifs" data-setting="showNotifs"></div>
                     <div class="setting-row"><label for="set-minimap">Show Minimap</label><input type="checkbox" id="set-minimap" data-setting="showMinimap"></div>
                     <div class="setting-row"><label for="set-fps">Show FPS Counter</label><input type="checkbox" id="set-fps" data-setting="showFps"></div>
-                    <div class="setting-row"><label for="set-dmg">Show Damage Numbers</label><input type="checkbox" id="set-dmg" data-setting="damageNumbers"></div>
+                    <div class="setting-row"><label for="set-dmg">Damage Numbers &amp; Hit Markers</label><input type="checkbox" id="set-dmg" data-setting="damageNumbers"></div>
                 </div>
                 <div class="settings-col mobile-controls-col">
                     <h3 class="controls-title">CONTROLS</h3>
@@ -296,8 +300,10 @@
                     <div class="setting-row"><label>Move Right</label><button class="keybind-btn" data-action="right">D</button></div>
                     <div class="setting-row"><label>Dash</label><button class="keybind-btn" data-action="dash">SPACE</button></div>
                     <div class="setting-row"><label>Use Ability</label><button class="keybind-btn ability-bind" data-action="ability">E</button></div>
-                    <button id="reset-keybinds-btn" class="keybind-reset">RESET CONTROLS</button>
-                    <button id="replay-tutorial-btn" class="keybind-reset">REPLAY TUTORIAL</button>
+                    <div class="settings-actions">
+                        <button id="reset-keybinds-btn" class="keybind-reset">RESET CONTROLS</button>
+                        <button id="replay-tutorial-btn" class="keybind-reset">REPLAY TUTORIAL</button>
+                    </div>
                 </div>
             </div>
             <button id="close-settings-btn" class="footer-btn yellow-btn-solid modal-wide-btn">APPLY & CLOSE</button>
@@ -425,6 +431,20 @@
     <div id="dev-console" class="hidden">
         <div id="dev-log"><div class="dev-startup">Admin Console Started. Press Esc to close. Type /help for commands.</div></div>
         <input type="text" id="dev-input" aria-label="Developer Console" placeholder="Enter command (e.g., /level 50)" autocomplete="off">
+    </div>
+
+    <!-- Admin menu: press / twice (admins only) -->
+    <div id="admin-menu" class="hidden" role="dialog" aria-label="Admin commands">
+        <div class="admin-panel">
+            <div class="admin-head">
+                <h2>ADMIN COMMANDS</h2>
+                <input type="text" id="admin-search" placeholder="Search commands..." autocomplete="off" aria-label="Search commands">
+                <button id="admin-close" class="admin-close" aria-label="Close">✕</button>
+            </div>
+            <div id="admin-tabs" class="admin-tabs"></div>
+            <div id="admin-grid" class="admin-grid"></div>
+            <div id="admin-status" class="admin-status">Press / twice or Esc to close.</div>
+        </div>
     </div>
 
     <div id="black-fade-overlay"></div>
