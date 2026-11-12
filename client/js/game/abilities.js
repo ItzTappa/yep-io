@@ -3,8 +3,9 @@
 // is the one allowed to apply it (see GameEngine.damageAuthority).
 import { Projectile } from '../entities/Projectile.js';
 import { distance } from '../core/math.js';
-import { bladeRingRadius } from '../entities/geometry.js';
+import { bladeRingRadius, REPULSOR_RANGE } from '../entities/geometry.js';
 import { isEnemy } from './combat.js';
+import { BALANCE } from '../data/balance.js';
 
 // One-shot effects when an ability is used.
 const ON_TRIGGER = {
@@ -36,16 +37,16 @@ const ON_TRIGGER = {
 
     missile_swarm(engine, p) {
         engine.playSoundAt('ability_missile', p.x, p.y, { category: 'ability' });
-        for (let i = -6; i <= 6; i++) engine.addProjectile(new Projectile(p.x, p.y, p.angle + i * 0.15, p, { isMissile: true }));
+        for (let i = -2.5; i <= 2.5; i++) engine.addProjectile(new Projectile(p.x, p.y, p.angle + i * 0.2, p, { isMissile: true }));
     },
 
     earthshatter(engine, p) {
         engine.spawnParticles(p.x, p.y, '#ffaa00', 50);
         if (p.isPlayer) engine.shake(25);
-        forEachEnemyInRange(engine, p, 600, (e) => {
+        forEachEnemyInRange(engine, p, 450, (e) => {
             e.vx += (e.x - p.x) * 0.1;
             e.vy += (e.y - p.y) * 0.1;
-            engine.damage(e, 100, p, { armor: false });
+            engine.damage(e, 70, p, { armor: false });
         });
     },
 
@@ -61,7 +62,7 @@ const ON_TRIGGER = {
         beam.isRailgun = true;
         beam.speed = 40;
         beam.pierce = 999;
-        beam.damage = (p.baseDamage || 10) * 10;
+        beam.damage = 40 + p.baseDamage * 2.5;
         beam.color = '#ff00ff';
         beam.sizeScale = 3.0;
         beam.life = 100;
@@ -88,24 +89,25 @@ const ON_TRIGGER = {
 // Effects that keep running while the ability timer is active.
 const WHILE_ACTIVE = {
     repulsor(engine, p) {
-        forEachEnemyInRange(engine, p, 300, (e) => {
+        forEachEnemyInRange(engine, p, REPULSOR_RANGE, (e) => {
             e.vx += (e.x - p.x) * 0.05;
             e.vy += (e.y - p.y) * 0.05;
         });
         if (engine.frame % 10 !== 0) return;
         for (const proj of engine.projectiles) {
-            if (!isEnemy(proj.owner, p) || distance(p.x, p.y, proj.x, proj.y) >= 300) continue;
-            proj.angle += Math.PI;   // reflect enemy shots back at them
+            if (!isEnemy(proj.owner, p) || distance(p.x, p.y, proj.x, proj.y) >= REPULSOR_RANGE) continue;
+            proj.angle += Math.PI;   // reflect enemy shots back at them, at half damage
             proj.owner = p;
             proj.color = '#00ffff';
+            proj.damage *= 0.5;
             proj.hitTargets = [];
         }
     },
 
     strafe_run(engine, p) {
-        if (engine.frame % 5 !== 0) return;
-        engine.fireProjectile(p, p.angle + Math.PI / 2);
-        engine.fireProjectile(p, p.angle - Math.PI / 2);
+        if (engine.frame % 8 !== 0) return;
+        engine.fireProjectile(p, p.angle + 0.35);
+        engine.fireProjectile(p, p.angle - 0.35);
     },
 
     blade_ring(engine, p) {
@@ -113,14 +115,14 @@ const WHILE_ACTIVE = {
         const radius = bladeRingRadius(p);
         forEachEnemyInRange(engine, p, radius, (e) => {
             engine.spawnParticles(e.x, e.y, '#ff0000', 3);
-            engine.damage(e, 15, p, { armor: false });
+            engine.damage(e, 9, p, { armor: false });
         }, { addTargetSize: true });
     },
 
     sonic_boom(engine, p) {
         for (const e of engine.ships) {
             if (!isEnemy(p, e) || e.isDead) continue;
-            if (distance(p.x, p.y, e.x, e.y) < p.size + e.size + 20) engine.damage(e, 5, p, { armor: false });
+            if (distance(p.x, p.y, e.x, e.y) < p.size + e.size + 20) engine.damage(e, 4, p, { armor: false });
         }
     },
 
@@ -176,9 +178,9 @@ function shockwave(engine, p) {
     engine.playSoundAt('take_damage', p.x, p.y, { category: 'heavy', volume: 0.4 });
     engine.spawnParticles(p.x, p.y, '#ffcc00', 20);
     if (engine.player && distance(engine.player.x, engine.player.y, p.x, p.y) < 500) engine.shake(10);
-    forEachEnemyInRange(engine, p, 250, (e) => {
+    forEachEnemyInRange(engine, p, BALANCE.upgrades.shockwaveRadius, (e) => {
         e.vx += (e.x - p.x) * 0.05;
         e.vy += (e.y - p.y) * 0.05;
-        engine.damage(e, p.shockwave * 25, p, { armor: false });
+        engine.damage(e, p.shockwave * BALANCE.upgrades.shockwavePerTier, p, { armor: false });
     });
 }

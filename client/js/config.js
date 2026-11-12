@@ -41,7 +41,6 @@ export const NET = {
 };
 
 export const ACCOUNT = {
-    xpPerLevel: 1000,            // XP needed for the next level = level * xpPerLevel
     heartbeatMs: 60000,          // "online" ping for the friends list
     onlineWindowMs: 150000,      // a friend counts as online if they pinged this recently
     historyMax: 20,

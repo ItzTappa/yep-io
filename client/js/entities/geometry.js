@@ -1,15 +1,10 @@
 // Positions shared by drawing code and gameplay code, so what you see is exactly what hits.
-
-// How long each ability stays active once used, in ticks (60 = 1 second).
-export const ABILITY_DURATION = {
-    juggernaut: 300, repulsor: 300, cloak: 300,
-    minigun: 240, strafe_run: 240, blade_ring: 240,
-    sonic_boom: 180,
-    phase_strike: 30
-};
-export const DEFAULT_ABILITY_DURATION = 120;
+import { getUpgrade } from '../data/upgrades.js';
 
 export const ORBITER_BLADE_RADIUS = 9;
+
+// Repulsor pushes enemies and reflects enemy shots within this distance.
+export const REPULSOR_RANGE = 300;
 
 // Where each orbiter blade currently is (world coordinates).
 export function orbiterPositions(e, now = Date.now()) {
@@ -25,7 +20,7 @@ export function orbiterPositions(e, now = Date.now()) {
 
 // Blade Ring expands out to 250 and back in over the ability's duration.
 export function bladeRingRadius(e) {
-    const total = ABILITY_DURATION.blade_ring;
+    const total = getUpgrade('blade_ring').duration;
     const progress = 1 - Math.max(0, e.abilityTimer) / total;
     return 60 + 190 * Math.sin(Math.PI * Math.min(1, Math.max(0, progress)));
 }

@@ -87,7 +87,7 @@ function collect(engine, ship, orb) {
 
     if (ship === engine.player) sounds.play('xp_pickup', { category: 'pickup', varyPitch: true });
     if (orb.type === 'health') {
-        ship.health = Math.min(ship.maxHealth, ship.health + orb.healAmount);
+        ship.health = Math.min(ship.maxHealth, ship.health + ship.maxHealth * orb.healPct);
     } else {
         const value = orb.value * ship.scavenger;
         ship.points += value;

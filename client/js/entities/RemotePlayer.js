@@ -1,7 +1,7 @@
 // Another person in a multiplayer match. Their computer controls them; we only mirror
 // what they send (position, health, upgrades, shots) and draw them smoothly.
 import { Entity } from './Entity.js';
-import { bodyColorFor, loadoutForClass } from '../data/items.js';
+import { DEFAULT_BODY_COLOR } from '../data/items.js';
 import { NET } from '../config.js';
 
 export class RemotePlayer extends Entity {
@@ -10,8 +10,8 @@ export class RemotePlayer extends Entity {
         this.netId = id;
         this.name = name || 'PLAYER';
         this.isRemotePlayer = true;
-        this.equipped = loadoutForClass(equipped, this.type);
-        this.color = bodyColorFor(this.equipped);
+        this.color = DEFAULT_BODY_COLOR;
+        this.applyLoadout(equipped);
         this.target = { x, y, vx: 0, vy: 0, angle: 0, receivedAt: performance.now() };
     }
 

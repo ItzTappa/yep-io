@@ -1,5 +1,6 @@
 // Things lying around the arena: XP/health orbs, the Lucky Slot Machine, and effect particles.
 import { settings } from '../core/settings.js';
+import { BALANCE } from '../data/balance.js';
 
 export class Orb {
     constructor(x, y, type = 'xp', value = 1, scatterRadius = 30) {
@@ -12,10 +13,11 @@ export class Orb {
         this.collected = false;
 
         if (type === 'health') {
-            const big = Math.random() < 0.25;
+            const H = BALANCE.healthOrbs;
+            const big = Math.random() < H.bigChance;
             this.size = big ? 10 : 6;
-            this.color = big ? '#1F51FF' : '#3b82f6';
-            this.healAmount = big ? 70 : 24;
+            this.color = big ? '#2563eb' : '#3b82f6';
+            this.healPct = big ? H.bigPct : H.smallPct;   // share of max health
         } else {
             this.size = Math.min(15, 5 + Math.log10(Math.max(1, value)) * 3);
             this.color = '#ffe600';
@@ -32,6 +34,22 @@ export class Orb {
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
         ctx.fill();
+        ctx.shadowBlur = 0;
+        if (this.type === 'health') {
+            // white "+" so health is readable at a glance
+            const arm = this.size * 0.55;
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = Math.max(1.5, this.size * 0.3);
+            ctx.beginPath();
+            ctx.moveTo(this.x - arm, this.y); ctx.lineTo(this.x + arm, this.y);
+            ctx.moveTo(this.x, this.y - arm); ctx.lineTo(this.x, this.y + arm);
+            ctx.stroke();
+        } else {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+            ctx.beginPath();
+            ctx.arc(this.x - this.size * 0.25, this.y - this.size * 0.25, this.size * 0.35, 0, Math.PI * 2);
+            ctx.fill();
+        }
         ctx.restore();
     }
 }

@@ -3,11 +3,13 @@
 import { state } from '../core/state.js';
 import { emit } from '../core/events.js';
 import { ACCOUNT } from '../config.js';
+import { BALANCE } from '../data/balance.js';
 import { getItem, SEASON_ITEM_IDS, MASTERY_KILLS, masterySkinId, ITEMS_DB } from '../data/items.js';
 import { scheduleSave, saveNow } from './account.js';
 import { hourlyProgress, addHourlyProgress, shopEntryFor } from './shop.js';
 
-export const xpForNextLevel = (level) => level * ACCOUNT.xpPerLevel;
+// XP to go from `level` to the next one.
+export const xpForNextLevel = (level) => BALANCE.xp.perLevelBase + BALANCE.xp.perLevel * level;
 
 // Adds account XP. Returns the list of levels reached (empty if none).
 export function addAccountXP(amount) {

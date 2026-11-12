@@ -3,7 +3,8 @@
 // ("replicas") but still fires their guns locally so bullets reach you without lag.
 import { Projectile } from '../../entities/Projectile.js';
 import { distance } from '../../core/math.js';
-import { volleyAngles, isEnemy, isGhosting } from '../combat.js';
+import { volleyAngles, volleyDamageScale, isEnemy, isGhosting } from '../combat.js';
+import { BALANCE } from '../../data/balance.js';
 
 export function updateBots(engine) {
     const referencePoints = engine.player && !engine.isDemo ? engine.player.points : 100;
@@ -86,13 +87,15 @@ function keepInBounds(engine, bot) {
 
 function fireWeapons(engine, bot) {
     if (bot.fireCooldown <= 0 && hasEnemyNearby(engine, bot)) {
-        for (const angle of volleyAngles(bot)) engine.fireProjectile(bot, angle);
+        const angles = volleyAngles(bot);
+        const scale = volleyDamageScale(angles.length);
+        for (const angle of angles) engine.fireProjectile(bot, angle, scale);
         bot.fireCooldown = bot.fireRate;
     }
     if (bot.missiles > 0) {
         if (bot.missileCooldown <= 0) {
             engine.addProjectile(new Projectile(bot.x, bot.y, bot.angle, bot, { isMissile: true }));
-            bot.missileCooldown = Math.max(20, 90 - bot.missiles * 15);
+            bot.missileCooldown = BALANCE.upgrades.missileCooldown.base - bot.missiles * BALANCE.upgrades.missileCooldown.perTier;
         }
         bot.missileCooldown--;
     }

@@ -72,6 +72,7 @@
     .locker-slots-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; width: 100%; }
     .locker-slot { padding: 10px; width: 100%; }
     .slot-icon { font-size: 2rem; margin: 5px 0; }
+    .slot-icon .item-thumb { width: 56px; height: 56px; }
     .slot-name { font-size: 0.9rem; }
     #locker-items-view { max-height: none; overflow: visible; width: 100%; }
     #locker-item-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; padding-bottom: 20px; overflow: visible;}

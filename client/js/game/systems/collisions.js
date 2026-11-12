@@ -3,8 +3,9 @@
 import { distance } from '../../core/math.js';
 import { isEnemy, isGhosting, isImmune } from '../combat.js';
 import { orbiterPositions, ORBITER_BLADE_RADIUS } from '../../entities/geometry.js';
+import { BALANCE } from '../../data/balance.js';
 
-const ORBITER_HIT_COOLDOWN = 20;   // ticks between hits on the same target
+const B = BALANCE.upgrades;
 
 export function updateCollisions(engine) {
     const ships = engine.ships;
@@ -45,8 +46,8 @@ function pushApart(engine, a, b, dist, minDistance) {
 
 function spikeHit(engine, attacker, target) {
     if (attacker.spikes <= 0 || attacker.spikeCooldown > 0) return;
-    attacker.spikeCooldown = 30;
-    const damage = attacker.type === 'square' ? attacker.spikes * 2.5 : attacker.spikes * 5;
+    attacker.spikeCooldown = B.spikeCooldownTicks;
+    const damage = attacker.spikes * (B.spikeDamagePerTier[attacker.type] || 5);
     if (!isImmune(target)) engine.spawnParticles(target.x, target.y, '#ff4444', 5);
     engine.damage(target, damage, attacker, { hitSound: 0.4, shake: 8 });
 }
@@ -71,9 +72,9 @@ function updateOrbiters(engine) {
             if ((owner.orbiterHitTicks.get(target.uid) || 0) > engine.frame) continue;
             const touching = blades.some(b => distance(b.x, b.y, target.x, target.y) < ORBITER_BLADE_RADIUS + target.size);
             if (!touching) continue;
-            owner.orbiterHitTicks.set(target.uid, engine.frame + ORBITER_HIT_COOLDOWN);
+            owner.orbiterHitTicks.set(target.uid, engine.frame + Math.round(B.orbiterHitCooldownTicks / owner.overclock));
             engine.spawnParticles(target.x, target.y, '#a855f7', 4);
-            engine.damage(target, 6 * owner.orbiterDamage, owner, { hitSound: 0.3 });
+            engine.damage(target, B.orbiterDamagePerTier * owner.orbiterDamage, owner, { hitSound: 0.3 });
         }
     }
 }

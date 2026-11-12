@@ -72,7 +72,7 @@ export function updateStorm(engine) {
     if (!storm.active || engine.intro.active) return;
 
     const seconds = Math.max(0, (performance.now() - storm.startedAt) / 1000 - storm.delaySeconds);
-    storm.radius = Math.max(0, storm.startRadius - STORM.shrinkPerSecond * seconds);
+    storm.radius = Math.max(storm.minRadius || 0, storm.startRadius - (storm.shrinkPerSecond ?? STORM.shrinkPerSecond) * seconds);
 
     if (engine.frame % STORM.damageEveryTicks !== 0) return;
     for (const ship of engine.ships) {

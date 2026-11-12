@@ -2,9 +2,15 @@
 // Holds stats, upgrades, cooldowns and movement. Drawing lives in render/entityRenderer.js.
 import { CLASS_STATS } from '../data/classes.js';
 import { UPGRADE_POOL, getUpgrade, maxTierOf } from '../data/upgrades.js';
-import { emptyLoadout, getItem } from '../data/items.js';
+import { BALANCE } from '../data/balance.js';
+import { emptyLoadout, getItem, bodyColorFor, bodyFinishFor, loadoutForClass } from '../data/items.js';
 import { drawEntity } from './render/entityRenderer.js';
-import { ABILITY_DURATION, DEFAULT_ABILITY_DURATION, armorTierOf } from './geometry.js';
+import { spawnTrail, spawnDashEcho, spawnThrusterFlame, updateTrailParticles } from './render/trails.js';
+import { SHIP_PALETTE } from './render/palette.js';
+import { armorTierOf } from './geometry.js';
+
+// Thruster flame colour per tier (T1..T5).
+const FLAME_COLORS = [null, '#ffb347', '#ff8a3d', '#ffd166', '#5eead4', '#f0abfc'];
 
 let nextUid = 1;
 
@@ -20,7 +26,8 @@ export class Entity {
         this.vx = 0;
         this.vy = 0;
         this.angle = 0;
-        this.color = `hsl(${Math.floor(Math.random() * 360)}, 80%, 60%)`;
+        this.color = SHIP_PALETTE[Math.floor(Math.random() * SHIP_PALETTE.length)];
+        this.colorFinish = null;           // special paint from a Color cosmetic (render/finishes.js)
         this.name = 'Entity';
         this.team = null;              // ships with the same team never hurt each other
 
@@ -37,6 +44,7 @@ export class Entity {
         this.upgradeCount = 0;
 
         Object.assign(this, CLASS_STATS[this.type]); // speed, size, maxHealth, fireRate, baseDamage, dashMaxCooldown, bulletSpeed
+        this.base = { ...CLASS_STATS[this.type] };  // percentage upgrades are based on these
         this.baseSize = this.size;
         this.health = this.maxHealth;
         this.fireCooldown = 0;
@@ -78,6 +86,7 @@ export class Entity {
         this.shrapnel = 0;
         this.wantsShockwave = false;
         this.orbiterHitTicks = new Map(); // target uid -> tick of next allowed orbiter hit
+        this.shockwaveCooldown = 0;
 
         // Visual add-ons unlocked by upgrades
         this.frontVisual = null;
@@ -104,6 +113,7 @@ export class Entity {
         if (def.isActiveAbility) {
             if (this.activeAbility === upgradeId) return false;
             this.activeAbility = upgradeId;
+            this.abilityMaxCooldown = def.cooldown ?? 450;
             this.upgrades[upgradeId] = 1;
             return true;
         }
@@ -144,11 +154,12 @@ export class Entity {
 
     useAbility({ ignoreCooldown = false } = {}) {
         if (!this.activeAbility || (!ignoreCooldown && this.abilityCooldown > 0)) return false;
+        const def = getUpgrade(this.activeAbility);
         this.abilityCooldown = this.abilityMaxCooldown;
-        this.abilityTimer = ABILITY_DURATION[this.activeAbility] ?? DEFAULT_ABILITY_DURATION;
+        this.abilityTimer = def?.duration ?? 120;
         if (this.activeAbility === 'juggernaut') {
             this.size = this.baseSize * 1.5;
-            this.health = this.maxHealth;
+            this.health = Math.min(this.maxHealth, this.health + this.maxHealth * 0.15);
         }
         this.abilityTriggered = true;
         return true;
@@ -167,7 +178,10 @@ export class Entity {
         this.upgradeProgress = Math.max(0, this.upgradeProgress - cost);
         this.dashCooldown = this.dashMaxCooldown;
         this.dashTimer = 10;
-        if (this.shockwave > 0) this.wantsShockwave = true;
+        if (this.shockwave > 0 && this.shockwaveCooldown <= 0) {
+            this.wantsShockwave = true;
+            this.shockwaveCooldown = BALANCE.upgrades.shockwaveCooldownTicks;
+        }
 
         let length = Math.hypot(dx, dy);
         if (length === 0) {
@@ -203,6 +217,7 @@ export class Entity {
         if (this.fireCooldown > 0) this.fireCooldown -= fireRateMultiplier;
         if (this.dashCooldown > 0) this.dashCooldown--;
         if (this.spikeCooldown > 0) this.spikeCooldown--;
+        if (this.shockwaveCooldown > 0) this.shockwaveCooldown--;
         if (this.dashTimer > 0) this.dashTimer--;
         if (this.abilityCooldown > 0) this.abilityCooldown--;
 
@@ -214,8 +229,8 @@ export class Entity {
             this.isCloaked = false;
         }
 
-        if (regen && this.regen > 0 && Math.random() < 0.05) {
-            this.health = Math.min(this.maxHealth, this.health + this.regen);
+        if (regen && this.regen > 0 && this.health < this.maxHealth) {
+            this.health = Math.min(this.maxHealth, this.health + this.maxHealth * BALANCE.upgrades.regenPctPerSec * this.regen / 60);
         }
     }
 
@@ -223,84 +238,45 @@ export class Entity {
         return this.dashTimer > 0 || (this.abilityTimer > 0 && this.activeAbility === 'phase_strike');
     }
 
-    // Trail particles: dash afterimages, equipped Trail smoke, and thruster flames.
+    // Trail particles: dash afterimages, the equipped Trail, and thruster flames (see render/trails.js).
     updateTrail() {
-        const speed = Math.hypot(this.vx, this.vy);
+        const moving = Math.hypot(this.vx, this.vy) > 1.0;
         const trailItem = getItem(this.equipped.Trail);
         const dashing = this.isDashing();
 
-        if (dashing && !trailItem) {
-            this.trail.push({ type: 'ghost', x: this.x, y: this.y, angle: this.angle, alpha: 0.25, color: this.color });
-        } else if (trailItem && (dashing || speed > 1.0)) {
-            const alpha = dashing ? 0.7 : 0.5;
-            const backAngle = Math.atan2(this.vy, this.vx) + Math.PI;
-            const spawnRadius = this.type === 'square' ? this.size / 2 : this.size * 0.8;
-            const exhaustAngle = backAngle + (Math.random() - 0.5) * 1.2;
-            const exhaustSpeed = Math.random() * 2 + (dashing ? 3 : 1);
-            this.trail.push({
-                type: 'smoke',
-                x: this.x + Math.cos(backAngle) * spawnRadius + (Math.random() - 0.5) * 8,
-                y: this.y + Math.sin(backAngle) * spawnRadius + (Math.random() - 0.5) * 8,
-                vx: Math.cos(exhaustAngle) * exhaustSpeed,
-                vy: Math.sin(exhaustAngle) * exhaustSpeed,
-                angle: this.angle + (Math.random() - 0.5),
-                rotSpeed: (Math.random() - 0.5) * 0.2,
-                alpha,
-                startAlpha: alpha,
-                isDashing: dashing,
-                color: trailItem.value
-            });
-        }
+        if (trailItem && (dashing || moving)) spawnTrail(this, trailItem, dashing);
+        else if (dashing) spawnDashEcho(this);
+        if (this.rearVisual === 'thrusters' && (dashing || moving)) this.spawnThrusterFlames(dashing);
+        updateTrailParticles(this);
+    }
 
-        if (this.rearVisual === 'thrusters' && (dashing || speed > 1.0)) this.spawnThrusterFlames(dashing);
-
-        for (let i = this.trail.length - 1; i >= 0; i--) {
-            const t = this.trail[i];
-            if (t.type === 'smoke') {
-                t.x += t.vx;
-                t.y += t.vy;
-                t.angle += t.rotSpeed;
-                t.vx *= 0.9;
-                t.vy *= 0.9;
-                t.alpha -= 0.03;
-            } else if (t.type === 'fire') {
-                t.x += t.vx;
-                t.y += t.vy;
-                t.alpha -= 0.12;
-            } else {
-                t.alpha -= 0.05;
+    // Flames from the two thruster nozzles (positions match the drawn nozzles).
+    spawnThrusterFlames(dashing) {
+        const tier = Math.max(1, Math.max(this.upgrades.speed || 0, this.upgrades.dash || 0));
+        const armor = this.bodyVisual === 'armor' ? 3 + Math.max(1, armorTierOf(this)) * 1.4 : 0;
+        const exitX = -(this.type === 'circle' ? this.size : this.size / 2) - armor + 3 - (7 + tier * 2) - 1;
+        const spread = this.type === 'square' ? this.size * 0.3 : this.size * 0.42;
+        const cos = Math.cos(this.angle);
+        const sin = Math.sin(this.angle);
+        // Higher tiers get bigger flames rather than more of them (keeps the particle count low).
+        const count = dashing ? 2 : 1;
+        const color = FLAME_COLORS[tier];
+        const size = 2.2 + tier * 0.45;
+        for (let k = 0; k < count; k++) {
+            for (const side of [-1, 1]) {
+                const x = this.x + cos * exitX - sin * side * spread;
+                const y = this.y + sin * exitX + cos * side * spread;
+                const a = this.angle + Math.PI + (Math.random() - 0.5) * 0.5;
+                spawnThrusterFlame(this, x, y, a, Math.random() * 2.5 + (dashing ? 4.5 : 2), color, size);
             }
-            if (t.alpha <= 0) this.trail.splice(i, 1);
         }
     }
 
-    spawnThrusterFlames(dashing) {
-        const tier = Math.max(this.upgrades.speed || 0, this.upgrades.dash || 0);
-        const len = 8 + tier * 3;
-        const armorTier = armorTierOf(this);
-        let back = this.type === 'circle' ? -this.size : -this.size / 2;
-        if (this.bodyVisual === 'armor') back -= 4 + armorTier + (4 + armorTier * 1.5) / 2;
-        const spread = this.type === 'square' ? this.size * 0.35 : this.size * 0.45;
-        const cos = Math.cos(this.angle);
-        const sin = Math.sin(this.angle);
-        const nozzles = [-spread, spread].map(side => ({
-            x: this.x + cos * (back - len) - sin * side,
-            y: this.y + sin * (back - len) + cos * side
-        }));
-        const count = dashing ? 3 + tier : 1 + Math.floor(tier / 2);
-        const color = tier >= 5 ? '#ff00ff' : tier === 4 ? '#00ffcc' : tier === 3 ? '#ffd700' : tier === 2 ? '#ff2200' : '#ffaa00';
-
-        for (let k = 0; k < count; k++) {
-            const flameSpeed = Math.random() * 3 + (dashing ? 5 : 2);
-            for (const n of nozzles) {
-                const a = this.angle + Math.PI + (Math.random() - 0.5) * 0.6;
-                this.trail.push({
-                    type: 'fire', x: n.x, y: n.y,
-                    vx: Math.cos(a) * flameSpeed, vy: Math.sin(a) * flameSpeed,
-                    alpha: 1.0, color, size: 2 + Math.random() * 2
-                });
-            }
-        }
+    // Puts on a set of cosmetics (keeps only valid items for this class).
+    applyLoadout(equipped) {
+        this.equipped = loadoutForClass(equipped, this.type);
+        this.color = getItem(this.equipped.Color) ? bodyColorFor(this.equipped) : this.color;
+        this.colorFinish = bodyFinishFor(this.equipped);
     }
 
     draw(ctx, options) {

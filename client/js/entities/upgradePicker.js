@@ -6,6 +6,7 @@ export function availableUpgrades(entity, { abilities = true } = {}) {
     return UPGRADE_POOL.filter(upg => {
         if (upg.isActiveAbility && (!abilities || entity.activeAbility)) return false;
         if ((entity.upgrades[upg.id] || 0) >= maxTierOf(upg, entity)) return false;
+        if (upg.requires && !(entity.upgrades[upg.requires] > 0)) return false;
         return !upg.classes || upg.classes.includes(entity.type);
     });
 }

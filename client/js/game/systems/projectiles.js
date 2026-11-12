@@ -3,7 +3,7 @@ import { Projectile } from '../../entities/Projectile.js';
 import { distance } from '../../core/math.js';
 import { isEnemy, isGhosting } from '../combat.js';
 
-const NUKE_RADIUS = 280;
+const NUKE_RADIUS = 320;
 
 export function updateProjectiles(engine) {
     const ships = engine.ships;

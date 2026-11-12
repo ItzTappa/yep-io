@@ -3,7 +3,8 @@ import { settings } from '../../core/settings.js';
 import { sounds } from '../../core/sound.js';
 import { OFFENSIVE_ABILITIES } from '../../data/upgrades.js';
 import { Projectile } from '../../entities/Projectile.js';
-import { volleyAngles } from '../combat.js';
+import { volleyAngles, volleyDamageScale } from '../combat.js';
+import { BALANCE } from '../../data/balance.js';
 
 export function updateLocalPlayer(engine) {
     const p = engine.player;
@@ -58,7 +59,8 @@ export function updateLocalPlayer(engine) {
 
     if (p.fireCooldown <= 0) {
         const angles = volleyAngles(p);
-        for (const angle of angles) engine.fireProjectile(p, angle);
+        const scale = volleyDamageScale(angles.length);
+        for (const angle of angles) engine.fireProjectile(p, angle, scale);
         p.fireCooldown = p.fireRate;
         engine.net?.sendShoot(angles, 'b');
     }
@@ -66,7 +68,7 @@ export function updateLocalPlayer(engine) {
     if (p.missiles > 0) {
         if (p.missileCooldown <= 0) {
             engine.addProjectile(new Projectile(p.x, p.y, p.angle, p, { isMissile: true }));
-            p.missileCooldown = Math.max(20, 90 - p.missiles * 15);
+            p.missileCooldown = BALANCE.upgrades.missileCooldown.base - p.missiles * BALANCE.upgrades.missileCooldown.perTier;
             engine.net?.sendShoot([p.angle], 'm');
         }
         p.missileCooldown--;

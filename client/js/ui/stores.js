@@ -8,6 +8,7 @@ import { ITEMS_DB, SEASON_ITEM_IDS, SEASON_MAX_LEVEL, getItem, itemColor } from 
 import { canClaim, claimItem, isClaimed, toggleEquip } from '../services/profile.js';
 import { getShop, hourlyProgress, msUntilRotation } from '../services/shop.js';
 import { openPreview } from './previews.js';
+import { itemIconHtml } from './itemThumbnails.js';
 
 const HOLD_MS = 1000;
 
@@ -32,6 +33,7 @@ export function initStores() {
 
     on('profile:changed', renderStores);
     on('shop:rotated', renderStores);
+    on('class:changed', renderStores);
     on('tab:changed', (tab) => { if (tab === 'season' || tab === 'store') renderStores(); });
 
     updateTimer();
@@ -53,7 +55,7 @@ function itemCard(item, color, { unlocked, reqText, footer }) {
     const previewable = item.category !== 'Banner';
     return `
         <div class="store-item ${unlocked ? 'unlocked' : 'locked'}" style="--rarity-color: ${color};">
-            <div class="item-icon ${previewable ? '' : 'not-previewable'}" data-id="${item.id}" ${previewable ? 'title="Click to Preview"' : ''}>${item.icon}</div>
+            <div class="item-icon ${previewable ? '' : 'not-previewable'}" data-id="${item.id}" ${previewable ? 'title="Click to Preview"' : ''}>${itemIconHtml(item)}</div>
             <div class="item-category">${item.category}</div>
             <div class="item-name">${escapeHtml(item.name)}</div>
             <div class="item-req">${reqText}</div>

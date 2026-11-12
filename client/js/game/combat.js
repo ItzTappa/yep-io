@@ -1,4 +1,6 @@
 // Shared combat rules: who is friendly, who is immune, and how a trigger pull spreads.
+import { BALANCE } from '../data/balance.js';
+
 export const IMMUNE_ABILITIES = new Set(['shield', 'juggernaut', 'phase_strike']);
 
 // Shield, Juggernaut and Phase Strike block all incoming damage while active.
@@ -27,6 +29,11 @@ export function volleyAngles(ship) {
         angles.push(angle);
     }
     return angles;
+}
+
+// Multishot: a volley deals 1 bullet + BALANCE.upgrades.multishotExtraDamage per extra barrel, shared across the barrels.
+export function volleyDamageScale(shots) {
+    return (1 + BALANCE.upgrades.multishotExtraDamage * (shots - 1)) / shots;
 }
 
 // Account XP for a kill. Killing someone with more points than you is worth up to 5x.

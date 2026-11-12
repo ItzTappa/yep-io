@@ -95,6 +95,8 @@
 .item-req { color: var(--rarity-color); }
 .item-progress-fill { background: var(--rarity-color); box-shadow: 0 0 10px var(--rarity-color); }
 .item-icon.not-previewable { cursor: default; }
+.item-icon .item-thumb { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+.slot-icon .item-thumb { width: 72px; height: 72px; display: block; margin: 0 auto; pointer-events: none; }
 
 /* Match history cards */
 .empty-history { grid-column: auto; }

@@ -7,12 +7,13 @@ import { createRng, hashString } from '../core/math.js';
 
 const SHOP_SIZE = 4;
 
-// Targets per rarity (1 = common ... 5 = legendary). Each shop slot gets ±20% of this.
+// Targets per rarity (1 = common ... 5 = legendary), each roughly 5 / 10 / 15 / 25 / 40 minutes of
+// play within the hour, whichever stat you get. Each shop slot gets ±20% of this.
 const STAT_TYPES = [
-    { type: 'kills', label: 'Kills', targets: [15, 30, 50, 80, 120] },
-    { type: 'distance', label: 'Dist.', targets: [15000, 30000, 60000, 90000, 150000] },
-    { type: 'time', label: 'Secs', targets: [300, 600, 1200, 2400, 3600] },
-    { type: 'points', label: 'Pts', targets: [1000, 2500, 5000, 10000, 20000] }
+    { type: 'kills', label: 'Kills', targets: [8, 15, 22, 38, 60] },
+    { type: 'distance', label: 'Dist.', targets: [120000, 240000, 360000, 600000, 960000] },
+    { type: 'time', label: 'Secs', targets: [300, 600, 900, 1500, 2400] },
+    { type: 'points', label: 'Pts', targets: [3000, 6000, 9000, 15000, 24000] }
 ];
 
 const ROTATING = Object.values(ITEMS_DB).filter(i => i.isRotating && !i.hideFromStore);

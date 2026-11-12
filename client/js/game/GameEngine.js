@@ -7,6 +7,7 @@
 //   br    - multiplayer battle royale: your team vs bots, shrinking storm, last team standing
 //   duel  - multiplayer 1v1 on a small map, no bots or orbs
 import { TICK_MS, WORLD, MATCH, STORM } from '../config.js';
+import { BALANCE } from '../data/balance.js';
 import { settings } from '../core/settings.js';
 import { sounds } from '../core/sound.js';
 import { distance, createRng } from '../core/math.js';
@@ -111,7 +112,7 @@ export class GameEngine {
         this.hasEnemies = false;
         this.isGameOver = false;
         this.spectateTarget = null;
-        this.storm = { active: false, x: worldSize / 2, y: worldSize / 2, radius: 0, startRadius: STORM.startRadius, startedAt: 0, delaySeconds: 0 };
+        this.storm = { active: false, x: worldSize / 2, y: worldSize / 2, radius: 0, startRadius: STORM.startRadius, minRadius: 0, shrinkPerSecond: STORM.shrinkPerSecond, startedAt: 0, delaySeconds: 0 };
         this.matchStats = { startTime: Date.now(), deathTime: null, xpEarned: 0, distance: 0, lastX: 0, lastY: 0, totalPlayers: 1 };
         this.forfeitArmedUntil = 0;
         this.leaderboardTick = 0;
@@ -148,7 +149,7 @@ export class GameEngine {
         const seed = Math.random();
         for (let i = 0; i < MATCH.soloBots; i++) {
             let pts;
-            if (seed > 0.9) pts = Math.random() < 0.2 ? Math.random() * 5000 : Math.random() * 500;
+            if (seed > 0.9) pts = Math.random() < 0.2 ? Math.random() * BALANCE.bots.soloStackedMaxPoints : Math.random() * 500;
             else if (seed < 0.4) pts = Math.random() * 80;
             else pts = Math.random() < 0.1 ? Math.random() * 1000 : Math.random() * 100;
             const spawn = this.getSafeSpawnPosition();
@@ -200,12 +201,17 @@ export class GameEngine {
         }
         if (!duel) this.spawnOrbs();
 
+        // Battle royale storm stops at a final circle; duels get a small storm so nobody can kite forever.
+        const S = BALANCE.storm;
         this.storm = {
             ...this.storm,
-            active: !duel,
-            radius: STORM.startRadius,
+            active: true,
+            startRadius: duel ? S.duelStartRadius : STORM.startRadius,
+            radius: duel ? S.duelStartRadius : STORM.startRadius,
+            minRadius: duel ? S.duelMinRadius : S.minRadius,
+            shrinkPerSecond: duel ? S.duelShrinkPerSecond : STORM.shrinkPerSecond,
             startedAt: performance.now(),
-            delaySeconds: MATCH.introTicks / 60
+            delaySeconds: MATCH.introTicks / 60 + (duel ? S.duelDelaySeconds : 0)
         };
         this.matchStats.totalPlayers = duel ? 2 : MATCH.brTotalPlayers;
 
@@ -314,9 +320,16 @@ export class GameEngine {
         this.projectiles.push(projectile);
     }
 
-    fireProjectile(owner, angle) {
-        this.projectiles.push(new Projectile(owner.x, owner.y, angle, owner));
-        if (owner.rearguard > 0) this.projectiles.push(new Projectile(owner.x, owner.y, angle + Math.PI, owner));
+    // damageScale < 1 for Multishot volleys (see combat.volleyDamageScale).
+    fireProjectile(owner, angle, damageScale = 1) {
+        const shot = new Projectile(owner.x, owner.y, angle, owner);
+        shot.damage *= damageScale;
+        this.projectiles.push(shot);
+        if (owner.rearguard > 0) {
+            const rear = new Projectile(owner.x, owner.y, angle + Math.PI, owner);
+            rear.damage *= damageScale * BALANCE.upgrades.rearguardDamage[Math.min(3, owner.rearguard)];
+            this.projectiles.push(rear);
+        }
     }
 
     spawnParticles(x, y, color, amount) {
@@ -360,7 +373,12 @@ export class GameEngine {
             if (hitSound) this.playSoundAt('take_damage', target.x, target.y, { volume: 0.1 });
             return false;
         }
-        const final = armor ? Math.max(1, amount - target.plating * 2) : amount;
+        const final = armor ? Math.max(1, amount * (1 - BALANCE.upgrades.platingReduction * target.plating)) : amount;
+
+        // Vampirism: heal a share of the damage you deal (the attacker's own computer applies it).
+        if (attacker && attacker.vampirism > 0 && (attacker === this.player || (attacker.isBot && !attacker.isReplica)) && !attacker.isDead) {
+            attacker.health = Math.min(attacker.maxHealth, attacker.health + final * BALANCE.upgrades.lifestealPct * attacker.vampirism);
+        }
 
         if (particles) this.spawnParticles(particles.x, particles.y, particles.color, particles.count);
         if (hitSound) {
@@ -400,12 +418,6 @@ export class GameEngine {
             this.player.kills++;
             this.addXP(killXp(this.player.points, victim.points || 0));
         }
-        // Vampirism heals whoever this computer controls (others heal on their own computer).
-        if (killer && killer.vampirism > 0 && (killer === this.player || (killer.isBot && !killer.isReplica))) {
-            killer.health = Math.min(killer.maxHealth, killer.health + killer.vampirism);
-            this.spawnParticles(killer.x, killer.y, '#ff0044', 5);
-        }
-
         this.dropLoot(victim, killer);
 
         if (isLocal) {
@@ -498,7 +510,11 @@ export class GameEngine {
         setVisible($('mobile-controls'), false);
 
         const timeAlive = Math.floor(((this.matchStats.deathTime || Date.now()) - this.matchStats.startTime) / 1000);
-        this.addXP(timeAlive * 2);
+        const X = BALANCE.xp;
+        let xp = timeAlive * X.perSecondAlive;
+        if (result === 'victory') xp += this.mode === 'duel' ? X.duelVictory : X.brVictory;
+        if (this.mode === 'br' && placement) xp += Math.max(0, this.matchStats.totalPlayers - placement) * X.brPerPlacement;
+        this.addXP(xp);
 
         if (placement === null) {
             // Solo: your place on the leaderboard when you died.
@@ -817,7 +833,7 @@ class UpgradeFlow {
             this.showNext();
             return;
         }
-        engine.addXP(15);
+        engine.addXP(BALANCE.xp.perUpgrade);
         engine.refreshBadges();
 
         hideUpgradeCards();

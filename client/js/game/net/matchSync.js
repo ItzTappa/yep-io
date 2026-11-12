@@ -22,6 +22,7 @@ import { Bot } from '../../entities/Bot.js';
 import { isAbility } from '../../data/upgrades.js';
 import { Projectile } from '../../entities/Projectile.js';
 import { applyNetZones } from '../systems/zones.js';
+import { volleyDamageScale } from '../combat.js';
 
 const round = (n, digits = 0) => {
     const f = 10 ** digits;
@@ -153,10 +154,11 @@ export class MatchSync {
     onShoot(d) {
         const shooter = this.remote(d);
         if (!shooter || shooter.isDead || !Array.isArray(d.a)) return;
-        for (const angle of d.a.slice(0, 12)) {
-            if (!finite(angle)) continue;
+        const angles = d.a.slice(0, 12).filter(finite);
+        const scale = volleyDamageScale(angles.length || 1);
+        for (const angle of angles) {
             if (d.k === 'm') this.engine.addProjectile(new Projectile(shooter.x, shooter.y, angle, shooter, { isMissile: true }));
-            else this.engine.fireProjectile(shooter, angle);
+            else this.engine.fireProjectile(shooter, angle, scale);
         }
     }
 

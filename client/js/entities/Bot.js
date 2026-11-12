@@ -1,9 +1,10 @@
 // AI-controlled ships. Each bot is its own team (bots fight each other too).
 import { Entity } from './Entity.js';
-import { ITEMS_DB, loadoutForClass } from '../data/items.js';
+import { ITEMS_DB } from '../data/items.js';
 import { randomBotName } from '../data/botNames.js';
 import { getWeightedUpgrades } from './upgradePicker.js';
 import { distance } from '../core/math.js';
+import { BALANCE } from '../data/balance.js';
 
 const COLORS = Object.values(ITEMS_DB).filter(i => i.category === 'Color');
 const SKINS = Object.values(ITEMS_DB).filter(i => i.category === 'Skin' && !i.masteryClass);
@@ -40,10 +41,11 @@ export class Bot extends Entity {
     }
 
     randomizeLook() {
-        if (Math.random() < 0.6) this.color = pick(COLORS).value;
+        if (Math.random() < 0.6) this.equipped.Color = pick(COLORS).id;
         if (Math.random() < 0.3) this.equipped.Skin = pick(SKINS).id;
         if (Math.random() < 0.3) this.equipped.Trail = pick(TRAILS).id;
         if (Math.random() < 0.3) this.equipped.Banner = pick(BANNERS).id;
+        this.applyLoadout(this.equipped);
     }
 
     // Bots pick a random upgrade every time their upgrade bar fills.
@@ -90,7 +92,7 @@ export class Bot extends Entity {
     applyNetMeta(meta) {
         if (typeof meta.n === 'string') this.name = meta.n.slice(0, 24);
         if (typeof meta.c === 'string') this.color = meta.c;
-        if (meta.e) this.equipped = loadoutForClass(meta.e, this.type);
+        if (meta.e) this.applyLoadout(meta.e);
         if (meta.u) this.syncUpgradeTiers(meta.u);
         this.upgradeCount = Object.values(this.upgrades).reduce((a, b) => a + b, 0);
         this.botPointsToNextUpgrade = nextUpgradeCost(this.upgradeCount);
@@ -128,8 +130,9 @@ export class Bot extends Entity {
 
     // Bots drift toward a score relative to the local player, so matches stay competitive.
     rubberBandPoints(referencePoints) {
-        const target = Math.max(100, referencePoints) * (0.1 + this.personality * 1.05);
-        if (this.points > target * 1.2) {
+        const R = BALANCE.bots;
+        const target = Math.max(100, referencePoints) * (R.targetMin + this.personality * R.targetRange);
+        if (this.points > target * R.decayAbove) {
             const decay = (this.points - target) * 0.01;
             this.points -= decay;
             this.upgradeProgress = Math.max(0, this.upgradeProgress - decay);
@@ -159,9 +162,10 @@ export class Bot extends Entity {
         }
 
         if (this.health < this.maxHealth * fleeThreshold) {
-            this.angle = Math.atan2(-dy, -dx);
-            this.vx += Math.cos(this.angle) * speed * 0.14;
-            this.vy += Math.sin(this.angle) * speed * 0.14;
+            // Retreat while still facing (and shooting at) the enemy.
+            this.angle = Math.atan2(dy, dx);
+            this.vx -= (dx / dist) * speed * 0.14;
+            this.vy -= (dy / dist) * speed * 0.14;
             if (this.dashCooldown <= 0 && Math.random() < 0.03 && this.dash(-dx, -dy)) this.justDashed = true;
             return;
         }

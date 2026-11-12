@@ -2,7 +2,7 @@
 // multiplayer lobby slots. One animation loop draws whichever of them is visible.
 import { $, setVisible, setupHiDpiCanvas } from '../core/dom.js';
 import { state } from '../core/state.js';
-import { getItem, bodyColorFor, loadoutForClass } from '../data/items.js';
+import { getItem, DEFAULT_BODY_COLOR } from '../data/items.js';
 import { Player } from '../entities/Player.js';
 import { TICK_MS } from '../config.js';
 import { activeTab } from './menu.js';
@@ -46,7 +46,8 @@ export function closePreview() {
 
 export const isPreviewOpen = () => previewItemId !== null;
 
-// Trails only show while moving, so the preview ship circles when a trail is on display.
+// Trails only show while moving, so the preview ship flies in a wide circle when a trail is on
+// display. drawDummy() keeps the camera on the ship, so the trail streams out behind it.
 function step() {
     angle += 0.015;
     const showingTrail = (activeTab() === 'locker' && lockerCategory() === 'Trail') || getItem(previewItemId)?.category === 'Trail';
@@ -58,9 +59,6 @@ function step() {
         dummy.vy = 0;
         dummy.trail = [];
     }
-    // The dummy lives at (0, 0); drawDummy() shifts it (and its trail) to each canvas centre.
-    dummy.x = 0;
-    dummy.y = 0;
     dummy.update();
 }
 
@@ -68,20 +66,15 @@ function drawDummy(canvas, cssSize, type, equipped, shipSize) {
     const ctx = setupHiDpiCanvas(canvas, cssSize, cssSize);
     ctx.clearRect(0, 0, cssSize, cssSize);
     dummy.type = type;
-    dummy.equipped = loadoutForClass(equipped, type);
-    dummy.color = bodyColorFor(dummy.equipped);
+    dummy.color = DEFAULT_BODY_COLOR;
+    dummy.applyLoadout(equipped);
     dummy.angle = angle;
     dummy.size = shipSize;
     const center = cssSize / 2;
-    const baseX = dummy.x;
-    const baseY = dummy.y;
-    dummy.x = center;
-    dummy.y = center;
-    for (const t of dummy.trail) { t.x += center; t.y += center; }
+    ctx.save();
+    ctx.translate(center - dummy.x, center - dummy.y);
     dummy.draw(ctx, { preview: true });
-    for (const t of dummy.trail) { t.x -= center; t.y -= center; }
-    dummy.x = baseX;
-    dummy.y = baseY;
+    ctx.restore();
 }
 
 function draw() {

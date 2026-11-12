@@ -5,6 +5,7 @@ import { on } from '../core/events.js';
 import { CATEGORIES, getItem, itemColor } from '../data/items.js';
 import { toggleEquip } from '../services/profile.js';
 import { openPreview } from './previews.js';
+import { itemIconHtml } from './itemThumbnails.js';
 
 let category = null;
 
@@ -47,7 +48,7 @@ function renderLocker() {
             return `
                 <div class="locker-slot" data-category="${cat}" style="--slot-color: ${itemColor(item)};">
                     <div class="slot-header">${cat}</div>
-                    <div class="slot-icon">${item?.icon || '✖'}</div>
+                    <div class="slot-icon">${item ? itemIconHtml(item) : '✖'}</div>
                     <div class="slot-name">${escapeHtml(item?.name || 'Default')}</div>
                 </div>`;
         }).join('');
@@ -71,7 +72,7 @@ function renderLocker() {
         const isEquipped = equipped[category] === item.id;
         return `
             <div class="store-item unlocked" style="--rarity-color: ${itemColor(item)};">
-                <div class="item-icon" data-id="${item.id}" title="Click to Preview">${item.icon}</div>
+                <div class="item-icon" data-id="${item.id}" title="Click to Preview">${itemIconHtml(item)}</div>
                 <div class="item-category">${item.category}</div>
                 <div class="item-name">${escapeHtml(item.name)}</div>
                 <button class="btn-equip ${isEquipped ? 'equipped' : ''}" data-id="${item.id}">${isEquipped ? '✓ EQUIPPED' : 'EQUIP'}</button>

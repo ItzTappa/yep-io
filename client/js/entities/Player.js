@@ -1,6 +1,6 @@
 // The ship you control.
 import { Entity } from './Entity.js';
-import { bodyColorFor, loadoutForClass } from '../data/items.js';
+import { DEFAULT_BODY_COLOR } from '../data/items.js';
 
 export class Player extends Entity {
     constructor(x, y, type, name = '', equipped = null) {
@@ -12,7 +12,7 @@ export class Player extends Entity {
     }
 
     setLoadout(equipped) {
-        this.equipped = loadoutForClass(equipped, this.type);
-        this.color = bodyColorFor(this.equipped);
+        this.color = DEFAULT_BODY_COLOR;
+        this.applyLoadout(equipped);
     }
 }
