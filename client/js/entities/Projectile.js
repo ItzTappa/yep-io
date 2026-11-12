@@ -103,6 +103,8 @@ export class Projectile {
 
         ctx.rotate(this.angle);
         ctx.scale(this.sizeScale, this.sizeScale);
+        // Fade out over the last few ticks instead of vanishing (nukes explode instead).
+        if (!this.isNuke && this.life < FADE_TICKS) ctx.globalAlpha *= Math.max(0, this.life / FADE_TICKS);
         // Real blur only on the rare special shots; ordinary bullets (there can be hundreds on
         // screen) get a cheap soft halo instead.
         const special = this.isNuke || this.isMissile || this.isRailgun;
@@ -176,6 +178,8 @@ export class Projectile {
         ctx.restore();
     }
 }
+
+const FADE_TICKS = 12;
 
 function capsule(ctx, x, y, w, h) {
     const r = h / 2;

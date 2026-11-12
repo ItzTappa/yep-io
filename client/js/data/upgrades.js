@@ -94,6 +94,10 @@ export const UPGRADE_POOL = [
         apply: (e) => { e.vampirism += 1; }
     },
     {
+        id: 'siphon', title: 'Soul Siphon', desc: 'Each kill heals 6% of your max health.', weight: 45, maxTier: 5,
+        apply: (e) => { e.siphon += 1; }
+    },
+    {
         id: 'magnet', title: 'Orb Magnet', desc: 'Pulls orbs from further away.', weight: 70, maxTier: 5,
         apply: (e) => { e.magnet += 1; }
     },

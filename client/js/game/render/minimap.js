@@ -1,5 +1,5 @@
-// The minimap (top right) and the "ALIVE: N" counter under it.
-// Battle royale hides enemies on the minimap; teammates, slot machines and zones are always shown.
+// The minimap (top right) and the "ALIVE: N" counter under it. Enemies are small red dots,
+// teammates cyan, you yellow; slot machines flash.
 import { $, setupHiDpiCanvas } from '../../core/dom.js';
 
 const SIZE = 220;
@@ -47,12 +47,11 @@ export function drawMinimap(engine) {
 
     const p = engine.player;
     let alive = p && !p.isDead ? 1 : 0;
-    const showEnemies = engine.mode === 'duel' || engine.isGameOver;
     for (const ship of [...engine.bots, ...engine.remotes]) {
         if (ship.isDead) continue;
         alive++;
         if (ship.isTeammate) dot(ship.x, ship.y, '#00ffcc', 3);
-        else if (showEnemies) dot(ship.x, ship.y, '#ff4444', 2);
+        else dot(ship.x, ship.y, '#ff4444', 1.6);
     }
 
     const flash = Math.floor(Date.now() / 250) % 2 === 0 ? '#ffe600' : '#ff00ff';

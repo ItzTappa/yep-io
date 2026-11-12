@@ -66,6 +66,8 @@ export class Input {
             if (this.playing && Object.values(this.engine.keybinds()).includes(key)) e.preventDefault();
             this.keys[key] = true;
             if (this.playing && ['1', '2', '3'].includes(key)) this.engine.upgrades.pick(Number(key) - 1);
+            if (this.playing && ['=', '+'].includes(key)) this.engine.zoomBy(1);
+            if (this.playing && ['-', '_'].includes(key)) this.engine.zoomBy(-1);
         });
         window.addEventListener('keyup', (e) => {
             this.keys[e.key.toLowerCase()] = false;
@@ -76,6 +78,12 @@ export class Input {
     }
 
     bindMouse() {
+        // Mouse wheel zooms the camera during a match (not over menus like the admin panel).
+        window.addEventListener('wheel', (e) => {
+            if (!this.playing || e.target.closest?.('#admin-menu, #dev-console')) return;
+            e.preventDefault();
+            this.engine.zoomBy(e.deltaY < 0 ? 1 : -1);
+        }, { passive: false });
         window.addEventListener('mousemove', (e) => {
             if (this.isTouchDevice) return;
             this.mouseX = e.clientX;

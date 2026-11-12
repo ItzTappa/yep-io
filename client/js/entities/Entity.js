@@ -80,6 +80,7 @@ export class Entity {
         this.heavyArt = 0;
         this.plating = 0;
         this.vampirism = 0;
+        this.siphon = 0;
         this.magnet = 0;
         this.rearguard = 0;
         this.efficiency = 0;
@@ -125,7 +126,7 @@ export class Entity {
         if (['fireRate', 'multiShot', 'damage'].includes(upgradeId) && !this.frontVisual) this.frontVisual = 'gun';
         if (ARMOR_UPGRADES.includes(upgradeId) && !this.bodyVisual) this.bodyVisual = 'armor';
         if ((upgradeId === 'speed' || upgradeId === 'dash') && !this.rearVisual) this.rearVisual = 'thrusters';
-        if ((upgradeId === 'regen' || upgradeId === 'vampirism') && !this.auraVisual) this.auraVisual = 'regen';
+        if (['regen', 'vampirism', 'siphon'].includes(upgradeId) && !this.auraVisual) this.auraVisual = 'regen';
 
         def.apply(this);
         this.upgrades[upgradeId] = tier + 1;

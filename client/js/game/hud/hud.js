@@ -1,5 +1,5 @@
 // In-match HUD: points bar, leaderboard, upgrade badges, spectator banner, notifications,
-// kill feed, the "ELIMINATED" banner and the red screen edge when you get hit.
+// kill feed and the red screen edge when you get hit.
 import { $, escapeHtml, setVisible, slideIn } from '../../core/dom.js';
 import { settings } from '../../core/settings.js';
 import { sounds } from '../../core/sound.js';
@@ -16,7 +16,7 @@ export function resetHud() {
     $('upgrade-badges').innerHTML = '';
     $('leaderboard-list').innerHTML = '';
     $('kill-feed').innerHTML = '';
-    setVisible($('kill-banner'), false);
+    setVisible($('kill-feed'), true);
     setLowHealth(false);
     $('hit-vignette').style.opacity = '0';
     for (const box of document.querySelectorAll('#notif-queue .notif-quest')) box.remove();
@@ -95,18 +95,6 @@ export function addKillFeed({ killer, killerTone, victim, victimTone }) {
     while (feed.children.length > 5) feed.lastElementChild.remove();
     setTimeout(() => row.classList.add('fade'), 5000);
     setTimeout(() => row.remove(), 5600);
-}
-
-let killBannerTimer = null;
-export function showKillBanner(victimName) {
-    const banner = $('kill-banner');
-    $('kill-banner-name').textContent = victimName;
-    setVisible(banner, true);
-    banner.classList.remove('pop');
-    void banner.offsetWidth; // restart the animation
-    banner.classList.add('pop');
-    clearTimeout(killBannerTimer);
-    killBannerTimer = setTimeout(() => setVisible(banner, false), 1800);
 }
 
 // Red flash at the screen edges when you take damage (fraction = share of your max health).

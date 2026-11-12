@@ -1,0 +1,26 @@
+/* Hover / press feel for everything you can click: a small springy lift and a slight brighten on
+   hover, a quick press-in on click. Loaded after the other stylesheets so it applies everywhere
+   (positioning transforms set with an #id, like the password eye button, still win). */
+html body :is(button, .tab-btn, .class-btn, .item-icon:not(.not-previewable), .locker-slot, .quest-cat, .quest-row,
+    .bonus-tile, .friend-item, .match-card, .card, .admin-tab, .mode-option) {
+    transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.18s ease, background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s, opacity 0.2s;
+}
+html body :is(button, .tab-btn, .class-btn, .item-icon:not(.not-previewable), .locker-slot, .quest-cat, .quest-row,
+    .bonus-tile, .friend-item, .match-card, .card, .admin-tab, .mode-option):hover:not(:disabled, .is-waiting) {
+    transform: translateY(-2px);
+    filter: brightness(1.12);
+}
+html body :is(button, .tab-btn, .class-btn, .item-icon:not(.not-previewable), .locker-slot, .quest-cat, .quest-row,
+    .bonus-tile, .friend-item, .match-card, .card, .admin-tab, .mode-option):active:not(:disabled, .is-waiting) {
+    transform: translateY(0) scale(0.97);
+    transition-duration: 0.06s;
+}
+
+/* Buttons that sit inside a joined block (team size, game mode, the mode list) light up in place
+   instead of lifting out of the block. */
+html body :is(.mode-select-btn, .mode-main-btn, .mode-option):hover:not(:disabled) { transform: none; filter: brightness(1.2); }
+html body :is(.mode-select-btn, .mode-main-btn, .mode-option):active:not(:disabled) { transform: scale(0.97); }
+
+/* Keep the existing playful hovers on the round footer buttons. */
+html body #settings-btn:hover { transform: rotate(45deg); }
+html body #account-btn:hover { transform: translateY(-4px); }

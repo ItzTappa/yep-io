@@ -6,7 +6,7 @@ import { setTutorialDone } from '../services/profile.js';
 
 let listeningFor = null;   // action waiting for a key press
 let onApplyHook = null;
-const RESERVED_KEYS = ['escape', '/', '`', '1', '2', '3'];
+const RESERVED_KEYS = ['escape', '/', '`', '1', '2', '3', '=', '+', '-', '_'];
 
 export function initSettingsModal({ onApply }) {
     onApplyHook = onApply;

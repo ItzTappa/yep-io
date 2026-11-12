@@ -33,11 +33,20 @@ export function initLobbyScreen({ onMatchStart }) {
         switchTab('lobby');
     });
 
-    document.querySelectorAll('.mode-select-btn[data-mainmode]').forEach(btn => btn.addEventListener('click', () => {
+    // Game mode: one button showing the current mode; clicking it opens the list above it.
+    $('mode-main-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
         if (!state.lobby) return;
         if (!isLobbyHost()) return showError('ONLY THE HOST CAN CHANGE THE MODE');
+        setModeListOpen($('mode-options').classList.contains('hidden'));
+    });
+    document.querySelectorAll('.mode-option').forEach(btn => btn.addEventListener('click', () => {
+        setModeListOpen(false);
         changeMode({ mainMode: btn.dataset.mainmode });
     }));
+    document.addEventListener('click', (e) => {
+        if (!(e.target instanceof Element) || !e.target.closest('#mode-options')) setModeListOpen(false);
+    });
     document.querySelectorAll('.mode-select-btn[data-teamsize]').forEach(btn => btn.addEventListener('click', () => {
         if (!isLobbyHost()) return showError('ONLY THE HOST CAN CHANGE THE MODE');
         if (state.lobby?.mainMode === '1v1') return; // duels are always 1 vs 1
@@ -61,6 +70,11 @@ export function initLobbyScreen({ onMatchStart }) {
     });
 
     render();
+}
+
+export function setModeListOpen(open) {
+    setVisible($('mode-options'), open);
+    $('mode-picker').classList.toggle('open', open);
 }
 
 // Opening the Multiplayer tab puts you in a lobby of your own (unless you're already in one).
@@ -132,7 +146,8 @@ function render() {
     const mainMode = lobby?.mainMode || 'br';
     const teamSize = lobby?.teamSize || 'duos';
     const duel = mainMode === '1v1';
-    document.querySelectorAll('.mode-select-btn[data-mainmode]').forEach(b => b.classList.toggle('active', b.dataset.mainmode === mainMode));
+    $('mode-main-label').textContent = duel ? '1v1 DUEL' : 'BATTLE ROYALE';
+    document.querySelectorAll('.mode-option').forEach(b => b.classList.toggle('active', b.dataset.mainmode === mainMode));
     // Team size only matters in battle royale: greyed out (but kept in place) for duels.
     document.querySelectorAll('.mode-select-btn[data-teamsize]').forEach(b => b.classList.toggle('active', !duel && b.dataset.teamsize === teamSize));
     $('br-team-selector').classList.toggle('disabled', duel);
@@ -159,7 +174,7 @@ function renderSlots(lobby) {
             continue;
         }
         const isHost = p.id === lobby.hostId;
-        const role = p.id === state.myNetId ? '(YOU)' : isHost ? '(HOST)' : '(PLAYER)';
+        const role = p.id === state.myNetId ? '' : isHost ? '(HOST)' : '(PLAYER)';
         let status = p.ready ? 'READY' : 'NOT READY';
         let statusClass = '';
         if (p.inMatch) status = 'IN MATCH';
@@ -170,7 +185,7 @@ function renderSlots(lobby) {
         html += `
             <div class="player-slot ${p.ready ? 'ready' : ''} ${p.inMatch ? 'in-match' : ''}">
                 <canvas class="lobby-preview-canvas" id="lobby-canvas-${i}"></canvas>
-                <div class="name">${escapeHtml(p.name)} <span class="role-tag">${role}</span></div>
+                <div class="name">${escapeHtml(p.name)}${role ? ` <span class="role-tag">${role}</span>` : ''}</div>
                 <div class="status ${statusClass}">${status}</div>
             </div>`;
     }

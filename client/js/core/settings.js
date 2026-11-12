@@ -16,6 +16,7 @@ export const DEFAULT_SETTINGS = {
     showNotifs: true,
     showMinimap: true,
     damageNumbers: true,
+    zoom: 1,                 // in-match camera zoom (mouse wheel or + / -)
     keybinds: { ...DEFAULT_KEYBINDS }
 };
 

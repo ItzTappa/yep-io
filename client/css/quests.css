@@ -95,7 +95,7 @@
 .bonus-goal { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
 .bonus-tile { position: relative; margin-right: calc((var(--num) - var(--tile)) / 2); cursor: pointer; border-radius: 10px; transition: transform 0.15s; }
 .bonus-tile:hover { transform: scale(1.05); }
-.bonus-goal.selected .reward-chip { box-shadow: 0 0 0 3px var(--accent), 0 0 16px rgba(255, 230, 0, 0.4); }
+.bonus-goal.selected .reward-chip { box-shadow: 0 0 0 3px var(--accent), 0 0 10px rgba(255, 230, 0, 0.25); }
 .reward-chip.big { width: var(--tile); height: var(--tile); }
 .bonus-goal:not(.reached) .reward-chip { opacity: 0.85; }
 .bonus-track { display: flex; align-items: center; width: 100%; gap: 6px; }

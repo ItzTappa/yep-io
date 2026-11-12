@@ -91,7 +91,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 15px;
+    gap: 26px;
     z-index: 100;
     pointer-events: none;
 }
@@ -272,7 +272,7 @@
 .notif-invite .accept-invite-btn { height: 30px; font-size: 0.8rem; margin-top: 8px; padding: 0 15px; width: 100%; }
 
 /* ==========================================
-   FIGHT FEEDBACK: kill feed, kill banner, hit edge
+   FIGHT FEEDBACK: kill feed, hit edge
 ========================================== */
 .kill-feed { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; width: 260px; pointer-events: none; }
 .kf-row { display: flex; align-items: center; gap: 6px; max-width: 100%; background: rgba(0,0,0,0.65); border: 1px solid #333; border-radius: 6px; padding: 4px 10px; font-size: 0.8rem; font-weight: bold; letter-spacing: 0.5px; animation: kfIn 0.25s ease-out; transition: opacity 0.5s; }
@@ -284,17 +284,6 @@
 .kf-storm { color: #c084fc; }
 .kf-verb { color: #9ca3af; font-weight: normal; }
 @keyframes kfIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
-
-#kill-banner { position: absolute; top: 24%; left: 50%; transform: translateX(-50%); text-align: center; pointer-events: none; z-index: 120; }
-#kill-banner.pop { animation: killPop 1.8s ease-out forwards; }
-.kb-label { font-size: 0.85rem; font-weight: 900; letter-spacing: 4px; color: #ef4444; text-shadow: 0 0 10px rgba(239,68,68,0.6), 1px 1px 2px black; }
-.kb-name { font-size: 1.6rem; font-weight: 900; color: white; text-shadow: 0 0 12px rgba(0,0,0,0.9), 2px 2px 3px black; white-space: nowrap; }
-@keyframes killPop {
-    0% { opacity: 0; transform: translateX(-50%) scale(1.5); }
-    12% { opacity: 1; transform: translateX(-50%) scale(1); }
-    75% { opacity: 1; transform: translateX(-50%) scale(1); }
-    100% { opacity: 0; transform: translateX(-50%) scale(0.95); }
-}
 
 #hit-vignette, #low-health-vignette { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
 #hit-vignette { box-shadow: inset 0 0 90px 10px rgba(239, 68, 68, 0.75); }

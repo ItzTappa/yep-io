@@ -14,7 +14,7 @@ import { addAccountXP, recordMatch, setTutorialDone } from './services/profile.j
 import { startQuestMatch, trackQuestStat, reportQuestBest, endQuestMatch } from './services/quests.js';
 import { startShopClock } from './services/shop.js';
 import { initMenu, switchTab } from './ui/menu.js';
-import { initLobbyScreen } from './ui/lobbyScreen.js';
+import { initLobbyScreen, setModeListOpen } from './ui/lobbyScreen.js';
 import { initLocker, lockerCategory } from './ui/locker.js';
 import { initStores } from './ui/stores.js';
 import { initStats } from './ui/stats.js';
@@ -93,6 +93,7 @@ document.addEventListener('keydown', (e) => {
     if (!$('mastery-modal').classList.contains('hidden')) return closeMasteryModal();
     if (!$('account-modal').classList.contains('hidden')) return closeAccountModal();
     if (isSettingsOpen()) return applyAndClose();
+    if (!$('mode-options').classList.contains('hidden')) return setModeListOpen(false);
     if (state.inMatch) engine.requestForfeit();
 });
 

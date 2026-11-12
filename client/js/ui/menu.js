@@ -9,6 +9,7 @@ import { onClassChanged, xpForNextLevel } from '../services/profile.js';
 import { network } from '../services/network.js';
 import { showToast, showError, hideToast } from './toast.js';
 import { openMasteryModal } from './masteryModal.js';
+import { setModeListOpen } from './lobbyScreen.js';
 
 let currentTab = 'lobby';
 const FOOTER_TABS = ['lobby', 'multiplayer', 'season', 'store'];
@@ -83,6 +84,7 @@ export function switchTab(target) {
     setVisible(document.querySelector('.menu-footer'), FOOTER_TABS.includes(target));
     const multiplayer = target === 'multiplayer';
     setVisible($('mode-picker'), multiplayer);
+    if (!multiplayer) setModeListOpen(false);
     setVisible($('footer-center-lobby-controls'), multiplayer);
 
     emit('tab:changed', target);

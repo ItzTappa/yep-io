@@ -8,7 +8,7 @@
 //   duel  - multiplayer 1v1 on a small map, no bots or orbs
 import { TICK_MS, WORLD, MATCH, STORM } from '../config.js';
 import { BALANCE } from '../data/balance.js';
-import { settings } from '../core/settings.js';
+import { settings, saveSettings } from '../core/settings.js';
 import { sounds } from '../core/sound.js';
 import { distance, createRng } from '../core/math.js';
 import { setVisible, $ } from '../core/dom.js';
@@ -39,6 +39,9 @@ import { showUpgradeCards, hideUpgradeCards } from './hud/upgradeCards.js';
 import { showGameOver, hideGameOver } from './hud/gameOver.js';
 import { DamageNumbers } from './render/damageNumbers.js';
 import { Tutorial } from './tutorial.js';
+
+const ZOOM_MIN = 0.7;   // how far out / in players can zoom during a match
+const ZOOM_MAX = 1.4;
 
 const nextUpgradeCost = (count) => Math.floor(15 + count * 12 + Math.pow(count, 1.7) * 1.5);
 
@@ -132,7 +135,7 @@ export class GameEngine {
         this.leaderboardTick = 0;
         this.matchQuests = [];          // quests finished this match (listed on the game over screen)
         this.timeScale = 1;             // admin slow motion
-        this.zoomTarget = 1;            // admin camera zoom
+        this.zoomTarget = 1;            // camera zoom: mouse wheel / + - in a match (and admin /zoom)
         this.adminPacifist = false;     // admin: bots ignore you
         this.admin?.clear();
         this.damageNumbers.clear();
@@ -260,6 +263,7 @@ export class GameEngine {
         hud.resetHud();
         hideGameOver();
         this.showMatchUi(true);
+        this.zoomTarget = settings.zoom || 1;
         this.hooks.onMatchStart?.({ mode: this.mode, classType: p.type });
         this.startLoop();
     }
@@ -362,6 +366,15 @@ export class GameEngine {
         for (let i = 0; i < amount; i++) this.particles.push(new Particle(x, y, color));
     }
 
+    // Mouse wheel / + - keys. steps > 0 zooms in.
+    zoomBy(steps) {
+        if (this.isDemo || this.isGameOver) return;
+        this.zoomTarget = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, this.zoomTarget * Math.pow(1.1, steps)));
+        settings.zoom = Math.round(this.zoomTarget * 100) / 100;
+        clearTimeout(this.zoomSaveTimer);
+        this.zoomSaveTimer = setTimeout(saveSettings, 600);
+    }
+
     shake(amount) {
         if (!this.isDemo) this.camera.shake = Math.max(this.camera.shake, amount);
     }
@@ -455,12 +468,12 @@ export class GameEngine {
         if (killer === this.player && !this.isGameOver && !isLocal) {
             this.player.kills++;
             this.addXP(killXp(this.player.points, victim.points || 0));
-            hud.showKillBanner(victim.name || 'ENEMY');
             sounds.play('kill_confirm', { category: 'alert' });
             if (settings.damageNumbers) this.damageNumbers.marker(victim.x, victim.y, true);
             this.stat('kills');
         }
         this.reportKill(victim, killer);
+        this.siphonHeal(killer);
         this.dropLoot(victim, killer);
 
         if (isLocal) {
@@ -477,6 +490,17 @@ export class GameEngine {
 
         if (this.spectateTarget === victim) this.spectateTarget = null;
         this.checkMatchOutcome(killer);
+    }
+
+    // Soul Siphon: the killer heals (on the computer that controls the killer, like Vampirism).
+    siphonHeal(killer) {
+        if (!killer || !(killer.siphon > 0) || killer.isDead) return;
+        if (killer !== this.player && !(killer.isBot && !killer.isReplica)) return;
+        const heal = Math.min(killer.maxHealth - killer.health, killer.maxHealth * BALANCE.upgrades.siphonPctPerTier * killer.siphon);
+        if (heal <= 0) return;
+        killer.health += heal;
+        this.spawnParticles(killer.x, killer.y, '#22c55e', 10);
+        if (killer === this.player && settings.damageNumbers) this.damageNumbers.addWord(killer, `+${Math.round(heal)} HP`, '#4ade80');
     }
 
     // Kill feed: every kill by or of a real player, plus bot kills close enough to see.

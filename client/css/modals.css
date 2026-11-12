@@ -4,7 +4,7 @@
    SETTINGS & ACCOUNT MODAL (FRIENDS LIST)
 ========================================== */
 .modal { position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 300; pointer-events: auto;}
-.settings-content { background: #222; border: 2px solid var(--accent); padding: 30px; border-radius: 12px; width: 400px; max-height: 90vh; overflow-y: auto; box-shadow: 0 0 20px rgba(255, 230, 0, 0.2); pointer-events: auto; }
+.settings-content { background: #222; border: 2px solid var(--accent); padding: 30px; border-radius: 12px; width: 400px; max-height: 90vh; overflow-y: auto; box-shadow: 0 0 12px rgba(255, 230, 0, 0.12); pointer-events: auto; }
 .settings-content h2 { text-align: center; color: var(--accent); letter-spacing: 2px; }
 
 /* Every popup is a stack with the same gap between its parts (no margins on the parts). */
@@ -41,7 +41,7 @@
 .friend-action-btn { padding: 5px 15px; font-size: 0.8rem; height: 30px; margin-left: 5px; }
 
 /* Golden Invite Class */
-.friend-item.has-invite { border-color: var(--accent); box-shadow: 0 0 15px rgba(255,230,0,0.3); background: rgba(40, 40, 0, 0.6); }
+.friend-item.has-invite { border-color: var(--accent); box-shadow: 0 0 8px rgba(255,230,0,0.2); background: rgba(40, 40, 0, 0.6); }
 .friend-item.has-invite .friend-name span { color: var(--accent) !important; font-size: 0.75rem; text-transform: uppercase; font-style: italic; }
 
 .slider { -webkit-appearance: none; appearance: none; width: 150px; height: 8px; border-radius: 4px; background: #444; outline: none; border: 1px solid #222; }
@@ -93,4 +93,4 @@
 #match-countdown-overlay { position: absolute; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0,0,0,0.8); z-index: 9998; display: flex; flex-direction: column; justify-content: center; align-items: center; pointer-events: none; }
 #match-countdown-overlay:not(.hidden) { gap: var(--space-page); }
 .countdown-label { font-size: 2rem; color: white; letter-spacing: 5px; text-transform: uppercase; }
-#countdown-text { font-size: 8rem; font-weight: bold; color: var(--accent); text-shadow: 0 0 30px var(--accent); }
+#countdown-text { font-size: 8rem; font-weight: bold; color: var(--accent); text-shadow: 0 0 18px rgba(255, 230, 0, 0.5); }

@@ -15,6 +15,7 @@ export const BALANCE = {
         platingHealthPct: 0.05,
         regenPctPerSec: 0.006,      // Nanobots: heal 0.6% of max HP per second per tier
         lifestealPct: 0.05,         // Vampirism: heal 5% of damage dealt per tier
+        siphonPctPerTier: 0.06,     // Soul Siphon: each kill heals 6% of max HP per tier (T5 = 30%)
         dashCooldownMult: 0.85,     // Dash Cooldown: x0.85 per tier
         dashCooldownMinTicks: 40,
         sniperLifeTicks: 10,        // Sniper Sight: +10 ticks of bullet life and +2 bullet speed per tier

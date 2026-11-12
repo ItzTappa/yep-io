@@ -1,6 +1,6 @@
 // The Quests tab: daily and weekly quests, the weekly Bonus Goals track, and each class's
-// mastery progress. Pick a category on the left; click a quest or a Bonus Goal to see its reward
-// in the preview on the right (empty until you pick something).
+// mastery progress. Pick a category on the left; hover a quest or a Bonus Goal to see its reward
+// in the preview on the right (empty otherwise). On touch screens, tap instead of hover.
 import { $, escapeHtml, setVisible } from '../core/dom.js';
 import { state } from '../core/state.js';
 import { on } from '../core/events.js';
@@ -24,6 +24,9 @@ const CATEGORIES = [
 let category = 'daily';
 let selectedKey = null;   // what's in the preview: 'q:<quest id>', 'b:<goal index>' or 'm:<class>'
 let entries = new Map();  // key -> { reward, kind, title, ... } for the page on screen
+let hideTimer = null;
+const PREVIEW_LINGER_MS = 350; // time to move the mouse from a quest to its preview's button
+const canHover = () => window.matchMedia?.('(hover: hover)').matches;
 
 export function initQuests() {
     $('quests').addEventListener('click', (e) => {
@@ -33,17 +36,32 @@ export function initQuests() {
         if (cat) {
             category = cat.dataset.category;
             selectedKey = null;
+            clearTimeout(hideTimer);
             renderQuests();
         } else if (target?.closest('#quest-preview-btn')) {
             previewAction();
         } else if (target?.closest('#quest-preview-close')) {
             selectedKey = null;
             renderQuests();
-        } else if (pick) {
-            // Click again to clear the preview.
-            selectedKey = selectedKey === pick.dataset.select ? null : pick.dataset.select;
-            renderQuests();
+        } else if (pick && !canHover()) {
+            // Touch screens: tap to show, tap again to clear.
+            showPreviewFor(selectedKey === pick.dataset.select ? null : pick.dataset.select);
         }
+    });
+    // Hover a quest to preview its reward. The preview stays while the mouse is on it.
+    $('quests').addEventListener('mouseover', (e) => {
+        if (!canHover() || !(e.target instanceof Element)) return;
+        const pick = e.target.closest('[data-select]');
+        if (pick || e.target.closest('#quest-preview')) clearTimeout(hideTimer);
+        if (pick && pick.dataset.select !== selectedKey) showPreviewFor(pick.dataset.select);
+    });
+    $('quests').addEventListener('mouseout', (e) => {
+        if (!canHover() || !(e.target instanceof Element)) return;
+        const area = '[data-select], #quest-preview';
+        const to = e.relatedTarget instanceof Element ? e.relatedTarget.closest(area) : null;
+        if (!e.target.closest(area) || to) return;
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => showPreviewFor(null), PREVIEW_LINGER_MS);
     });
     on('profile:changed', () => { if (activeTab() === 'quests') renderQuests(); });
     on('class:changed', () => { if (activeTab() === 'quests') renderQuests(); });
@@ -223,6 +241,17 @@ function renderTimer() {
 }
 
 // ---------- preview panel ----------
+
+// Shows (or with null, clears) the preview without rebuilding the page under the mouse.
+function showPreviewFor(key) {
+    selectedKey = key;
+    for (const el of document.querySelectorAll('#quests .selected')) el.classList.remove('selected');
+    if (key) {
+        const el = document.querySelector(`#quests [data-select="${key}"]`);
+        (el?.classList.contains('bonus-tile') ? el.closest('.bonus-goal') : el)?.classList.add('selected');
+    }
+    renderPreview();
+}
 
 function renderPreview() {
     const entry = entries.get(selectedKey) || null;

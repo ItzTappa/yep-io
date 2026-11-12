@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="css/hud.css">
     <link rel="stylesheet" href="css/admin.css">
     <link rel="stylesheet" href="css/mobile.css">
+    <link rel="stylesheet" href="css/interactions.css">
 </head>
 <body>
     <canvas id="gameCanvas"></canvas>
@@ -155,12 +156,13 @@
 
         <div class="menu-footer">
             <div class="footer-left-container">
-                <!-- Multiplayer only: game mode on top, team size underneath, one block -->
+                <!-- Multiplayer only: game mode button on top (opens the list), team size underneath -->
+                <div id="mode-options" class="mode-options hidden">
+                    <button class="mode-option active" data-mainmode="br">BATTLE ROYALE</button>
+                    <button class="mode-option" data-mainmode="1v1">1v1 DUEL</button>
+                </div>
                 <div id="mode-picker" class="mode-picker hidden">
-                    <div class="gamemode-selector">
-                        <button class="mode-select-btn active" data-mainmode="br">BATTLE ROYALE</button>
-                        <button class="mode-select-btn" data-mainmode="1v1">1v1 DUEL</button>
-                    </div>
+                    <button id="mode-main-btn" class="mode-main-btn" aria-haspopup="true"><span id="mode-main-label">BATTLE ROYALE</span><span class="mode-caret">▾</span></button>
                     <div id="br-team-selector" class="gamemode-selector">
                         <button class="mode-select-btn active" data-teamsize="duos">DUOS</button>
                         <button class="mode-select-btn" data-teamsize="trios">TRIOS</button>
@@ -340,11 +342,6 @@
                 <div class="tut-top"><span id="tut-step" class="tut-step">STEP 1 / 6</span><button id="tut-skip-btn" class="tut-skip">SKIP TUTORIAL</button></div>
                 <div id="tut-title" class="tut-title">MOVE</div>
                 <div id="tut-text" class="tut-text"></div>
-            </div>
-
-            <div id="kill-banner" class="hidden">
-                <div class="kb-label">ELIMINATED</div>
-                <div id="kill-banner-name" class="kb-name"></div>
             </div>
 
             <div id="right-hud-column" class="right-hud-column">

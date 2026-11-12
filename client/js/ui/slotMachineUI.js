@@ -1,5 +1,5 @@
 // The Lucky Slot spin animation (bottom right of the HUD). The prize itself is rolled in
-// game/systems/slotMachines.js once the reels stop.
+// game/systems/slotMachines.js once the reels stop. The kill feed is hidden while it runs.
 import { $, setVisible } from '../core/dom.js';
 import { sounds } from '../core/sound.js';
 
@@ -17,6 +17,7 @@ export function playSlotMachine(engine) {
     const reels = ['reel-1', 'reel-2', 'reel-3'].map(id => $(id));
 
     setVisible(ui, true);
+    setVisible($('kill-feed'), false);
     ui.style.opacity = '1';
     setVisible(result, false);
     lever.classList.remove('pulled');
@@ -34,7 +35,7 @@ export function playSlotMachine(engine) {
         reels.forEach(r => r.classList.remove('spinning'));
         const reward = engine.awardSlotMachine();
         if (!reward) {
-            setVisible(ui, false);
+            hideSlotMachine();
             return;
         }
         for (const reel of reels) {
@@ -48,7 +49,7 @@ export function playSlotMachine(engine) {
 
         timers.push(setTimeout(() => {
             ui.style.opacity = '0';
-            timers.push(setTimeout(() => setVisible(ui, false), 300));
+            timers.push(setTimeout(hideSlotMachine, 300));
         }, SHOW_RESULT_MS));
     }, SPIN_MS));
 }
@@ -57,4 +58,5 @@ export function hideSlotMachine() {
     timers.forEach(clearTimeout);
     timers = [];
     setVisible($('slot-machine-ui'), false);
+    setVisible($('kill-feed'), true);
 }
