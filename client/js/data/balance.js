@@ -34,7 +34,7 @@ export const BALANCE = {
         shockwaveCooldownTicks: 90  // at most one shockwave every 1.5 seconds
     },
 
-    healthOrbs: { smallPct: 0.08, bigPct: 0.22, bigChance: 0.25 },
+    healthOrbs: { smallPct: 0.08, bigPct: 0.22, bigChance: 0.25, dropChance: 0.27 }, // dropChance: per kill
 
     bots: {
         // Bots chase a points total relative to the player: 10%..110% of yours by personality.

@@ -35,16 +35,8 @@ export class Orb {
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
-        if (this.type === 'health') {
-            // white "+" so health is readable at a glance
-            const arm = this.size * 0.55;
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = Math.max(1.5, this.size * 0.3);
-            ctx.beginPath();
-            ctx.moveTo(this.x - arm, this.y); ctx.lineTo(this.x + arm, this.y);
-            ctx.moveTo(this.x, this.y - arm); ctx.lineTo(this.x, this.y + arm);
-            ctx.stroke();
-        } else {
+        // Health orbs are plain blue; XP orbs get a small shine.
+        if (this.type !== 'health') {
             ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
             ctx.beginPath();
             ctx.arc(this.x - this.size * 0.25, this.y - this.size * 0.25, this.size * 0.35, 0, Math.PI * 2);

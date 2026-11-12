@@ -2,7 +2,7 @@
 //   Logged in: progress lives in Firestore at users/<uid>.
 //   Guest:     progress is kept in this browser (localStorage) until you register; registering
 //              carries your guest progress over to the new account.
-import { state, createEmptyProfile } from '../core/state.js';
+import { state, createEmptyProfile, createEmptyQuests } from '../core/state.js';
 import { emit } from '../core/events.js';
 import { ACCOUNT } from '../config.js';
 import { CATEGORIES, emptyLoadout } from '../data/items.js';
@@ -11,7 +11,7 @@ import { loadFirebase, EMAIL_DOMAIN } from './firebase.js';
 const GUEST_KEY = 'yepio_guest_profile';
 const USERNAME_RULE = /^[A-Za-z0-9_]{3,16}$/;
 // Progress fields we own and save. Social fields (friends, invites...) are written separately.
-const PROFILE_FIELDS = ['xp', 'level', 'equipped', 'unlocked', 'history', 'stats', 'classStats', 'hourly'];
+const PROFILE_FIELDS = ['xp', 'level', 'equipped', 'unlocked', 'history', 'stats', 'classStats', 'hourly', 'quests', 'tutorialDone'];
 
 let fb = null;
 let unsubscribeDoc = null;
@@ -212,7 +212,30 @@ export function profileFromData(data = {}) {
         history: arrayOf(data.history).filter(m => m && now - (m.timestamp || now) < ACCOUNT.historyMaxAgeMs),
         stats: { ...base.stats, ...(data.stats || {}) },
         classStats,
-        hourly: { ...base.hourly, ...(data.hourly || {}) }
+        hourly: { ...base.hourly, ...(data.hourly || {}) },
+        quests: questsFromData(data.quests),
+        // Players from before the tutorial existed have already played: don't show it to them.
+        tutorialDone: data.tutorialDone === undefined ? (Number(data.stats?.matches) || 0) > 0 : !!data.tutorialDone
+    };
+}
+
+function questsFromData(data = {}) {
+    const base = createEmptyQuests();
+    const obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? { ...v } : {});
+    const key = (v) => (typeof v === 'string' ? v : null);
+    const day = data?.day || {};
+    const week = data?.week || {};
+    return {
+        day: { ...base.day, key: key(day.key), progress: obj(day.progress), done: obj(day.done) },
+        week: {
+            ...base.week,
+            key: key(week.key),
+            progress: obj(week.progress),
+            done: obj(week.done),
+            count: Number(week.count) || 0,
+            goals: obj(week.goals),
+            rewards: arrayOf(week.rewards).map(id => (typeof id === 'string' ? id : null))
+        }
     };
 }
 

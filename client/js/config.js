@@ -17,7 +17,7 @@ export const MATCH = {
     brTotalPlayers: 50,      // multiplayer battle royale is filled up with bots to this many
     xpOrbs: 3000,
     demoOrbs: 1000,
-    healthOrbs: 91,
+    healthOrbs: 115,
     safeZones: 3,
     safeZoneRespawnTicks: 1800,
     introTicks: 180,         // the zoom-in camera shot at the start of a multiplayer match

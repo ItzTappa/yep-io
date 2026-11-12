@@ -15,6 +15,7 @@ export const DEFAULT_SETTINGS = {
     showBadges: true,
     showNotifs: true,
     showMinimap: true,
+    damageNumbers: true,
     keybinds: { ...DEFAULT_KEYBINDS }
 };
 

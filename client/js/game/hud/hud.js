@@ -1,4 +1,5 @@
-// In-match HUD: points bar, leaderboard, upgrade badges, spectator banner, notifications.
+// In-match HUD: points bar, leaderboard, upgrade badges, spectator banner, notifications,
+// kill feed, the "ELIMINATED" banner and the red screen edge when you get hit.
 import { $, escapeHtml, setVisible, slideIn } from '../../core/dom.js';
 import { settings } from '../../core/settings.js';
 import { sounds } from '../../core/sound.js';
@@ -14,6 +15,11 @@ export function resetHud() {
     $('level-display').textContent = '0 PTS';
     $('upgrade-badges').innerHTML = '';
     $('leaderboard-list').innerHTML = '';
+    $('kill-feed').innerHTML = '';
+    setVisible($('kill-banner'), false);
+    setLowHealth(false);
+    $('hit-vignette').style.opacity = '0';
+    for (const box of document.querySelectorAll('#notif-queue .notif-quest')) box.remove();
     applyHudSettings();
 }
 
@@ -24,8 +30,8 @@ export function applyHudSettings() {
     if (!settings.showFps) setVisible($('fps-display'), false);
 }
 
-export function updatePointsBar(points, progress, needed) {
-    $('level-display').textContent = `${Math.floor(points)} PTS`;
+export function updatePointsBar(points, progress, needed, kills = 0) {
+    $('level-display').textContent = kills > 0 ? `${Math.floor(points)} PTS  ·  ${kills} ${kills === 1 ? 'KILL' : 'KILLS'}` : `${Math.floor(points)} PTS`;
     $('xp-bar').style.width = Math.min(100, (progress / needed) * 100) + '%';
 }
 
@@ -50,6 +56,73 @@ export function showAccountLevelNotif(level) {
     const box = $('account-level-notif');
     box.hideNotif?.();
     slideIn(box, 4000);
+}
+
+// A finished quest or Bonus Goal: { kind: 'quest' | 'bonus', title, xp, itemId }
+export function showQuestComplete(reward) {
+    if (!settings.showNotifs) return;
+    sounds.play('mastery_unlock', { category: 'alert', volume: 0.6 });
+    const box = $('quest-notif-template').content.firstElementChild.cloneNode(true);
+    box.querySelector('.notif-text').textContent = reward.kind === 'bonus' ? (reward.itemId ? 'BONUS REWARD UNLOCKED' : 'BONUS GOAL REACHED') : 'QUEST COMPLETE';
+    box.querySelector('.quest-notif-title').textContent = reward.title;
+    box.querySelector('.quest-notif-reward').textContent = reward.xp ? `+${reward.xp.toLocaleString('en-US')} XP` : 'In your Locker';
+    $('notif-queue').appendChild(box);
+    slideIn(box, 4500, { removeWhenDone: true });
+}
+
+// ---------- fights ----------
+
+// One line in the kill feed. tone: 'you' | 'mate' | 'enemy' | 'storm'
+export function addKillFeed({ killer, killerTone, victim, victimTone }) {
+    const feed = $('kill-feed');
+    const row = document.createElement('div');
+    row.className = 'kf-row';
+    const name = (text, tone) => {
+        const span = document.createElement('span');
+        span.className = `kf-name kf-${tone}`;
+        span.textContent = text;
+        return span;
+    };
+    const icon = document.createElement('span');
+    icon.className = 'kf-icon';
+    icon.textContent = '✖';
+    if (killer) row.append(name(killer, killerTone), icon, name(victim, victimTone));
+    else row.append(name(victim, victimTone), name('WAS ELIMINATED', 'note'));
+    feed.prepend(row);
+    while (feed.children.length > 4) feed.lastElementChild.remove();
+    setTimeout(() => row.classList.add('fade'), 5000);
+    setTimeout(() => row.remove(), 5600);
+}
+
+let killBannerTimer = null;
+export function showKillBanner(victimName) {
+    const banner = $('kill-banner');
+    $('kill-banner-name').textContent = victimName;
+    setVisible(banner, true);
+    banner.classList.remove('pop');
+    void banner.offsetWidth; // restart the animation
+    banner.classList.add('pop');
+    clearTimeout(killBannerTimer);
+    killBannerTimer = setTimeout(() => setVisible(banner, false), 1800);
+}
+
+// Red flash at the screen edges when you take damage (fraction = share of your max health).
+let lastHitFlash = 0;
+export function flashHit(fraction) {
+    const now = performance.now();
+    if (now - lastHitFlash < 90) return;
+    lastHitFlash = now;
+    const el = $('hit-vignette');
+    el.style.transition = 'none';
+    el.style.opacity = String(Math.min(1, 0.45 + fraction * 4));
+    void el.offsetWidth;
+    el.style.transition = 'opacity 0.45s ease-out';
+    el.style.opacity = '0';
+}
+
+export function setLowHealth(low) {
+    const el = $('low-health-vignette');
+    if (el.classList.contains('on') !== low) el.classList.toggle('on', low);
 }
 
 // rows: [{ name, points, highlight }] already sorted, best first.

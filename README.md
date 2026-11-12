@@ -15,6 +15,8 @@ Then open http://localhost:3000.
 
 **Admin console:** sign in as an admin account (`ADMIN_USERNAMES` in `client/js/config.js`, currently
 `chase`), press `/` or `` ` `` and type `/help`. It works on the live site too; guests and other accounts can't open it.
+Handy for testing: `/questsdone` finishes today's and this week's quests, `/questsreset` starts them
+over, `/tutorial` plays the tutorial again in your next solo match.
 
 ## Deploy (Render)
 
@@ -43,7 +45,7 @@ server/
 
 client/
   index.html           All screens (menu tabs, popups, in-match HUD)
-  css/                 base, menu, lobby, store (stats/locker/shops), modals, hud, mobile
+  css/                 base, menu, lobby, store (stats/locker/shops), quests, modals, hud, mobile
   assets/sounds/       Sound effects
   js/
     main.js            Entry point: wires everything together, switches menu <-> match
@@ -53,6 +55,7 @@ client/
       classes.js         Class stats and descriptions
       upgrades.js        Every upgrade and ability (+ tier colours)
       items.js           Every cosmetic (season, hourly shop, mastery skins)
+      quests.js          Daily/weekly quest pools, XP rewards and the weekly Bonus Goals
       botNames.js        Bot name pools
 
     core/              Small shared helpers
@@ -79,11 +82,13 @@ client/
       combat.js          Teams, immunity, shot spread, kill XP
       abilities.js       What each E-key ability does (+ shockwave/afterburner)
       input.js           Keyboard, mouse, touch joystick, mobile buttons
+      tutorial.js        The first-match tutorial steps (bots leave you alone until FIGHT)
       systems/           One file per mechanic: playerControl, bots, collisions (spikes/orbiters),
                          projectiles, orbs, zones (safe zones + storm), slotMachines
       net/matchSync.js   Multiplayer sync (who controls what is explained at the top)
-      render/            World drawing, minimap, teammate arrows
-      hud/               Points bar, leaderboard, badges, notifications, upgrade cards, game over
+      render/            World drawing, minimap, teammate arrows, damage numbers
+      hud/               Points bar, leaderboard, badges, notifications, kill feed, upgrade cards,
+                         tutorial box, game over
 
     services/          Talking to the outside world
       network.js         socket.io client (lobbies + match messages)
@@ -92,10 +97,12 @@ client/
       profile.js         XP/levels, match results, claiming/equipping cosmetics
       friends.js         Friend requests, invites, friend profiles
       shop.js            Hourly rotating shop (same items for everyone each hour)
+      quests.js          Quest progress: today's/this week's quests, Bonus Goals, what a match adds
 
     ui/                One file per menu screen or popup
       menu.js            Tabs, class select, PLAY, season level box
       lobbyScreen.js     Multiplayer tab + match countdown
+      quests.js          Quests tab (daily, weekly, Bonus Goals, class mastery)
       locker.js, stores.js, stats.js, previews.js
       accountModal.js, invites.js, settingsModal.js, masteryModal.js
       slotMachineUI.js, devConsole.js, toast.js

@@ -24,6 +24,7 @@ export function updateLocalPlayer(engine) {
             engine.spawnParticles(p.x, p.y, '#ffffff', 8);
             engine.shake(5);
             engine.net?.sendAction({ t: 'dash' });
+            engine.stat('dashes');
         }
 
         if (input.consume(binds.ability)) tryUseAbility(engine, p);
@@ -84,5 +85,6 @@ function tryUseAbility(engine, p) {
     if (p.useAbility()) {
         engine.shake(8);
         engine.net?.sendAction({ t: 'ability', ab: p.activeAbility, a: +p.angle.toFixed(3) });
+        engine.stat('abilities');
     }
 }

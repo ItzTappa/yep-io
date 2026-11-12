@@ -10,13 +10,16 @@ import { GameEngine } from './game/GameEngine.js';
 import { applyHudSettings } from './game/hud/hud.js';
 import { network } from './services/network.js';
 import { initAccount, setInGame } from './services/account.js';
-import { addAccountXP, recordMatch } from './services/profile.js';
+import { addAccountXP, recordMatch, setTutorialDone } from './services/profile.js';
+import { startQuestMatch, trackQuestStat, reportQuestBest, endQuestMatch } from './services/quests.js';
 import { startShopClock } from './services/shop.js';
 import { initMenu, switchTab } from './ui/menu.js';
 import { initLobbyScreen } from './ui/lobbyScreen.js';
 import { initLocker, lockerCategory } from './ui/locker.js';
 import { initStores } from './ui/stores.js';
 import { initStats } from './ui/stats.js';
+import { initQuests } from './ui/quests.js';
+import { initTutorialPanel } from './game/hud/tutorialPanel.js';
 import { initPreviews, closePreview, isPreviewOpen } from './ui/previews.js';
 import { initAccountModal, closeAccountModal } from './ui/accountModal.js';
 import { initInvites } from './ui/invites.js';
@@ -29,8 +32,13 @@ sounds.setVolume(settings.volume);
 
 const engine = new GameEngine($('gameCanvas'), {
     addAccountXP,
+    onMatchStart: (info) => startQuestMatch(info),
+    onStat: (stat, amount) => trackQuestStat(stat, amount),
+    onStatBest: (stat, value) => reportQuestBest(stat, value),
+    onMatchQuests: (summary) => endQuestMatch(summary),
     onMatchEnd: (summary) => recordMatch(summary),
-    onSlotMachine: () => playSlotMachine(engine)
+    onSlotMachine: () => playSlotMachine(engine),
+    onTutorialDone: () => setTutorialDone(true)
 });
 if (DEV_TOOLS_ENABLED) window.game = engine; // handy in the browser console while developing
 engine.startDemo();
@@ -46,7 +54,7 @@ function enterMatch() {
 
 function startSolo(classType) {
     enterMatch();
-    engine.startSolo(classType, { equipped: state.profile.equipped });
+    engine.startSolo(classType, { equipped: state.profile.equipped, tutorial: !state.profile.tutorialDone });
 }
 
 function startMultiplayerMatch(match) {
@@ -91,6 +99,8 @@ initLobbyScreen({ onMatchStart: startMultiplayerMatch });
 initLocker();
 initStores();
 initStats();
+initQuests();
+initTutorialPanel();
 initPreviews({ getLockerCategory: lockerCategory });
 initAccountModal();
 initInvites();

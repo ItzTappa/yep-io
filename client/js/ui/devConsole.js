@@ -5,7 +5,9 @@ import { ADMIN_USERNAMES } from '../config.js';
 import { state } from '../core/state.js';
 import { on } from '../core/events.js';
 import { UPGRADE_POOL, isAbility } from '../data/upgrades.js';
-import { devSetLevel, devUnlockAll, devSetHourly } from '../services/profile.js';
+import { devSetLevel, devUnlockAll, devSetHourly, addAccountXP, setTutorialDone } from '../services/profile.js';
+import { completeAllQuests, resetQuests } from '../services/quests.js';
+import { emit } from '../core/events.js';
 import { STORM } from '../config.js';
 import { LuckySlotMachine } from '../entities/pickups.js';
 
@@ -140,6 +142,14 @@ function run(raw, engine, log) {
             engine.refreshBadges();
             ok('ALL UPGRADES MAXED!');
         },
+        '/questsdone': () => {
+            const rewards = completeAllQuests();
+            addAccountXP(rewards.reduce((sum, r) => sum + (r.xp || 0), 0));
+            emit('profile:changed');
+            ok(`Finished ${rewards.filter(r => r.kind === 'quest').length} quests (+${rewards.length - rewards.filter(r => r.kind === 'quest').length} bonus rewards).`);
+        },
+        '/questsreset': () => { resetQuests(); emit('profile:changed'); ok('Quest progress reset for today and this week.'); },
+        '/tutorial': () => { setTutorialDone(false); ok('The tutorial will play in your next solo match.'); },
         '/close': () => closeDevConsole(),
         '/exit': () => closeDevConsole(),
         '/help': () => log('Commands: ' + Object.keys(commands).join(', '))

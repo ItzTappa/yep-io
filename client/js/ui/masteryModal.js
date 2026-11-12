@@ -1,4 +1,5 @@
-// Class mastery popup (click your selected class again): 1000 kills with a class unlocks its Golden skin.
+// Class mastery popup (click your selected class again): 500 kills with a class unlocks its Golden skin.
+// The Quests tab shows the same progress (ui/quests.js).
 import { $, setVisible } from '../core/dom.js';
 import { state } from '../core/state.js';
 import { sounds } from '../core/sound.js';

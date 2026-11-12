@@ -2,6 +2,7 @@
 import { Projectile } from '../../entities/Projectile.js';
 import { distance } from '../../core/math.js';
 import { isEnemy, isGhosting } from '../combat.js';
+import { settings } from '../../core/settings.js';
 
 const NUKE_RADIUS = 320;
 
@@ -30,6 +31,7 @@ export function updateProjectiles(engine) {
             // Evasion: a dodged bullet passes through this target for good.
             if (target.evasion > 0 && Math.random() < target.evasion) {
                 engine.spawnParticles(target.x, target.y, '#ffffff', 2);
+                if (proj.owner === engine.player && settings.damageNumbers) engine.damageNumbers.addWord(target, 'DODGED', '#cbd5e1');
                 continue;
             }
 

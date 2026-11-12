@@ -18,6 +18,7 @@ export function updateSlotMachines(engine) {
         if (p && !p.isDead && !engine.isDemo && !engine.isGameOver && distance(p.x, p.y, machine.x, machine.y) < p.size + machine.size) {
             machines.splice(i, 1);
             engine.hooks.onSlotMachine?.();
+            engine.stat('slots');
         }
     }
 

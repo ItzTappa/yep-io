@@ -114,6 +114,14 @@ export function onClassChanged(classType) {
     }
 }
 
+// ---------- tutorial ----------
+
+// done = false makes the tutorial play again in your next solo match (Settings > Replay Tutorial).
+export function setTutorialDone(done) {
+    state.profile.tutorialDone = done;
+    scheduleSave();
+}
+
 // ---------- developer console helpers ----------
 
 export function devSetLevel(level) {

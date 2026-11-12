@@ -8,6 +8,8 @@ import { BALANCE } from '../../data/balance.js';
 
 export function updateBots(engine) {
     const referencePoints = engine.player && !engine.isDemo ? engine.player.points : 100;
+    // During the first steps of the tutorial bots don't go after you.
+    const hostile = engine.tutorial?.calm ? (a, b) => b !== engine.player && isEnemy(a, b) : isEnemy;
 
     for (const bot of [...engine.bots]) {
         if (bot.isDead) continue;
@@ -15,7 +17,7 @@ export function updateBots(engine) {
         if (bot.isReplica) {
             followHost(bot);
         } else {
-            bot.updateBot(engine.ships, { referencePoints, isEnemy });
+            bot.updateBot(engine.ships, { referencePoints, isEnemy: hostile });
             keepInBounds(engine, bot);
             if (bot.justDashed) {
                 bot.justDashed = false;
@@ -28,7 +30,7 @@ export function updateBots(engine) {
         }
 
         if (engine.intro.active) continue;
-        fireWeapons(engine, bot);
+        fireWeapons(engine, bot, hostile);
     }
 }
 
@@ -85,8 +87,8 @@ function keepInBounds(engine, bot) {
     }
 }
 
-function fireWeapons(engine, bot) {
-    if (bot.fireCooldown <= 0 && hasEnemyNearby(engine, bot)) {
+function fireWeapons(engine, bot, hostile) {
+    if (bot.fireCooldown <= 0 && hasEnemyNearby(engine, bot, hostile)) {
         const angles = volleyAngles(bot);
         const scale = volleyDamageScale(angles.length);
         for (const angle of angles) engine.fireProjectile(bot, angle, scale);
@@ -101,9 +103,9 @@ function fireWeapons(engine, bot) {
     }
 }
 
-function hasEnemyNearby(engine, bot) {
+function hasEnemyNearby(engine, bot, hostile) {
     for (const p of engine.ships) {
-        if (p === bot || p.isDead || p.inSafeZone || !isEnemy(bot, p) || isGhosting(p)) continue;
+        if (p === bot || p.isDead || p.inSafeZone || !hostile(bot, p) || isGhosting(p)) continue;
         if (distance(bot.x, bot.y, p.x, p.y) < 600) return true;
     }
     return false;

@@ -13,6 +13,7 @@ import { STEEL, TIER_GLOW, rgba } from './palette.js';
 import { armorTierOf, bladeRingRadius, orbiterPositions, ORBITER_BLADE_RADIUS, REPULSOR_RANGE } from '../geometry.js';
 
 const outlineWidth = (e) => Math.max(2, Math.min(3.2, e.size * 0.11));
+const HIT_FLASH_MS = 110;
 // Distance from the centre to the back edge / front edge of each shape.
 const backEdge = (e) => (e.type === 'circle' ? e.size : e.size / 2);
 const frontEdge = (e) => (e.type === 'square' ? e.size / 2 : e.size * 0.8);
@@ -79,6 +80,17 @@ function drawHull(ctx, e, hq) {
     if (skin) {
         ctx.save();
         skin.draw(k);
+        ctx.restore();
+    }
+
+    // Just got hit: a quick white flash over the hull.
+    const flash = e.hitFlashAt ? 1 - (performance.now() - e.hitFlashAt) / HIT_FLASH_MS : 0;
+    if (flash > 0) {
+        ctx.save();
+        ctx.globalAlpha *= flash * 0.6;
+        ctx.fillStyle = '#ffffff';
+        traceBody(ctx, e.type, e.size);
+        ctx.fill();
         ctx.restore();
     }
 
@@ -520,10 +532,26 @@ function drawFacingArrow(ctx, e, armor) {
     ctx.restore();
 }
 
-function bar(ctx, x, y, w, h, pct, color) {
+// Health you just lost stays on the bar for a moment, then drains away (shows how hard a hit was).
+function healthChip(e, pct) {
+    const now = performance.now();
+    if (e.chipPct === undefined || pct >= e.chipPct) {
+        e.chipPct = pct;
+    } else if (now - (e.hitFlashAt || 0) > 350) {
+        e.chipPct = Math.max(pct, e.chipPct - 0.012);
+    }
+    return e.chipPct;
+}
+
+function bar(ctx, x, y, w, h, pct, color, chipPct = 0) {
     roundRect(ctx, x, y, w, h, h / 2);
     ctx.fillStyle = 'rgba(10, 14, 22, 0.78)';
     ctx.fill();
+    if (chipPct > pct) {
+        roundRect(ctx, x, y, Math.max(h, w * Math.min(1, chipPct)), h, h / 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+        ctx.fill();
+    }
     if (pct > 0) {
         roundRect(ctx, x, y, Math.max(h, w * Math.min(1, pct)), h, h / 2);
         ctx.fillStyle = color;
@@ -568,7 +596,7 @@ function drawNameAndBars(ctx, e, armor) {
     if (e.health < e.maxHealth || e.isPlayer) {
         const pct = Math.max(0, e.health / e.maxHealth);
         const color = pct > 0.5 ? '#00ffcc' : pct > 0.25 ? '#facc15' : '#ef4444';
-        bar(ctx, x, y, w, 5, pct, color);
+        bar(ctx, x, y, w, 5, pct, color, healthChip(e, pct));
     }
     if (e.dashCooldown <= 0) bar(ctx, x, y + 7, w, 3, 1, e.points >= e.dashCost() ? '#ffe600' : '#6b7280');
     else bar(ctx, x, y + 7, w, 3, 1 - e.dashCooldown / e.dashMaxCooldown, '#e5e7eb');

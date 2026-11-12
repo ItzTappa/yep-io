@@ -16,6 +16,8 @@ export const RARITY_COLORS = {
     5: '#f97316'  // Legendary (Orange)
 };
 
+export const RARITY_NAMES = { 1: 'Common', 2: 'Uncommon', 3: 'Rare', 4: 'Epic', 5: 'Legendary' };
+
 const skin = (id, name, rarity, value, icon) => ({ id, name, category: 'Skin', icon, rarity, value, isRotating: true });
 const trail = (id, name, rarity, value, style, icon, extra = {}) => ({ id, name, category: 'Trail', icon, rarity, value, style, isRotating: true, ...extra });
 const color = (id, name, rarity, value, icon, extra = {}) => ({ id, name, category: 'Color', icon, rarity, value, isRotating: true, ...extra });

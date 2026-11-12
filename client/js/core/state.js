@@ -3,6 +3,14 @@
 import { emptyLoadout } from '../data/items.js';
 import { CLASS_TYPES } from '../data/classes.js';
 
+// Quest progress for the current day and week (see services/quests.js).
+export function createEmptyQuests() {
+    return {
+        day: { key: null, progress: {}, done: {} },
+        week: { key: null, progress: {}, done: {}, count: 0, goals: {}, rewards: [] }
+    };
+}
+
 export function createEmptyProfile() {
     const classStats = {};
     for (const type of CLASS_TYPES) classStats[type] = { kills: 0, matches: 0 };
@@ -14,7 +22,9 @@ export function createEmptyProfile() {
         history: [],                  // recent matches (last 24 hours, newest first)
         stats: { matches: 0, kills: 0, time: 0, points: 0, distance: 0 },
         classStats,
-        hourly: { key: null, kills: 0, time: 0, points: 0, distance: 0 } // hourly shop progress
+        hourly: { key: null, kills: 0, time: 0, points: 0, distance: 0 }, // hourly shop progress
+        quests: createEmptyQuests(),
+        tutorialDone: false          // the first-match tutorial was finished or skipped
     };
 }
 

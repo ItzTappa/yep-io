@@ -2,6 +2,7 @@
 import { $, setVisible } from '../core/dom.js';
 import { settings, saveSettings, keyLabel, DEFAULT_KEYBINDS } from '../core/settings.js';
 import { sounds } from '../core/sound.js';
+import { setTutorialDone } from '../services/profile.js';
 
 let listeningFor = null;   // action waiting for a key press
 let onApplyHook = null;
@@ -22,6 +23,10 @@ export function initSettingsModal({ onApply }) {
     $('reset-keybinds-btn').addEventListener('click', () => {
         settings.keybinds = { ...DEFAULT_KEYBINDS };
         stopListening();
+    });
+    $('replay-tutorial-btn').addEventListener('click', () => {
+        setTutorialDone(false);
+        $('replay-tutorial-btn').textContent = '✔ TUTORIAL IN YOUR NEXT SOLO MATCH';
     });
 
     // Capture phase so the key never reaches the game or the dev console.
@@ -45,6 +50,7 @@ export function openSettings() {
         input.checked = !!settings[input.dataset.setting];
     }
     $('set-volume').value = Math.round(settings.volume * 100);
+    $('replay-tutorial-btn').textContent = 'REPLAY TUTORIAL';
     stopListening();
     setVisible($('settings-modal'), true);
 }

@@ -37,15 +37,23 @@ import { drawTeammatePointers, clearTeammatePointers } from './render/teammatePo
 import * as hud from './hud/hud.js';
 import { showUpgradeCards, hideUpgradeCards } from './hud/upgradeCards.js';
 import { showGameOver, hideGameOver } from './hud/gameOver.js';
+import { DamageNumbers } from './render/damageNumbers.js';
+import { Tutorial } from './tutorial.js';
 
 const nextUpgradeCost = (count) => Math.floor(15 + count * 12 + Math.pow(count, 1.7) * 1.5);
 
 export class GameEngine {
-    // hooks: onMatchEnd(summary), onSlotMachine(), addAccountXP(amount) -> [new levels]
+    // hooks:
+    //   addAccountXP(amount) -> [new levels]
+    //   onMatchStart({ mode, classType }), onMatchEnd(summary), onSlotMachine(), onTutorialDone()
+    //   Quests: onStat(stat, amount), onStatBest(stat, value), onMatchQuests(summary)
+    //           each return a list of finished quest rewards (see services/quests.js)
     constructor(canvas, hooks = {}) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
         this.hooks = hooks;
+        this.damageNumbers = new DamageNumbers();
+        this.tutorial = null;
 
         this.mode = 'demo';
         this.resetWorld(WORLD.demo);
@@ -116,6 +124,10 @@ export class GameEngine {
         this.matchStats = { startTime: Date.now(), deathTime: null, xpEarned: 0, distance: 0, lastX: 0, lastY: 0, totalPlayers: 1 };
         this.forfeitArmedUntil = 0;
         this.leaderboardTick = 0;
+        this.matchQuests = [];          // quests finished this match (listed on the game over screen)
+        this.damageNumbers.clear();
+        this.tutorial?.end();
+        this.tutorial = null;
         if (this.upgrades) this.upgrades.reset();
         if (this.input) this.input.clear();
         clearTeammatePointers();
@@ -137,7 +149,8 @@ export class GameEngine {
         this.startLoop();
     }
 
-    startSolo(playerClass, { name = '', equipped = null } = {}) {
+    // tutorial: run the first-match tutorial (bots leave you alone while you learn the controls).
+    startSolo(playerClass, { name = '', equipped = null, tutorial = false } = {}) {
         this.mode = 'solo';
         this.resetWorld(WORLD.solo);
         this.config = { orbCount: MATCH.xpOrbs };
@@ -159,6 +172,7 @@ export class GameEngine {
         this.spawnOrbs();
         this.matchStats.totalPlayers = this.bots.length + 1;
         this.beginMatch({ intro: false });
+        if (tutorial) this.tutorial = new Tutorial(this, { onDone: () => this.hooks.onTutorialDone?.() });
     }
 
     // match: { mode: 'br' | 'duel', hostId, seed, players: [{ id, name, classType, equipped }] }
@@ -236,6 +250,7 @@ export class GameEngine {
         hud.resetHud();
         hideGameOver();
         this.showMatchUi(true);
+        this.hooks.onMatchStart?.({ mode: this.mode, classType: p.type });
         this.startLoop();
     }
 
@@ -371,9 +386,18 @@ export class GameEngine {
         if (isImmune(target)) {
             this.spawnParticles(target.x, target.y, '#0096ff', 3);
             if (hitSound) this.playSoundAt('take_damage', target.x, target.y, { volume: 0.1 });
+            if (attacker === this.player && settings.damageNumbers) this.damageNumbers.addWord(target, 'IMMUNE', '#7dd3fc');
             return false;
         }
         const final = armor ? Math.max(1, amount * (1 - BALANCE.upgrades.platingReduction * target.plating)) : amount;
+
+        // Hit feedback: white flash on the ship, your damage as a number, a red edge when you're hit.
+        target.hitFlashAt = performance.now();
+        if (attacker === this.player && target !== this.player) {
+            if (settings.damageNumbers) this.damageNumbers.add(target, final, { big: final >= this.player.baseDamage * 2.2 });
+            this.stat('damage', final);
+        }
+        if (target === this.player && !this.isDemo) hud.flashHit(final / target.maxHealth);
 
         // Vampirism: heal a share of the damage you deal (the attacker's own computer applies it).
         if (attacker && attacker.vampirism > 0 && (attacker === this.player || (attacker.isBot && !attacker.isReplica)) && !attacker.isDead) {
@@ -417,7 +441,10 @@ export class GameEngine {
         if (killer === this.player && !this.isGameOver && !isLocal) {
             this.player.kills++;
             this.addXP(killXp(this.player.points, victim.points || 0));
+            hud.showKillBanner(victim.name || 'ENEMY');
+            this.stat('kills');
         }
+        this.reportKill(victim, killer);
         this.dropLoot(victim, killer);
 
         if (isLocal) {
@@ -434,6 +461,23 @@ export class GameEngine {
 
         if (this.spectateTarget === victim) this.spectateTarget = null;
         this.checkMatchOutcome(killer);
+    }
+
+    // Kill feed: kills by or of you and other real players (bot-on-bot kills would flood it).
+    reportKill(victim, killer) {
+        const p = this.player;
+        if (this.isDemo || !p || killer?.isForfeit) return;
+        const shown = (s) => !!s && (s === p || s.isRemotePlayer);
+        if (!shown(victim) && !shown(killer)) return;
+        const tone = (s) => (s === p ? 'you' : s.isStorm ? 'storm' : s.isTeammate ? 'mate' : 'enemy');
+        const label = (s) => (s === p ? 'YOU' : s.name || 'PLAYER');
+        const hasKiller = killer && killer !== victim;
+        hud.addKillFeed({
+            killer: hasKiller ? label(killer) : null,
+            killerTone: hasKiller ? tone(killer) : null,
+            victim: label(victim),
+            victimTone: tone(victim)
+        });
     }
 
     removeRemote(remote) {
@@ -455,7 +499,7 @@ export class GameEngine {
             }
         }
         if (killer && killer.medicDrop > 0 && Math.random() < killer.medicDrop * 0.15) this.orbs.push(new Orb(victim.x, victim.y, 'health'));
-        if (Math.random() < 0.21) this.orbs.push(new Orb(victim.x, victim.y, 'health'));
+        if (Math.random() < BALANCE.healthOrbs.dropChance) this.orbs.push(new Orb(victim.x, victim.y, 'health'));
     }
 
     scheduleRespawn() {
@@ -507,6 +551,8 @@ export class GameEngine {
         hideUpgradeCards();
         hud.setSpectating(null);
         hud.setSafeZoneIndicator(false);
+        hud.setLowHealth(false);
+        this.tutorial?.end();
         setVisible($('mobile-controls'), false);
 
         const timeAlive = Math.floor(((this.matchStats.deathTime || Date.now()) - this.matchStats.startTime) / 1000);
@@ -537,10 +583,32 @@ export class GameEngine {
             distance: Math.floor(this.matchStats.distance),
             playerClass: p.type,
             upgrades: p.upgradeTiers(),
-            xpEarned: this.matchStats.xpEarned
+            xpEarned: 0
         };
-        showGameOver(summary);
+        // Quests finished by the match itself (matches played, placement) give their XP here too.
+        for (const reward of this.hooks.onMatchQuests?.(summary) || []) this.completeQuest(reward);
+        summary.xpEarned = this.matchStats.xpEarned;
+        showGameOver(summary, this.matchQuests);
         this.hooks.onMatchEnd?.(summary);
+    }
+
+    // A quest stat happened (kills, damage, dashes...): moves the tutorial and your quests along.
+    stat(name, amount = 1) {
+        if (this.isDemo || this.isGameOver || !this.player || !(amount > 0)) return;
+        this.tutorial?.onStat(name);
+        for (const reward of this.hooks.onStat?.(name, amount) || []) this.completeQuest(reward);
+    }
+
+    // Your best value this match (points) for "in one match" quests.
+    statBest(name, value) {
+        if (this.isDemo || this.isGameOver || !this.player) return;
+        for (const reward of this.hooks.onStatBest?.(name, value) || []) this.completeQuest(reward);
+    }
+
+    completeQuest(reward) {
+        this.addXP(reward.xp || 0);
+        this.matchQuests.push(reward);
+        if (!this.isGameOver) hud.showQuestComplete(reward);
     }
 
     addXP(amount) {
@@ -689,9 +757,16 @@ export class GameEngine {
 
         if (playing) {
             this.upgrades.checkProgress();
-            hud.updatePointsBar(p.points, p.upgradeProgress, this.upgrades.pointsToNext);
+            hud.updatePointsBar(p.points, p.upgradeProgress, this.upgrades.pointsToNext, p.kills);
             hud.setSafeZoneIndicator(p.inSafeZone);
+            if (!this.intro.active && this.frame % 60 === 0) {
+                this.stat('time', 1);
+                this.statBest('points', p.points);
+            }
         }
+        if (!this.isDemo && this.frame % 10 === 0) hud.setLowHealth(playing && p.health / p.maxHealth < 0.25);
+        this.tutorial?.update();
+        this.damageNumbers.update();
 
         if (this.frame % 30 === 0) {
             this.refreshLeaderboard();
@@ -835,6 +910,7 @@ class UpgradeFlow {
         }
         engine.addXP(BALANCE.xp.perUpgrade);
         engine.refreshBadges();
+        engine.stat('upgrades');
 
         hideUpgradeCards();
         this.choosing = false;

@@ -109,4 +109,18 @@
     .hud-slot-lever::after { width: 10px; height: 10px; left: -1px; top: -5px; }
     @keyframes pullLever { 0% { top: -5px; } 50% { top: 15px; } 100% { top: -5px; } }
     #slot-result { font-size: 0.6rem; margin-top: 2px; }
+
+    /* Fight feedback, tutorial and quest popups */
+    .kill-feed { width: 150px; gap: 3px; }
+    .kf-row { font-size: 0.6rem; padding: 2px 6px; gap: 4px; }
+    .kf-name { max-width: 58px; }
+    .kb-label { font-size: 0.7rem; letter-spacing: 3px; }
+    .kb-name { font-size: 1.15rem; }
+    /* the top of a phone screen is full (badges, leaderboard, minimap): sit above the touch controls */
+    #tutorial-panel { top: auto; bottom: calc(215px + env(safe-area-inset-bottom)); width: min(340px, 92vw); padding: 6px 10px 9px; }
+    .tut-title { font-size: 1rem; }
+    .tut-text { font-size: 0.75rem; line-height: 1.4; }
+    .tut-step { font-size: 0.6rem; }
+    .go-quests { min-width: 0; width: 92vw; margin: -10px 0 18px; }
+    .go-quest { font-size: 0.8rem; padding: 6px 10px; }
 }

@@ -55,6 +55,11 @@ function selectClass(classType) {
         openMasteryModal(classType);
         return;
     }
+    chooseClass(classType);
+}
+
+// Makes `classType` the selected class (also used by the Quests tab to equip a mastery skin).
+export function chooseClass(classType) {
     state.selectedClass = classType;
     document.querySelectorAll('.class-btn').forEach(b => b.classList.toggle('active', b.dataset.class === classType));
     onClassChanged(classType);

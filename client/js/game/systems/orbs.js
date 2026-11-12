@@ -85,7 +85,10 @@ function collect(engine, ship, orb) {
     // Mirrored bots only "eat" orbs so the arena looks the same; the host awards their points.
     if (ship.isReplica) return;
 
-    if (ship === engine.player) sounds.play('xp_pickup', { category: 'pickup', varyPitch: true });
+    if (ship === engine.player) {
+        sounds.play('xp_pickup', { category: 'pickup', varyPitch: true });
+        engine.stat(orb.type === 'health' ? 'healthOrbs' : 'orbs');
+    }
     if (orb.type === 'health') {
         ship.health = Math.min(ship.maxHealth, ship.health + ship.maxHealth * orb.healPct);
     } else {

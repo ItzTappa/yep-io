@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="css/menu.css">
     <link rel="stylesheet" href="css/lobby.css">
     <link rel="stylesheet" href="css/store.css">
+    <link rel="stylesheet" href="css/quests.css">
     <link rel="stylesheet" href="css/modals.css">
     <link rel="stylesheet" href="css/hud.css">
     <link rel="stylesheet" href="css/mobile.css">
@@ -22,6 +23,7 @@
         <nav class="top-nav">
             <button class="tab-btn active" data-target="lobby">Lobby</button>
             <button class="tab-btn" data-target="multiplayer">Multiplayer</button>
+            <button class="tab-btn" data-target="quests">Quests</button>
             <button class="tab-btn" data-target="stats">Stats</button>
             <button class="tab-btn" data-target="locker">Locker</button>
             <button class="tab-btn" data-target="season">Season Store</button>
@@ -54,6 +56,37 @@
                     </div>
                 </div>
                 <div id="player-slots-container" class="player-slots"></div>
+            </div>
+        </div>
+
+        <!-- Quests tab: daily / weekly quests, Bonus Goals, class mastery -->
+        <div id="quests" class="tab-content">
+            <div class="quests-layout">
+                <nav id="quest-categories" class="quest-sidebar" aria-label="Quest categories"></nav>
+                <section class="quest-main">
+                    <div class="quest-header">
+                        <div>
+                            <div id="quest-kicker" class="quest-kicker"></div>
+                            <h2 id="quest-title" class="quest-title"></h2>
+                            <p id="quest-desc" class="quest-desc"></p>
+                        </div>
+                        <div id="quest-timer" class="quest-timer"></div>
+                    </div>
+                    <div id="quest-bonus"></div>
+                    <div id="quest-list" class="quest-list"></div>
+                </section>
+                <aside id="quest-preview" class="quest-preview">
+                    <div class="quest-preview-stage">
+                        <canvas id="questPreviewCanvas" width="260" height="260"></canvas>
+                        <div id="quest-preview-emoji" class="quest-preview-emoji hidden"></div>
+                    </div>
+                    <div class="quest-preview-info">
+                        <div id="quest-preview-rarity" class="quest-preview-rarity"></div>
+                        <div id="quest-preview-name" class="quest-preview-name"></div>
+                        <div id="quest-preview-status" class="quest-preview-status"></div>
+                        <button id="quest-preview-btn" class="btn-equip quest-preview-btn">EQUIP</button>
+                    </div>
+                </aside>
             </div>
         </div>
 
@@ -253,6 +286,7 @@
                     <div class="setting-row"><label for="set-notifs">Show Notifications</label><input type="checkbox" id="set-notifs" data-setting="showNotifs"></div>
                     <div class="setting-row"><label for="set-minimap">Show Minimap</label><input type="checkbox" id="set-minimap" data-setting="showMinimap"></div>
                     <div class="setting-row"><label for="set-fps">Show FPS Counter</label><input type="checkbox" id="set-fps" data-setting="showFps"></div>
+                    <div class="setting-row"><label for="set-dmg">Show Damage Numbers</label><input type="checkbox" id="set-dmg" data-setting="damageNumbers"></div>
                 </div>
                 <div class="settings-col mobile-controls-col">
                     <h3 class="controls-title">CONTROLS</h3>
@@ -263,6 +297,7 @@
                     <div class="setting-row"><label>Dash</label><button class="keybind-btn" data-action="dash">SPACE</button></div>
                     <div class="setting-row"><label>Use Ability</label><button class="keybind-btn ability-bind" data-action="ability">E</button></div>
                     <button id="reset-keybinds-btn" class="keybind-reset">RESET CONTROLS</button>
+                    <button id="replay-tutorial-btn" class="keybind-reset">REPLAY TUTORIAL</button>
                 </div>
             </div>
             <button id="close-settings-btn" class="footer-btn yellow-btn-solid modal-wide-btn">APPLY & CLOSE</button>
@@ -277,6 +312,8 @@
     <!-- =================== IN-MATCH HUD =================== -->
     <div id="game-ui" class="hidden">
         <div class="hud">
+            <div id="low-health-vignette"></div>
+            <div id="hit-vignette"></div>
             <div id="spectator-hud" class="hidden">
                 SPECTATING: <span id="spectating-name" class="cyan-text">TEAMMATE</span>
                 <div class="spectator-hint">ESC TWICE TO LEAVE</div>
@@ -292,6 +329,18 @@
             </div>
             <div id="safezone-indicator" class="hidden">SAFE ZONE · WEAPONS OFFLINE</div>
 
+            <!-- First-match tutorial -->
+            <div id="tutorial-panel" class="hidden">
+                <div class="tut-top"><span id="tut-step" class="tut-step">STEP 1 / 6</span><button id="tut-skip-btn" class="tut-skip">SKIP TUTORIAL</button></div>
+                <div id="tut-title" class="tut-title">MOVE</div>
+                <div id="tut-text" class="tut-text"></div>
+            </div>
+
+            <div id="kill-banner" class="hidden">
+                <div class="kb-label">ELIMINATED</div>
+                <div id="kill-banner-name" class="kb-name"></div>
+            </div>
+
             <div id="right-hud-column" class="right-hud-column">
                 <div id="leaderboard-container" class="leaderboard">
                     <h3>Leaderboard</h3>
@@ -301,6 +350,7 @@
                     <canvas id="minimap-canvas"></canvas>
                     <div id="player-count-display">ALIVE: --</div>
                 </div>
+                <div id="kill-feed" class="kill-feed"></div>
             </div>
 
             <div id="slot-machine-ui" class="hidden">
@@ -348,9 +398,19 @@
                 <div>Time Alive: <span id="go-time">0s</span></div>
             </div>
             <div id="go-xp-container" class="xp-gained">Season Level XP Earned: <span id="go-xp" class="accent-text">+0</span></div>
+            <div id="go-quests" class="go-quests hidden"></div>
             <button id="return-lobby-btn">Return to Menu</button>
         </div>
     </div>
+
+    <!-- Template cloned for each "QUEST COMPLETE" notification in a match -->
+    <template id="quest-notif-template">
+        <div class="notif-box notif-quest">
+            <div class="notif-text">QUEST COMPLETE</div>
+            <div class="notif-level quest-notif-title"></div>
+            <div class="quest-notif-reward"></div>
+        </div>
+    </template>
 
     <!-- Template cloned for each lobby invite notification -->
     <template id="invite-template">
